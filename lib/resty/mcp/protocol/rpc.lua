@@ -30,8 +30,8 @@ function _M.succ_resp(rid, result)
   if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
     error("JSONRPC: ID MUST be a string or integer.")
   end
-  if type(result) ~= "table" or #result > 0 then
-    error("JSONRPC: result MUST be a dict.")
+  if type(result) == "nil" then
+    error("JSONRPC: result MUST be set in a successful response.")
   end
   local body, err = cjson.encode({
     jsonrpc = "2.0",
