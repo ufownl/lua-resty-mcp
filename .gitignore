@@ -1,3 +1,6 @@
+# OpenResty test server root directory
+t/servroot/
+
 # Vim SWP files
 *.swp
 
