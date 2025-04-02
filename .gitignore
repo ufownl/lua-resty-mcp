@@ -1,0 +1,5 @@
+# Vim SWP files
+*.swp
+
+# macOS useless files
+.DS_Store
