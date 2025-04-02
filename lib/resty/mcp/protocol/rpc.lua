@@ -1,13 +1,16 @@
-local _M = {
-  _NAME = "resty.mcp.protocol.rpc",
-  _VERSION = "1.0"
-}
+local JSONRPC_VERSION = "2.0"
 
 local mcp = {
   utils = require("resty.mcp.utils")
 }
 
 local cjson = require("cjson.safe")
+local ngx_log = ngx.log
+
+local _M = {
+  _NAME = "resty.mcp.protocol.rpc",
+  _VERSION = "1.0"
+}
 
 function _M.request(method, params)
   if type(method) ~= "string" then
@@ -18,7 +21,7 @@ function _M.request(method, params)
   end
   local rid = mcp.utils.generate_id()
   local msg, err = cjson.encode({
-    jsonrpc = "2.0",
+    jsonrpc = JSONRPC_VERSION,
     id = rid,
     method = method,
     params = params or nil
@@ -34,7 +37,7 @@ function _M.succ_resp(rid, result)
     error("JSONRPC: result MUST be set in a successful response.")
   end
   local msg, err = cjson.encode({
-    jsonrpc = "2.0",
+    jsonrpc = JSONRPC_VERSION,
     id = rid,
     result = result
   })
@@ -42,8 +45,8 @@ function _M.succ_resp(rid, result)
 end
 
 function _M.fail_resp(rid, code, message, data)
-  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
-    error("JSONRPC: ID MUST be a string or integer.")
+  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) and rid ~= cjson.null then
+    error("JSONRPC: ID MUST be a string or integer, or null.")
   end
   if type(code) ~= "number" or code % 1 ~= 0 then
     error("JSONRPC: error code MUST be an integer.")
@@ -52,7 +55,7 @@ function _M.fail_resp(rid, code, message, data)
     error("JSONRPC: error message MUST be a string.")
   end
   local msg, err = cjson.encode({
-    jsonrpc = "2.0",
+    jsonrpc = JSONRPC_VERSION,
     id = rid,
     error = {
       code = code,
@@ -71,7 +74,7 @@ function _M.notification(method, params)
     error("JSONRPC: params MUST be a dict.")
   end
   local msg, err = cjson.encode({
-    jsonrpc = "2.0",
+    jsonrpc = JSONRPC_VERSION,
     method = method,
     params = params or nil
   })
@@ -80,6 +83,58 @@ end
 
 function _M.batch(msgs)
   return "["..table.concat(msgs, ",").."]"
+end
+
+local function handle_impl(dm, methods, resp_cb)
+  if type(dm) ~= "table" or
+     dm.jsonrpc ~= JSONRPC_VERSION or
+     dm.method and type(dm.method) ~= "string" or
+     not dm.id and not dm.method then
+    return _M.fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
+  end
+  if not dm.method then
+    if resp_cb then
+      resp_cb(dm.id, dm.result, dm.error)
+    end
+    return
+  end
+  local fn = methods[dm.method]
+  if not fn then
+    return dm.id and _M.fail_resp(dm.id, -32601, "Method not found") or nil
+  end
+  if dm.id then
+    local result, code, message, data = fn(dm.params)
+    return type(result) ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+  end
+  fn(dm.params)
+end
+
+function _M.handle(msg, methods, resp_cb)
+  if type(msg) ~= "string" then
+    error("JSONRPC: protocol message MUST be a string.")
+  end
+  if type(methods) ~= "table" then
+    error("JSONRPC: methods MUST be a table.")
+  end
+  local dm, err = cjson.decode(msg)
+  if err then
+    ngx_log(ngx.ERR, "JSONRPC: ", err)
+    return _M.fail_resp(cjson.null, -32700, "Parse error")
+  end
+  if type(dm) ~= "table" then
+    return _M.fail_resp(cjson.null, -32600, "Invalid Request")
+  end
+  if #dm > 0 then
+    local replies = {}
+    for i, v in ipairs(dm) do
+      local r = handle_impl(v, methods, resp_cb)
+      if r then
+        table.insert(replies, r)
+      end
+    end
+    return _M.batch(replies)
+  end
+  return handle_impl(dm, methods, resp_cb)
 end
 
 return _M
