@@ -1,13 +1,13 @@
-local _M = {
-  _NAME = "resty.mcp.utils",
-  _VERSION = "1.0"
-}
-
 local resty_random = require("resty.random")
 local resty_sha256 = require("resty.sha256")
 local ngx_base64 = require("ngx.base64")
 local ngx_worker_pid = ngx.worker.pid
 local ngx_time = ngx.time
+
+local _M = {
+  _NAME = "resty.mcp.utils",
+  _VERSION = "1.0"
+}
 
 local id_counter = 0
 
