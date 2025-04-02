@@ -17,13 +17,13 @@ function _M.request(method, params)
     error("JSONRPC: params MUST be a dict.")
   end
   local rid = mcp.utils.generate_id()
-  local body, err = cjson.encode({
+  local msg, err = cjson.encode({
     jsonrpc = "2.0",
     id = rid,
     method = method,
     params = params or nil
   })
-  return body, rid, err
+  return msg, rid, err
 end
 
 function _M.succ_resp(rid, result)
@@ -33,12 +33,12 @@ function _M.succ_resp(rid, result)
   if type(result) == "nil" then
     error("JSONRPC: result MUST be set in a successful response.")
   end
-  local body, err = cjson.encode({
+  local msg, err = cjson.encode({
     jsonrpc = "2.0",
     id = rid,
     result = result
   })
-  return body, err
+  return msg, err
 end
 
 function _M.fail_resp(rid, code, message, data)
@@ -51,7 +51,7 @@ function _M.fail_resp(rid, code, message, data)
   if type(message) ~= "string" then
     error("JSONRPC: error message MUST be a string.")
   end
-  local body, err = cjson.encode({
+  local msg, err = cjson.encode({
     jsonrpc = "2.0",
     id = rid,
     error = {
@@ -60,7 +60,7 @@ function _M.fail_resp(rid, code, message, data)
       data = data
     }
   })
-  return body, err
+  return msg, err
 end
 
 function _M.notification(method, params)
@@ -70,16 +70,16 @@ function _M.notification(method, params)
   if params and (type(params) ~= "table" or #params > 0) then
     error("JSONRPC: params MUST be a dict.")
   end
-  local body, err = cjson.encode({
+  local msg, err = cjson.encode({
     jsonrpc = "2.0",
     method = method,
     params = params or nil
   })
-  return body, err
+  return msg, err
 end
 
-function _M.batch(protocols)
-  return "["..table.concat(protocols, ",").."]"
+function _M.batch(msgs)
+  return "["..table.concat(msgs, ",").."]"
 end
 
 return _M
