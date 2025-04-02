@@ -78,4 +78,8 @@ function _M.notification(method, params)
   return body, err
 end
 
+function _M.batch(protocols)
+  return "["..table.concat(protocols, ",").."]"
+end
+
 return _M
