@@ -13,8 +13,8 @@ function _M.request(method, params)
   if type(method) ~= "string" then
     error("JSONRPC: method MUST be a string.")
   end
-  if params and (type(params) ~= "table" or #params > 0) then
-    error("JSONRPC: params MUST be a dict.")
+  if params and type(params) ~= "table" then
+    error("JSONRPC: params MUST be a table.")
   end
   local rid = mcp.utils.generate_id()
   local msg, err = cjson.encode({
@@ -67,7 +67,7 @@ function _M.notification(method, params)
   if type(method) ~= "string" then
     error("JSONRPC: method MUST be a string.")
   end
-  if params and (type(params) ~= "table" or #params > 0) then
+  if params and type(params) ~= "table" then
     error("JSONRPC: params MUST be a dict.")
   end
   local msg, err = cjson.encode({
