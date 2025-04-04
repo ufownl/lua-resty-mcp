@@ -1,3 +1,7 @@
+local mcp = {
+  version = require("resty.mcp.version")
+}
+
 local resty_signal = require("resty.signal")
 local ngx_pipe = require("ngx.pipe")
 local ngx_log = ngx.log
@@ -90,7 +94,7 @@ end
 
 local _M = {
   _NAME = "resty.mcp.transport.stdio",
-  _VERSION = "1.0"
+  _VERSION = mcp.version.module
 }
 
 function _M.new(subproc_opts)

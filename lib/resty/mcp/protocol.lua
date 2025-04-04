@@ -1,12 +1,11 @@
-local PROTOCOL_VERSION = "2025-03-26"
-
 local mcp = {
+  version = require("resty.mcp.version"),
   rpc = require("resty.mcp.protocol.rpc")
 }
 
 local _M = {
   _NAME = "resty.mcp.protocol",
-  _VERSION = "1.0",
+  _VERSION = mcp.version.module,
   request = {},
   response = {},
   notification = {}
@@ -14,7 +13,7 @@ local _M = {
 
 function _M.request.initialize(name, roots, sampling, experimental)
   return mcp.rpc.request("initialize", {
-    protocolVersion = PROTOCOL_VERSION,
+    protocolVersion = mcp.version.protocol,
     capabilities = {
       roots = roots and {listChanged = true} or nil,
       sampling = sampling and {} or sampling,
@@ -22,7 +21,7 @@ function _M.request.initialize(name, roots, sampling, experimental)
     },
     clientInfo = {
       name = name or "lua-resty-mcp",
-      version = "1.0"
+      version = mcp.version.module
     }
   })
 end

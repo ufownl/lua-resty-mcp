@@ -1,4 +1,5 @@
 local mcp = {
+  version = require("resty.mcp.version"),
   rpc = require("resty.mcp.protocol.rpc"),
   protocol = require("resty.mcp.protocol")
 }
@@ -149,7 +150,7 @@ end
 
 local _M = {
   _NAME = "resty.mcp.client",
-  _VERSION = "1.0",
+  _VERSION = mcp.version.module,
 }
 
 function _M.new(transport, options)

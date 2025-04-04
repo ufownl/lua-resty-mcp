@@ -1,6 +1,7 @@
 local JSONRPC_VERSION = "2.0"
 
 local mcp = {
+  version = require("resty.mcp.version"),
   utils = require("resty.mcp.utils")
 }
 
@@ -9,7 +10,7 @@ local ngx_log = ngx.log
 
 local _M = {
   _NAME = "resty.mcp.protocol.rpc",
-  _VERSION = "1.0"
+  _VERSION = mcp.version.module
 }
 
 function _M.request(method, params)
