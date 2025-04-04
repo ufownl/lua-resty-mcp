@@ -5,7 +5,7 @@ local mcp = {
 
 local ngx_log = ngx.log
 
-local function get_list(self, category)
+local function get_list(self, category, field_name)
   local list = {}
   local cursor
   repeat
@@ -13,7 +13,7 @@ local function get_list(self, category)
     if not res then
       return nil, err
     end
-    for i, v in ipairs(res[category]) do
+    for i, v in ipairs(res[field_name or category]) do
       table.insert(list, v)
     end
     cursor = res.nextCursor
@@ -88,6 +88,13 @@ end
 
 function _MT.__index.list_resources(self)
   return list_impl(self, "resources")
+end
+
+function _MT.__index.list_resource_templates(self)
+  if not self.server.capabilities.resources then
+    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+  end
+  return get_list(self, "resources/templates", "resourceTemplates")
 end
 
 function _MT.__index.list_tools(self)
