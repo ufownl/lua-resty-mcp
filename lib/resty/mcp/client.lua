@@ -10,27 +10,50 @@ local ngx_thread_spawn = ngx.thread.spawn
 local ngx_thread_wait = ngx.thread.wait
 local unpack = table.unpack or unpack
 
-local function send_request(self, req)
-  if type(req.name) ~= "string" or type(req.args) ~= "table" or type(req.callback) ~= "function" then
+local function send_request(self, name, args, timeout)
+  if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
-  local msg, rid, err = mcp.protocol.request[req.name](unpack(req.args))
+  local msg, rid, err = mcp.protocol.request[name](unpack(args))
   if not msg then
     return nil, err
   end
-  local ok, err = self.conn:send(msg)
+  local co = ngx_thread_spawn(function()
+    local sema, err = ngx_semaphore.new()
+    if not sema then
+      return nil, err
+    end
+    local ok, err = self.conn:send(msg)
+    if not ok then
+      return nil, err
+    end
+    local result, errobj
+    self.pending_requests[rid] = function(r, e)
+      result = r
+      errobj = e
+      sema:post()
+    end
+    local ok, err = sema:wait(tonumber(timeout) or 10)
+    if not ok then
+      return nil, err
+    end
+    if errobj then
+      return nil, string.format("%d %s", errobj.code, errobj.message)
+    end
+    return result
+  end)
+  local ok, res, err = ngx_thread_wait(co)
   if not ok then
-    return nil, err
+    return nil, res
   end
-  self.pending_requests[rid] = req.callback
-  return true
+  return res, err
 end
 
-local function send_notification(self, ntf)
-  if type(ntf.name) ~= "string" or type(ntf.args) ~= "table" then
+local function send_notification(self, name, args)
+  if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid notification format")
   end
-  local msg, err = mcp.protocol.notification[ntf.name](unpack(ntf.args))
+  local msg, err = mcp.protocol.notification[name](unpack(args))
   if not msg then
     return nil, err
   end
@@ -42,12 +65,11 @@ local function send_notification(self, ntf)
 end
 
 local function main_loop(self)
-  repeat
+  while true do
     local msg, err = self.conn:recv()
     if not msg and err ~= "timeout" then
       break
     end
-    local term = false
     -- TODO: methods handler
     local reply = mcp.rpc.handle(msg, {}, function(rid, result, errobj)
       local cb = self.pending_requests[rid]
@@ -56,11 +78,7 @@ local function main_loop(self)
         return
       end
       self.pending_requests[rid] = nil
-      local ok, err = cb(result, errobj)
-      if not ok then
-        ngx_log(ngx.ERR, "response: ", err)
-        term = true
-      end
+      cb(result, errobj)
     end)
     if reply then
       local ok, err = self.conn:send(reply)
@@ -69,7 +87,7 @@ local function main_loop(self)
         break
       end
     end
-  until term
+  end
   self.main_loop = nil
 end
 
@@ -78,57 +96,30 @@ local _MT = {
 }
 
 function _MT.__index.initialize(self)
-  local sema, err = ngx_semaphore.new()
-  if not sema then
-    return nil, err
-  end
-  local ok, err = send_request(self, {
-    name = "initialize",
-    args = {self.name},
-    callback = function(result, errobj)
-      if errobj then
-        return nil, string.format("%d %s", errobj.code, errobj.message)
-      end
-      self.server = {
-        protocol = result.protocolVersion,
-        capabilities = {
-          logging = result.capabilities.logging and true,
-          prompts = result.capabilities.prompts and {
-            list_changed = result.capabilities.prompts.listChanged
-          },
-          resources = result.capabilities.resources and {
-            subscribe = result.capabilities.resources.subscribe,
-            list_changed = result.capabilities.resources.listChanged
-          },
-          tools = result.capabilities.tools and {
-            list_changed = result.capabilities.tools.listChanged
-          }
-        },
-        info = result.serverInfo
-      }
-      sema:post()
-      return true
-    end
-  })
-  if not ok then
+  self.main_loop = ngx_thread_spawn(main_loop, self)
+  local res, err = send_request(self, "initialize", {self.name})
+  if not res then
     self.conn:close()
     return nil, err
   end
-  self.main_loop = ngx_thread_spawn(main_loop, self)
-  repeat
-    local ok, err = sema:wait(1)
-    if not ok and err ~= "timeout" then
-      return nil, err
-    end
-    if not self.main_loop then
-      self.conn:close()
-      return nil, "initialization aborted"
-    end
-  until self.server
-  local ok, err = send_notification(self, {
-    name = "initialized",
-    args = {}
-  })
+  self.server = {
+    protocol = res.protocolVersion,
+    capabilities = {
+      logging = res.capabilities.logging and true,
+      prompts = res.capabilities.prompts and {
+        list_changed = res.capabilities.prompts.listChanged
+      },
+      resources = res.capabilities.resources and {
+        subscribe = res.capabilities.resources.subscribe,
+        list_changed = res.capabilities.resources.listChanged
+      },
+      tools = res.capabilities.tools and {
+        list_changed = res.capabilities.tools.listChanged
+      }
+    },
+    info = res.serverInfo
+  }
+  local ok, err = send_notification(self, "initialized", {})
   if not ok then
     self.conn:close()
     return nil, err
