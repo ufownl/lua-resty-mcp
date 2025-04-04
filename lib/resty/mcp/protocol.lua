@@ -30,6 +30,10 @@ function _M.request.list(category, cursor)
   return mcp.rpc.request(category.."/list", {cursor = cursor})
 end
 
+function _M.request.get_prompt(name, args)
+  return mcp.rpc.request("prompts/get", {name = name, arguments = args})
+end
+
 function _M.request.call_tool(name, args)
   return mcp.rpc.request("tools/call", {name = name, arguments = args})
 end

@@ -86,6 +86,23 @@ function _MT.__index.list_prompts(self)
   return list_impl(self, "prompts")
 end
 
+function _MT.__index.get_prompt(self, name, args)
+  if type(name) ~= "string" then
+    error("prompt name MUST be a string.")
+  end
+  if args and (type(args) ~= "table" or #args > 0) then
+    error("arguments of prompt MUST be a dict.")
+  end
+  if not self.server.capabilities.prompts then
+    return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
+  end
+  local res, err = mcp.session.send_request(self, "get_prompt", {name, args})
+  if not res then
+    return nil, err
+  end
+  return res
+end
+
 function _MT.__index.list_resources(self)
   return list_impl(self, "resources")
 end
