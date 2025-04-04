@@ -5,33 +5,53 @@ local mcp = {
 
 local ngx_log = ngx.log
 
-local function get_list_tools(self)
-  local tools = {}
+local function get_list(self, category)
+  local list = {}
   local cursor
   repeat
-    local res, err = mcp.session.send_request(self, "list_tools", {cursor})
+    local res, err = mcp.session.send_request(self, "list", {category, cursor})
     if not res then
       return nil, err
     end
-    for i, v in ipairs(res.tools) do
-      table.insert(tools, v)
+    for i, v in ipairs(res[category]) do
+      table.insert(list, v)
     end
     cursor = res.nextCursor
   until not cursor
-  return tools
+  return list
 end
 
 local function define_methods(self)
-  return {
-    ["notifications/tools/list_changed"] = function(params)
-      local tools, err = get_list_tools(self)
-      if not tools then
+  local methods = {}
+  for i, v in ipairs({"prompts", "resources", "tools"}) do
+    methods[string.format("notifications/%s/list_changed", v)] = function(params)
+      local list, err = get_list(self, v)
+      if not list then
         ngx_log(ngx.ERR, "client: ", err)
         return
       end
-      self.server.discovered_tools = tools
+      self.server["discovered_"..v] = list
     end
-  }
+  end
+  return methods
+end
+
+local function list_impl(self, category)
+  if not self.server.capabilities[category] then
+    return nil, string.format("%s v%s has no %s capability", self.server.info.name, self.server.info.version, category)
+  end
+  if not self.server.capabilities[category].listChanged then
+    return get_list(self, category)
+  end
+  local key = "discovered_"..category
+  if not self.server[key] then
+    local list, err = get_list(self, category)
+    if not list then
+      return nil, err
+    end
+    self.server[key] = list
+  end
+  return self.server[key]
 end
 
 local _MT = {
@@ -62,21 +82,16 @@ function _MT.__index.shutdown(self)
   mcp.session.shutdown(self)
 end
 
+function _MT.__index.list_prompts(self)
+  return list_impl(self, "prompts")
+end
+
+function _MT.__index.list_resources(self)
+  return list_impl(self, "resources")
+end
+
 function _MT.__index.list_tools(self)
-  if not self.server.capabilities.tools then
-    return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
-  end
-  if not self.server.capabilities.tools.listChanged then
-    return get_list_tools(self)
-  end
-  if not self.server.discovered_tools then
-    local tools, err = get_list_tools(self)
-    if not tools then
-      return nil, err
-    end
-    self.server.discovered_tools = tools
-  end
-  return self.server.discovered_tools
+  return list_impl(self, "tools")
 end
 
 function _MT.__index.call_tool(self, name, args)

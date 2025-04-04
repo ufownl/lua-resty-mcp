@@ -26,8 +26,8 @@ function _M.request.initialize(name, roots, sampling, experimental)
   })
 end
 
-function _M.request.list_tools(cursor)
-  return mcp.rpc.request("tools/list", {cursor = cursor})
+function _M.request.list(category, cursor)
+  return mcp.rpc.request(category.."/list", {cursor = cursor})
 end
 
 function _M.request.call_tool(name, args)
