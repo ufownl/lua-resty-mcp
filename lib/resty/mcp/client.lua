@@ -45,7 +45,6 @@ local function main_loop(self)
   repeat
     local msg, err = self.conn:recv()
     if not msg and err ~= "timeout" then
-      ngx_log(ngx.ERR, "transport: ", err)
       break
     end
     local term = false
