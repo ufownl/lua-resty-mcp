@@ -114,6 +114,20 @@ function _MT.__index.list_resource_templates(self)
   return get_list(self, "resources/templates", "resourceTemplates")
 end
 
+function _MT.__index.read_resource(self, uri)
+  if type(uri) ~= "string" then
+    error("resource uri MUST be a string.")
+  end
+  if not self.server.capabilities.resources then
+    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+  end
+  local res, err = mcp.session.send_request(self, "read_resource", {uri})
+  if not res then
+    return nil, err
+  end
+  return res
+end
+
 function _MT.__index.list_tools(self)
   return list_impl(self, "tools")
 end
