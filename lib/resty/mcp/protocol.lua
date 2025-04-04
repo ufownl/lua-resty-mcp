@@ -30,6 +30,10 @@ function _M.request.list_tools(cursor)
   return mcp.rpc.request("tools/list", {cursor = cursor})
 end
 
+function _M.request.call_tool(name, args)
+  return mcp.rpc.request("tools/call", {name = name, arguments = args})
+end
+
 function _M.notification.initialized()
   return mcp.rpc.notification("notifications/initialized")
 end

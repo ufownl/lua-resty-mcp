@@ -79,6 +79,23 @@ function _MT.__index.list_tools(self)
   return self.server.discovered_tools
 end
 
+function _MT.__index.call_tool(self, name, args)
+  if type(name) ~= "string" then
+    error("tool name MUST be a string.")
+  end
+  if args and (type(args) ~= "table" or #args > 0) then
+    error("arguments of tool calling MUST be a dict.")
+  end
+  if not self.server.capabilities.tools then
+    return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
+  end
+  local res, err = mcp.session.send_request(self, "call_tool", {name, args})
+  if not res then
+    return nil, err
+  end
+  return res
+end
+
 local _M = {
   _NAME = "resty.mcp.client",
   _VERSION = mcp.version.module
