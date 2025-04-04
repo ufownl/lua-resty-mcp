@@ -59,7 +59,7 @@ local _MT = {
 }
 
 function _MT.__index.initialize(self)
-  mcp.session.initialize(self, define_methods())
+  mcp.session.initialize(self, define_methods(self))
   local res, err = mcp.session.send_request(self, "initialize", {self.name})
   if not res then
     self.conn:close()
