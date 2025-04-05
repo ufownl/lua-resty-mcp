@@ -16,12 +16,12 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-function _M.new(name, conn, mt)
+function _M.new(conn, name, mt)
   return setmetatable({
-    name = name,
     conn = conn,
+    name = name,
     pending_requests = {}
-  }, mt)
+  }, mt or {__index = _M})
 end
 
 function _M.initialize(self, methods)

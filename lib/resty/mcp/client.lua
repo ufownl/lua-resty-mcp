@@ -159,7 +159,7 @@ function _M.new(transport, options)
   if not conn then
     return nil, err
   end
-  return mcp.session.new(options.name, conn, _MT)
+  return mcp.session.new(conn, options.name, _MT)
 end
 
 return _M
