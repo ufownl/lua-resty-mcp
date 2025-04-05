@@ -7,7 +7,6 @@ local _M = {
   _NAME = "resty.mcp.protocol",
   _VERSION = mcp.version.module,
   request = {},
-  response = {},
   notification = {}
 }
 
@@ -15,8 +14,8 @@ function _M.request.initialize(name, roots, sampling, experimental)
   return mcp.rpc.request("initialize", {
     protocolVersion = mcp.version.protocol,
     capabilities = {
-      roots = roots and {listChanged = true} or nil,
-      sampling = sampling and {} or sampling,
+      roots = roots and (type(roots) == "table" and roots or {listChanged = true}) or nil,
+      sampling = sampling and {} or nil,
       experimental = experimental
     },
     clientInfo = {
