@@ -4,6 +4,7 @@ local mcp = {
   protocol = require("resty.mcp.protocol")
 }
 
+local cjson = require("cjson.safe")
 local ngx_semaphore = require("ngx.semaphore")
 local ngx_log = ngx.log
 local ngx_thread_spawn = ngx.thread.spawn
@@ -96,6 +97,10 @@ function _M.send_request(self, name, args, timeout)
       return nil, err
     end
     if errobj then
+      if errobj.data then
+        local data, err = cjson.encode(errobj.data)
+        return nil, string.format("%d %s %s", errobj.code, errobj.message, data or err)
+      end
       return nil, string.format("%d %s", errobj.code, errobj.message)
     end
     return result

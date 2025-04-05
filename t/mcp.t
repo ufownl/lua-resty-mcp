@@ -169,7 +169,7 @@ GET /t
 true
 false
 text 3
--32602 Unknown tool
+-32602 Unknown tool {"name":"echo"}
 false
 false
 text Hello, world!
