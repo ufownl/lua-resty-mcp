@@ -11,14 +11,14 @@ local _M = {
   result = {}
 }
 
-function _M.request.initialize(name, roots, sampling, experimental)
+function _M.request.initialize(capabilities, name)
   return mcp.rpc.request("initialize", {
     protocolVersion = mcp.version.protocol,
-    capabilities = {
-      roots = roots and (type(roots) == "table" and roots or {listChanged = true}) or nil,
-      sampling = sampling and {} or nil,
-      experimental = experimental
-    },
+    capabilities = capabilities and {
+      roots = capabilities.roots and (type(capabilities.roots) == "table" and capabilities.roots or {listChanged = true}) or nil,
+      sampling = capabilities.sampling and {} or nil,
+      experimental = capabilities.experimental
+    } or {},
     clientInfo = {
       name = name or "lua-resty-mcp",
       version = mcp.version.module
@@ -46,17 +46,17 @@ function _M.notification.initialized()
   return mcp.rpc.notification("notifications/initialized")
 end
 
-function _M.result.initialize(name, tools, resources, prompts, completions, logging, experimental)
+function _M.result.initialize(capabilities, name)
   return {
     protocolVersion = mcp.version.protocol,
-    capabilities = {
-      tools = tools and (type(tools) == "table" and tools or {listChanged = true}) or nil,
-      resources = resources and (type(resources) == "table" and resources or {subscribe = true, listChanged = true}) or nil,
-      prompts = prompts and (type(prompts) == "table" and prompts or {listChanged = true}) or nil,
-      completions = completions and {} or nil,
-      logging = logging and {} or nil,
-      experimental = experimental
-    },
+    capabilities = capabilities and {
+      tools = capabilities.tools and (type(capabilities.tools) == "table" and capabilities.tools or {listChanged = true}) or nil,
+      resources = capabilities.resources and (type(capabilities.resources) == "table" and capabilities.resources or {subscribe = true, listChanged = true}) or nil,
+      prompts = capabilities.prompts and (type(capabilities.prompts) == "table" and capabilities.prompts or {listChanged = true}) or nil,
+      completions = capabilities.completions and {} or nil,
+      logging = capabilities.logging and {} or nil,
+      experimental = capabilities.experimental
+    } or {},
     serverInfo = {
       name = name or "lua-resty-mcp",
       version = mcp.version.module
