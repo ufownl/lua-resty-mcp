@@ -65,6 +65,9 @@ function _M.shutdown(self, kill)
 end
 
 function _M.send_request(self, name, args, timeout)
+  if coroutine.running() == self.main_loop then
+    error("cannot call send_request in main loop thread")
+  end
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
