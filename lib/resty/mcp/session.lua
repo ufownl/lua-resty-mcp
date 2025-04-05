@@ -28,24 +28,25 @@ function _M.initialize(self, methods)
   self.main_loop = ngx_thread_spawn(function()
     while true do
       local msg, err = self.conn:recv()
-      if not msg and err ~= "timeout" then
+      if msg then
+        local reply = mcp.rpc.handle(msg, methods, function(rid, result, errobj)
+          local cb = self.pending_requests[rid]
+          if not cb then
+            ngx_log(ngx.ERR, "response: request id mismatch")
+            return
+          end
+          self.pending_requests[rid] = nil
+          cb(result, errobj)
+        end)
+        if reply then
+          local ok, err = self.conn:send(reply)
+          if not ok then
+            ngx_log(ngx.ERR, "transport: ", err)
+            break
+          end
+        end
+      elseif err ~= "timeout" then
         break
-      end
-      local reply = mcp.rpc.handle(msg, methods, function(rid, result, errobj)
-        local cb = self.pending_requests[rid]
-        if not cb then
-          ngx_log(ngx.ERR, "response: request id mismatch")
-          return
-        end
-        self.pending_requests[rid] = nil
-        cb(result, errobj)
-      end)
-      if reply then
-        local ok, err = self.conn:send(reply)
-        if not ok then
-          ngx_log(ngx.ERR, "transport: ", err)
-          break
-        end
       end
     end
     self.main_loop = nil
