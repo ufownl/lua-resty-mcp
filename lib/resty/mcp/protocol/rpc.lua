@@ -105,7 +105,7 @@ local function handle_impl(dm, methods, resp_cb)
   end
   if dm.id then
     local result, code, message, data = fn(dm.params)
-    return type(result) ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+    return type(result) ~= "nil" and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
   end
   fn(dm.params)
 end
