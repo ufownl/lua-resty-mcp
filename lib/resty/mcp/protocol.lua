@@ -46,6 +46,10 @@ function _M.notification.initialized()
   return mcp.rpc.notification("notifications/initialized")
 end
 
+function _M.notification.list_changed(category)
+  return mcp.rpc.notification(string.format("notifications/%s/list_changed", category))
+end
+
 function _M.result.initialize(capabilities, name)
   return {
     protocolVersion = mcp.version.protocol,
@@ -61,6 +65,17 @@ function _M.result.initialize(capabilities, name)
       name = name or "lua-resty-mcp",
       version = mcp.version.module
     }
+  }
+end
+
+function _M.result.list_tools(tools, next_cursor)
+  local schemas = {}
+  for k, v in pairs(tools) do
+    table.insert(schemas, v:to_mcp())
+  end
+  return {
+    tools = schemas,
+    nextCursor = next_cursor
   }
 end
 
