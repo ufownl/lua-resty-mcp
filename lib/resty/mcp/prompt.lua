@@ -93,24 +93,24 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-function _M.new(name, desc, args, cb)
+function _M.new(name, cb, desc, args)
   if type(name) ~= "string" then
     error("prompt name MUST be a string.")
   end
-  if type(desc) ~= "string" then
+  if not cb then
+    error("callback of prompt MUST be set.")
+  end
+  if desc and type(desc) ~= "string" then
     error("description of prompt MUST be a string.")
   end
   if args and (type(args) ~= "table" or #args > 0) then
     error("expected arguments of prompt MUST be a dict.")
   end
-  if not cb then
-    error("callback of prompt MUST be set.")
-  end
   return setmetatable({
     name = name,
+    callback = cb,
     description = desc,
-    expected_args = args or {},
-    callback = cb
+    expected_args = args or {}
   }, _MT)
 end
 

@@ -89,18 +89,18 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-function _M.new(name, desc, args, cb, annos)
+function _M.new(name, cb, desc, args, annos)
   if type(name) ~= "string" then
     error("tool name MUST be a string.")
   end
-  if type(desc) ~= "string" then
+  if not cb then
+    error("callback of tool MUST be set.")
+  end
+  if desc and type(desc) ~= "string" then
     error("description of tool MUST be a string.")
   end
   if args and (type(args) ~= "table" or #args > 0) then
     error("expected arguments of tool MUST be a dict.")
-  end
-  if not cb then
-    error("callback of tool MUST be set.")
   end
   local annotations
   if annos then
@@ -113,9 +113,9 @@ function _M.new(name, desc, args, cb, annos)
   end
   return setmetatable({
     name = name,
+    callback = cb,
     description = desc,
     expected_args = args or {},
-    callback = cb,
     annotations = annotations
   }, _MT)
 end

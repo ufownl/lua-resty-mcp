@@ -11,16 +11,7 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local prompt = require("resty.mcp.prompt")
-    local pt = prompt.new("foobar", "Demo prompt definition and getting.", {
-      a = {
-        description = "First argument?"
-      },
-      b = {
-        description = "Second argument?",
-        required = true
-      },
-      c = {}
-    }, function(args)
+    local pt = prompt.new("foobar", function(args)
       local text = ""
       if args.a then
         text = text..string.format("a=%s\n", args.a)
@@ -32,7 +23,16 @@ location = /t {
       return {
         {role = "user", content = {type = "text", text = text}}
       }
-    end)
+    end, "Demo prompt definition and getting.", {
+      a = {
+        description = "First argument?"
+      },
+      b = {
+        description = "Second argument?",
+        required = true
+      },
+      c = {}
+    })
     local schema = pt:to_mcp()
     ngx.say(schema.name)
     ngx.say(schema.description)
@@ -104,9 +104,9 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local prompt = require("resty.mcp.prompt")
-    local pt = prompt.new("foobar", "Demo handling errors return by callback.", nil, function(args)
+    local pt = prompt.new("foobar", function(args)
       return nil, "mock error"
-    end)
+    end, "Demo handling errors return by callback.")
     local _, code, message, data = pt:get()
     ngx.say(string.format("%d %s %s", code, message, data.errmsg))
   }

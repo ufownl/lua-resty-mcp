@@ -18,26 +18,26 @@ if not sess then
 end
 
 local available_prompts = {
-  simple_prompt = mcp.prompt.new("simple_prompt", "A prompt without arguments.", nil, function(args)
+  simple_prompt = mcp.prompt.new("simple_prompt", function(args)
     return {
       {role = "user", content = {type = "text", text = "This is a simple prompt without arguments."}}
     }
-  end),
-  complex_prompt = mcp.prompt.new("complex_prompt", "A prompt with arguments.", {
-    temperature = {description = "Temperature setting.", required = true},
-    style = {description = "Output style."}
-  }, function(args)
+  end, "A prompt without arguments."),
+  complex_prompt = mcp.prompt.new("complex_prompt", function(args)
     return {
       {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
       {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
     }
-  end)
+  end, "A prompt with arguments.", {
+    temperature = {description = "Temperature setting.", required = true},
+    style = {description = "Output style."}
+  })
 }
 
-local enable_mock_error = mcp.tool.new("enable_mock_error", "Enable mock error prompt.", nil, function(args)
-  available_prompts.mock_error = mcp.prompt.new("mock_error", "Mock error message.", nil, function(args)
+local enable_mock_error = mcp.tool.new("enable_mock_error", function(args)
+  available_prompts.mock_error = mcp.prompt.new("mock_error", function(args)
     return nil, "mock error"
-  end)
+  end, "Mock error message.")
   local ok, err = sess:send_notification("list_changed", {"prompts"})
   if not ok then
     return {
@@ -45,7 +45,7 @@ local enable_mock_error = mcp.tool.new("enable_mock_error", "Enable mock error p
     }, true
   end
   return {}
-end)
+end, "Enable mock error prompt.")
 
 sess:initialize({
   initialize = function(params)

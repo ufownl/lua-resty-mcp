@@ -11,7 +11,12 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local tool = require("resty.mcp.tool")
-    local fn = tool.new("add", "Adds two numbers.", {
+    local fn = tool.new("add", function(args)
+      local r = args.a + args.b
+      return {
+        {type = "text", text = args.format and string.format(args.format, r) or tostring(r)}
+      }
+    end, "Adds two numbers.", {
       a = {
         type = "number",
         required = true
@@ -24,12 +29,7 @@ location = /t {
         type = "string",
         description = "Result format string."
       }
-    }, function(args)
-      local r = args.a + args.b
-      return {
-        {type = "text", text = args.format and string.format(args.format, r) or tostring(r)}
-      }
-    end)
+    })
     local schema = fn:to_mcp()
     ngx.say(schema.name)
     ngx.say(schema.description)
@@ -93,16 +93,7 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local tool = require("resty.mcp.tool")
-    local fn = tool.new("div", "Calculate `a` divided by `b`.", {
-      a = {
-        type = "number",
-        required = true
-      },
-      b = {
-        type = "number",
-        required = true
-      }
-    }, function(args)
+    local fn = tool.new("div", function(args)
       if args.b == 0 then
         return {
           {type = "text", text = "ERROR: divisor cannot be 0!"}
@@ -111,7 +102,16 @@ location = /t {
       return {
         {type = "text", text = tostring(args.a / args.b)}
       }
-    end)
+    end, "Calculate `a` divided by `b`.", {
+      a = {
+        type = "number",
+        required = true
+      },
+      b = {
+        type = "number",
+        required = true
+      }
+    })
     local result, code, message, data = fn({a = 1, b = 2})
     if not result then
       error(string.format("%d %s", code, message))
