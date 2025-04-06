@@ -80,4 +80,3 @@ sess:initialize({
     return tool(params.arguments)
   end
 })
-sess:shutdown()

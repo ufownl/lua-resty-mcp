@@ -15,5 +15,3 @@ if not sess then
 end
 
 sess:initialize({})
-sess:shutdown()
-

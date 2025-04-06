@@ -20,4 +20,3 @@ sess:initialize({
     return mcp.protocol.result.initialize()
   end
 })
-sess:shutdown()

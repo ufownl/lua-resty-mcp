@@ -1,5 +1,6 @@
 local mcp = {
   version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils"),
   rpc = require("resty.mcp.protocol.rpc"),
   protocol = require("resty.mcp.protocol")
 }
@@ -27,27 +28,41 @@ end
 
 function _M.initialize(self, methods)
   self.main_loop = ngx_thread_spawn(function()
+    local running_tasks = {}
     while true do
       local msg, err = self.conn:recv()
       if msg then
-        local reply = mcp.rpc.handle(msg, methods, function(rid, result, errobj)
-          local cb = self.pending_requests[rid]
-          if not cb then
-            ngx_log(ngx.ERR, "response: request id mismatch")
-            return
+        local tid = mcp.utils.generate_id()
+        running_tasks[tid] = ngx_thread_spawn(function()
+          local reply = mcp.rpc.handle(msg, methods, function(rid, result, errobj)
+            local cb = self.pending_requests[rid]
+            if not cb then
+              ngx_log(ngx.ERR, "response: request id mismatch")
+              return
+            end
+            self.pending_requests[rid] = nil
+            cb(result, errobj)
+          end)
+          if reply then
+            local ok, err = self.conn:send(reply)
+            if not ok then
+              ngx_log(ngx.ERR, "transport: ", err)
+            end
           end
-          self.pending_requests[rid] = nil
-          cb(result, errobj)
+          running_tasks[tid] = nil
         end)
-        if reply then
-          local ok, err = self.conn:send(reply)
-          if not ok then
-            ngx_log(ngx.ERR, "transport: ", err)
-            break
-          end
-        end
       elseif err ~= "timeout" then
         break
+      end
+    end
+    local tasks = {}
+    for k, v in pairs(running_tasks) do
+      table.insert(tasks, v)
+    end
+    if #tasks > 0 then
+      local ok, err = ngx_thread_wait(unpack(tasks))
+      if not ok then
+        ngx_log(ngx.ERR, "ngx thread: ", err)
       end
     end
     self.main_loop = nil

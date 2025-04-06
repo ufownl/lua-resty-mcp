@@ -4,7 +4,6 @@ local mcp = {
 }
 
 local ngx_log = ngx.log
-local ngx_thread_spawn = ngx.thread.spawn
 
 local function get_list(self, category, field_name)
   local list = {}
@@ -26,14 +25,12 @@ local function define_methods(self)
   local methods = {}
   for i, v in ipairs({"prompts", "resources", "tools"}) do
     methods[string.format("notifications/%s/list_changed", v)] = function(params)
-      ngx_thread_spawn(function()
-        local list, err = get_list(self, v)
-        if not list then
-          ngx_log(ngx.ERR, "client: ", err)
-          return
-        end
-        self.server["discovered_"..v] = list
-      end)
+      local list, err = get_list(self, v)
+      if not list then
+        ngx_log(ngx.ERR, "client: ", err)
+        return
+      end
+      self.server["discovered_"..v] = list
     end
   end
   return methods
