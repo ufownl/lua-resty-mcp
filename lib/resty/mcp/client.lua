@@ -55,7 +55,9 @@ local function list_impl(self, category)
 end
 
 local _MT = {
-  __index = {}
+  __index = {
+    wait_background_tasks = mcp.session.wait_background_tasks
+  }
 }
 
 function _MT.__index.initialize(self)

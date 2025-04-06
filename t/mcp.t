@@ -142,6 +142,17 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
+    local ok, err = client:wait_background_tasks()
+    if not ok then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
+    end
+    ngx.say(#tools)
+    ngx.say(tostring(client.server.discovered_tools == tools))
     local res, err = client:call_tool("echo", {message = "Hello, world!"})
     if not res then
       error(err)
@@ -150,14 +161,6 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    ngx.sleep(1)
-    ngx.say(tostring(client.server.discovered_tools == tools))
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
-    ngx.say(#tools)
-    ngx.say(tostring(client.server.discovered_tools == tools))
     client:shutdown()
   }
 }
@@ -172,7 +175,7 @@ text 3
 -32602 Unknown tool {"name":"echo"}
 false
 false
-text Hello, world!
-false
 3
 true
+false
+text Hello, world!

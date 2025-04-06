@@ -19,10 +19,20 @@ local _M = {
 }
 
 function _M.new(conn, name, mt)
+  local sema, err = ngx_semaphore.new()
+  if not sema then
+    conn:close()
+    return nil, err
+  end
   return setmetatable({
     conn = conn,
     name = name,
-    pending_requests = {}
+    pending_requests = {},
+    bg_tasks = {
+      sema = sema,
+      count = 0,
+      waiting = 0
+    }
   }, mt or {__index = _M})
 end
 
@@ -34,6 +44,7 @@ function _M.initialize(self, methods)
       if msg then
         local tid = mcp.utils.generate_id()
         running_tasks[tid] = ngx_thread_spawn(function()
+          self.bg_tasks.count = self.bg_tasks.count + 1
           local reply = mcp.rpc.handle(msg, methods, function(rid, result, errobj)
             local cb = self.pending_requests[rid]
             if not cb then
@@ -49,7 +60,11 @@ function _M.initialize(self, methods)
               ngx_log(ngx.ERR, "transport: ", err)
             end
           end
+          self.bg_tasks.count = self.bg_tasks.count - 1
           running_tasks[tid] = nil
+          if self.bg_tasks.count < 1 and self.bg_tasks.waiting > 0 then
+            self.bg_tasks.sema:post(self.bg_tasks.waiting)
+          end
         end)
       elseif err ~= "timeout" then
         break
@@ -79,6 +94,16 @@ function _M.shutdown(self, kill)
       ngx_log(ngx.ERR, "ngx thread: ", err)
     end
   end
+end
+
+function _M.wait_background_tasks(self, timeout)
+  if self.bg_tasks.count < 1 then
+    return true
+  end
+  self.bg_tasks.waiting = self.bg_tasks.waiting + 1
+  local ok, err = self.bg_tasks.sema:wait(tonumber(timeout) or 10)
+  self.bg_tasks.waiting = self.bg_tasks.waiting - 1
+  return ok, err
 end
 
 function _M.send_request(self, name, args, timeout)
