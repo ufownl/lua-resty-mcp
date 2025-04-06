@@ -83,4 +83,4 @@ text 3
 false
 text result=3
 -32602 Invalid arguments format string number
--32602 Invalid arguments a number true
+-32602 Missing required arguments a number true

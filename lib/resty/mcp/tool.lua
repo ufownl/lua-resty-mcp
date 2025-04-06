@@ -57,7 +57,7 @@ function _MT.__call(self, args)
     local actual_type = type(actual_value)
     if actual_type == "nil" then
       if v.required then
-        return nil, -32602, "Invalid arguments", {
+        return nil, -32602, "Missing required arguments", {
           argument = k,
           expected = v.type,
           required = true
