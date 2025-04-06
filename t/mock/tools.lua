@@ -31,7 +31,7 @@ available_tools.add = mcp.tool.new("add", "Adds two numbers.", {
     {type = "text", text = tostring(args.a + args.b)}
   }
 end)
-available_tools.enable_echo = mcp.tool.new("enable_echo", "Enables the echo tool.", {}, function(args)
+available_tools.enable_echo = mcp.tool.new("enable_echo", "Enables the echo tool.", nil, function(args)
   if available_tools.echo then
     return {
       {type = "text", text = "Echo tool has been enabled!"}
