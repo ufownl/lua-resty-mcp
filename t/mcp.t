@@ -122,7 +122,10 @@ location = /t {
     if not tools then
       error(err)
     end
-    ngx.say(#tools)
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
     ngx.say(tostring(client.server.discovered_tools == tools))
     local res, err = client:call_tool("add", {a = 1, b = 2})
     if not res then
@@ -151,9 +154,20 @@ location = /t {
     if not tools then
       error(err)
     end
-    ngx.say(#tools)
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
     ngx.say(tostring(client.server.discovered_tools == tools))
     local res, err = client:call_tool("echo", {message = "Hello, world!"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:call_tool("enable_echo")
     if not res then
       error(err)
     end
@@ -168,14 +182,24 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-2
+add
+Adds two numbers.
+enable_echo
+Enables the echo tool.
 true
 false
 text 3
 -32602 Unknown tool {"name":"echo"}
 false
 false
-3
+add
+Adds two numbers.
+echo
+Echoes back the input.
+enable_echo
+Enables the echo tool.
 true
 false
 text Hello, world!
+true
+text Echo tool has been enabled!
