@@ -25,6 +25,25 @@ function _M.generate_id()
   return ngx_base64.encode_base64url(sha256:final())
 end
 
+function _M.check_resource(resource)
+  if type(resource.uri) ~= "string" then
+    return false
+  end
+  if resource.text and type(resource.text) ~= "string" then
+    return false
+  end
+  if resource.blob and type(resource.blob) ~= "string" then
+    return false
+  end
+  if resource.text and resource.blob then
+    return false
+  end
+  if resource.mimeType and type(resource.mimeType) ~= "string" then
+    return false
+  end
+  return resource.text or resource.blob
+end
+
 local argument_checkers = {
   object = function(typ, val)
     return typ == "table" and #val == 0
@@ -65,25 +84,7 @@ local content_checkers = {
     return type(content.data) == "string" and type(content.mimeType) == "string"
   end,
   resource = function(content)
-    if type(content.resource) ~= "table" then
-      return false
-    end
-    if type(content.resource.uri) ~= "string" then
-      return false
-    end
-    if content.resource.text and type(content.resource.text) ~= "string" then
-      return false
-    end
-    if content.resource.blob and type(content.resource.blob) ~= "string" then
-      return false
-    end
-    if content.resource.text and content.resource.blob then
-      return false
-    end
-    if content.resource.mimeType and type(content.resource.mimeType) ~= "string" then
-      return false
-    end
-    return content.resource.text or content.resource.blob
+    return type(content.resource) == "table" and _M.check_resource(content.resource)
   end
 }
 
