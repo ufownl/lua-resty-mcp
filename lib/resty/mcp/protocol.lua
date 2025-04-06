@@ -68,13 +68,13 @@ function _M.result.initialize(capabilities, name)
   }
 end
 
-function _M.result.list_tools(tools, next_cursor)
+function _M.result.list(field_name, tbl, next_cursor)
   local schemas = {}
-  for k, v in pairs(tools) do
+  for k, v in pairs(tbl) do
     table.insert(schemas, v:to_mcp())
   end
   return {
-    tools = schemas,
+    [field_name] = schemas,
     nextCursor = next_cursor
   }
 end

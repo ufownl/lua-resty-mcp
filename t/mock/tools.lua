@@ -70,7 +70,7 @@ sess:initialize({
       return a.name < b.name
     end)
     local idx = tonumber(params.cursor) or 1
-    return mcp.protocol.result.list_tools({tools[idx]}, idx < #tools and tostring(idx + 1) or nil)
+    return mcp.protocol.result.list("tools", {tools[idx]}, idx < #tools and tostring(idx + 1) or nil)
   end,
   ["tools/call"] = function(params)
     local tool = available_tools[params.name]

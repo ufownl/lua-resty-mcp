@@ -203,3 +203,104 @@ false
 text Hello, world!
 true
 text Echo tool has been enabled!
+
+
+=== TEST 5: prompts
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "resty -I lib t/mock/prompts.lua"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local res, err = client:get_prompt("simple_prompt")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
+    end
+    local res, err = client:get_prompt("complex_prompt", {
+      temperature = "0.4",
+      style = "json"
+    })
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
+    end
+    local _, err = client:get_prompt("mock_error")
+    ngx.say(err)
+    local res, err = client:call_tool("enable_mock_error")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local ok, err = client:wait_background_tasks()
+    if not ok then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local _, err = client:get_prompt("mock_error")
+    ngx.say(err)
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+complex_prompt
+A prompt with arguments.
+simple_prompt
+A prompt without arguments.
+true
+A prompt without arguments.
+user text This is a simple prompt without arguments.
+A prompt with arguments.
+user text This is a complex prompt with arguments: temperature=0.4, style=json
+assistant text Assistant reply: temperature=0.4, style=json
+-32602 Invalid prompt name {"name":"mock_error"}
+false
+false
+complex_prompt
+A prompt with arguments.
+mock_error
+Mock error message.
+simple_prompt
+A prompt without arguments.
+true
+-32603 Internal errors {"errmsg":"mock error"}
