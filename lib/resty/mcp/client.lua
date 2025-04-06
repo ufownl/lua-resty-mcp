@@ -25,6 +25,10 @@ local function define_methods(self)
   local methods = {}
   for i, v in ipairs({"prompts", "resources", "tools"}) do
     methods[string.format("notifications/%s/list_changed", v)] = function(params)
+      local cap = self.server.capabilities[v]
+      if not cap or not cap.listChanged then
+        return
+      end
       local list, err = get_list(self, v)
       if not list then
         ngx_log(ngx.ERR, "client: ", err)
