@@ -1,65 +1,9 @@
 local mcp = {
-  version = require("resty.mcp.version")
+  version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils")
 }
 
 local cjson = require("cjson.safe")
-
-local argument_checkers = {
-  object = function(typ, val)
-    return typ == "table" and #val == 0
-  end,
-  array = function(typ, val)
-    return typ == "table"
-  end,
-  string = function(typ, val)
-    return typ == "string"
-  end,
-  number = function(typ, val)
-    return typ == "number"
-  end,
-  integer = function(typ, val)
-    return typ == "number" and val % 1 == 0
-  end,
-  boolean = function(typ, val)
-    return typ == "boolean"
-  end,
-  null = function(typ, val)
-    return val == cjson.null
-  end
-}
-
-local content_checkers = {
-  text = function(content)
-    return type(content.text) == "string"
-  end,
-  image = function(content)
-    return type(content.data) == "string" and type(content.mimeType) == "string"
-  end,
-  audio = function(content)
-    return type(content.data) == "string" and type(content.mimeType) == "string"
-  end,
-  resource = function(content)
-    if type(content.resource) ~= "table" then
-      return false
-    end
-    if type(content.resource.uri) ~= "string" then
-      return false
-    end
-    if content.resource.text and type(content.resource.text) ~= "string" then
-      return false
-    end
-    if content.resource.blob and type(content.resource.blob) ~= "string" then
-      return false
-    end
-    if content.resource.text and content.resource.blob then
-      return false
-    end
-    if content.resource.mimeType and type(content.resource.mimeType) ~= "string" then
-      return false
-    end
-    return content.resource.text or content.resource.blob
-  end
-}
 
 local _MT = {
   __index = {}
@@ -119,21 +63,17 @@ function _MT.__call(self, args)
           required = true
         }
       end
-    else
-      local checker = argument_checkers[v.type]
-      if checker and not checker(actual_type, actual_value) then
-        return nil, -32602, "Invalid arguments", {
-          argument = k,
-          expected = v.type,
-          actual = actual_type
-        }
-      end
+    elseif not mcp.utils.check_argument(v.type, actual_type, actual_value) then
+      return nil, -32602, "Invalid arguments", {
+        argument = k,
+        expected = v.type,
+        actual = actual_type
+      }
     end
   end
   local content, is_error = self.callback(args)
   for i, v in ipairs(content) do
-    local checker = content_checkers[v.type]
-    if not checker or not checker(v) then
+    if not mcp.utils.check_content(v) then
       error("invalid content format")
     end
   end
