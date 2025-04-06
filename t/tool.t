@@ -84,3 +84,57 @@ false
 text result=3
 -32602 Invalid arguments format string number
 -32602 Missing required arguments a number true
+
+
+=== TEST 2: handle tool execution errors
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local tool = require("resty.mcp.tool")
+    local fn = tool.new("div", "Calculate `a` divided by `b`.", {
+      a = {
+        type = "number",
+        required = true
+      },
+      b = {
+        type = "number",
+        required = true
+      }
+    }, function(args)
+      if args.b == 0 then
+        return {
+          {type = "text", text = "ERROR: divisor cannot be 0!"}
+        }, true
+      end
+      return {
+        {type = "text", text = tostring(args.a / args.b)}
+      }
+    end)
+    local result, code, message, data = fn({a = 1, b = 2})
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    ngx.say(tostring(result.isError))
+    for i, v in ipairs(result.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local result, code, message, data = fn({a = 1, b = 0})
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    ngx.say(tostring(result.isError))
+    for i, v in ipairs(result.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+false
+text 0.5
+true
+text ERROR: divisor cannot be 0!
