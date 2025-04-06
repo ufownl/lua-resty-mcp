@@ -92,4 +92,8 @@ function _M.check_content(content)
   return checker and checker(content)
 end
 
+function _M.check_role(role)
+  return role == "user" or role == "assistant"
+end
+
 return _M
