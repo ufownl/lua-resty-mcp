@@ -121,6 +121,25 @@ local function get_values(ctx, op, key, mod)
   return res
 end
 
+local function get_regex(op, key, mod)
+  local pattern = "\\S"..(tonumber(mod) and string.format("{%d,%d}", 0, mod * 3) or "*")
+  if op == ";" then
+    if mod == "*" then
+      return string.format("(?:%s=?)?(%s)", encode_unreserved(key), pattern)
+    else
+      return encode_unreserved(key)..string.format("(?:=(%s))?", pattern)
+    end
+  elseif op == "?" or op == "&" then
+    if mod == "*" then
+      return string.format("(?:%s=)?(%s)", encode_unreserved(key), pattern)
+    else
+      return encode_unreserved(key)..string.format("=(%s)", pattern)
+    end
+  else
+    return string.format("(%s)", pattern)
+  end
+end
+
 local available_operators = {
   ["+"] = true,
   ["#"] = true,
@@ -140,21 +159,23 @@ local function parse_operator(exp)
   end
 end
 
-local _MT = {
-  __index = {}
-}
-
-function _MT.__index.expand(self, ctx)
-  local out, n, err = ngx_re_gsub(self.pattern, "{([^{}]+)}|([^{}]+)", function(m)
+local function expand_impl(pattern, ctx)
+  local vars = {}
+  local out, n, err = ngx_re_gsub(pattern, "{([^{}]+)}|([^{}]+)", function(m)
     if m[1] then
       local op, exp = parse_operator(m[1])
       local vals = {}
       local function parse_variable(var)
         local m, err = ngx_re_match(var, "([^:\\*]*)(?::(\\d+)|(\\*))?", "o")
         if m then
-          for i, v in ipairs(get_values(ctx, op, m[1], m[2] or m[3])) do
-            table.insert(vals, v)
+          if ctx then
+            for i, v in ipairs(get_values(ctx, op, m[1], m[2] or m[3])) do
+              table.insert(vals, v)
+            end
+          else
+            table.insert(vals, get_regex(op, m[1], m[2] or m[3]))
           end
+          table.insert(vars, m[1])
         elseif err then
           error(err)
         end
@@ -175,6 +196,9 @@ function _MT.__index.expand(self, ctx)
       if op and op ~= "+" then
         local sep = op
         if op == "?" then
+          if not ctx then
+            op = "\\"..op
+          end
           sep = "&"
         elseif op == "#" then
           sep = ","
@@ -183,14 +207,51 @@ function _MT.__index.expand(self, ctx)
       else
         return table.concat(vals, ",")
       end
-    else
+    elseif ctx then
       return encode_reserved(m[2])
+    else
+      local s, n, err = ngx_re_gsub(encode_reserved(m[2]), "[\\$\\(\\)\\[\\]\\.\\?\\+\\*]", function(m)
+        return "\\"..m[0]
+      end, "o")
+      if err then
+        error(err)
+      end
+      return s
     end
   end, "o")
   if not out then
     error(err)
   end
+  return ctx and out or "^"..out.."$", vars
+end
+
+local _MT = {
+  __index = {}
+}
+
+function _MT.__index.expand(self, ctx)
+  if not ctx then
+    error("context MUST be set")
+  end
+  local out, vars = expand_impl(self.pattern, ctx)
   return out
+end
+
+function _MT.__index.match(self, uri)
+  local m, err = ngx_re_match(uri, self.match_regex, "o")
+  if err then
+    error(err)
+  end
+  if not m then
+    return nil, "mismatch"
+  end
+  local res = {}
+  for i, v in ipairs(self.variables) do
+    if m[i] and (not res[v] or #m[i] > #res[v]) then
+      res[v] = m[i]
+    end
+  end
+  return res
 end
 
 local _M = {
@@ -199,14 +260,15 @@ local _M = {
 }
 
 function _M.new(pattern)
-  local from, to, err = ngx_re_find(pattern, "{([^{}]+)}", "o")
-  if not from then
-    if err then
-      error(err)
-    end
+  local regex, vars = expand_impl(pattern)
+  if #vars == 0 then
     return nil, "invalid uri template pattern"
   end
-  return setmetatable({pattern = pattern}, _MT)
+  return setmetatable({
+    pattern = pattern,
+    match_regex = regex,
+    variables = vars
+  }, _MT)
 end
 
 return _M
