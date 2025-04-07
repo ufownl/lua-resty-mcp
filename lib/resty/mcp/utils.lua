@@ -10,7 +10,8 @@ local ngx_time = ngx.time
 
 local _M = {
   _NAME = "resty.mcp.utils",
-  _VERSION = mcp.version.module
+  _VERSION = mcp.version.module,
+  uri_template = require("resty.mcp.utils.uri_template").new
 }
 
 local id_counter = 0
