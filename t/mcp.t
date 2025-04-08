@@ -404,6 +404,47 @@ location = /t {
         ngx.say(err)
       end
     end
+    local res, err = client:call_tool("touch_resource", {uri = "mock://static/text"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local uris = {"mock://static/text", "mock://dynamic/text/123", "mock://unknown"}
+    for i, v in ipairs(uris) do
+      local ok, err = client:subscribe_resource(v, function(uri)
+        ngx.say(string.format("sub %d: %s", i, uri))
+      end)
+      if not ok then
+        ngx.say(err)
+      end
+    end
+    for i, uri in ipairs(uris) do
+      local res, err = client:call_tool("touch_resource", {uri = uri})
+      if not res then
+        error(err)
+      end
+      ngx.say(tostring(res.isError))
+      for i, v in ipairs(res.content) do
+        ngx.say(string.format("%s %s", v.type, v.text))
+      end
+    end
+    local ok, err = client:unsubscribe_resource(uris[1])
+    if not ok then
+      error(err)
+    end
+    for i, uri in ipairs(uris) do
+      local res, err = client:call_tool("touch_resource", {uri = uri})
+      if not res then
+        error(err)
+      end
+      ngx.say(tostring(res.isError))
+      for i, v in ipairs(res.content) do
+        ngx.say(string.format("%s %s", v.type, v.text))
+      end
+    end
     client:shutdown()
   }
 }
@@ -465,3 +506,14 @@ application/octet-stream
 nil
 content of dynamic blob resource mock://dynamic/blob/123, id=123
 -32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
+false
+-32002 Resource not found {"uri":"mock:\/\/unknown"}
+sub 1: mock://static/text
+false
+sub 2: mock://dynamic/text/123
+false
+false
+false
+sub 2: mock://dynamic/text/123
+false
+false

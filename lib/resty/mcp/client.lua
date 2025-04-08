@@ -22,7 +22,15 @@ local function get_list(self, category, field_name)
 end
 
 local function define_methods(self)
-  local methods = {}
+  local methods = {
+    ["notifications/resources/updated"] = function(params)
+      local cap = self.server.capabilities.resources
+      if not cap or not cap.subscribe or not self.subscribed_resources or not self.subscribed_resources[params.uri] then
+        return
+      end
+      self.subscribed_resources[params.uri](params.uri)
+    end
+  }
   for i, v in ipairs({"prompts", "resources", "tools"}) do
     methods[string.format("notifications/%s/list_changed", v)] = function(params)
       local cap = self.server.capabilities[v]
@@ -132,6 +140,54 @@ function _MT.__index.read_resource(self, uri)
     return nil, err
   end
   return res
+end
+
+function _MT.__index.subscribe_resource(self, uri, cb)
+  if type(uri) ~= "string" then
+    error("resource uri MUST be a string.")
+  end
+  if not cb then
+    error("callback of subscribed resource MUST be set")
+  end
+  if not self.server.capabilities.resources then
+    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+  end
+  if not self.server.capabilities.resources.subscribe then
+    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
+  end
+  if self.subscribed_resources and self.subscribed_resources[uri] then
+    return nil, string.format("resource %s had been subscribed", uri)
+  end
+  local res, err = mcp.session.send_request(self, "subscribe_resource", {uri})
+  if not res then
+    return nil, err
+  end
+  if self.subscribed_resources then
+    self.subscribed_resources[uri] = cb
+  else
+    self.subscribed_resources = {[uri] = cb}
+  end
+  return true
+end
+
+function _MT.__index.unsubscribe_resource(self, uri)
+  if type(uri) ~= "string" then
+    error("resource uri MUST be a string.")
+  end
+  if not self.server.capabilities.resources then
+    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+  end
+  if not self.server.capabilities.resources.subscribe then
+    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
+  end
+  local res, err = mcp.session.send_request(self, "unsubscribe_resource", {uri})
+  if not res then
+    return nil, err
+  end
+  if self.subscribed_resources then
+    self.subscribed_resources[uri] = nil
+  end
+  return true
 end
 
 function _MT.__index.list_tools(self)

@@ -38,6 +38,14 @@ function _M.request.read_resource(uri)
   return mcp.rpc.request("resources/read", {uri = uri})
 end
 
+function _M.request.subscribe_resource(uri)
+  return mcp.rpc.request("resources/subscribe", {uri = uri})
+end
+
+function _M.request.unsubscribe_resource(uri)
+  return mcp.rpc.request("resources/unsubscribe", {uri = uri})
+end
+
 function _M.request.call_tool(name, args)
   return mcp.rpc.request("tools/call", {name = name, arguments = args})
 end
@@ -48,6 +56,10 @@ end
 
 function _M.notification.list_changed(category)
   return mcp.rpc.notification(string.format("notifications/%s/list_changed", category))
+end
+
+function _M.notification.resource_updated(uri)
+  return mcp.rpc.notification("notifications/resources/updated", {uri = uri})
 end
 
 function _M.result.initialize(capabilities, name)
