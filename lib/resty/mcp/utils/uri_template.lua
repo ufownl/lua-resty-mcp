@@ -159,6 +159,19 @@ local function parse_operator(exp)
   end
 end
 
+local function escape_regex(raw, ctx)
+  if ctx then
+    return raw
+  end
+  local out, n, err = ngx_re_gsub(raw, "[\\$\\(\\)\\[\\]\\.\\?\\+\\*]", function(m)
+    return "\\"..m[0]
+  end, "o")
+  if err then
+    error(err)
+  end
+  return out
+end
+
 local function expand_impl(pattern, ctx)
   local vars = {}
   local out, n, err = ngx_re_gsub(pattern, "{([^{}]+)}|([^{}]+)", function(m)
@@ -196,27 +209,16 @@ local function expand_impl(pattern, ctx)
       if op and op ~= "+" then
         local sep = op
         if op == "?" then
-          if not ctx then
-            op = "\\"..op
-          end
           sep = "&"
         elseif op == "#" then
           sep = ","
         end
-        return op..table.concat(vals, sep)
+        return escape_regex(op, ctx)..table.concat(vals, escape_regex(sep, ctx))
       else
         return table.concat(vals, ",")
       end
-    elseif ctx then
-      return encode_reserved(m[2])
     else
-      local s, n, err = ngx_re_gsub(encode_reserved(m[2]), "[\\$\\(\\)\\[\\]\\.\\?\\+\\*]", function(m)
-        return "\\"..m[0]
-      end, "o")
-      if err then
-        error(err)
-      end
-      return s
+      return escape_regex(encode_reserved(m[2]), ctx)
     end
   end, "o")
   if not out then

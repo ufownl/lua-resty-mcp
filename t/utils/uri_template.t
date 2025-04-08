@@ -20,7 +20,15 @@ location = /t {
       if not t then
         error(err)
       end
-      ngx.say(t:expand(ctx))
+      local uri = t:expand(ctx)
+      ngx.say(uri)
+      local m, err = t:match(uri)
+      if not m then
+        error(err)
+      end
+      for i, v in ipairs(t.variables) do
+        ngx.say(ngx.unescape_uri(m[v]))
+      end
     end
     test_case("{var}")
     test_case("{hello}")
@@ -31,7 +39,9 @@ GET /t
 --- error_code: 200
 --- response_body
 value
+value
 Hello%20World%21
+Hello World!
 
 
 === Level 2
@@ -51,7 +61,15 @@ location = /t {
       if not t then
         error(err)
       end
-      ngx.say(t:expand(ctx))
+      local uri = t:expand(ctx)
+      ngx.say(uri)
+      local m, err = t:match(uri)
+      if not m then
+        error(err)
+      end
+      for i, v in ipairs(t.variables) do
+        ngx.say(ngx.unescape_uri(m[v]))
+      end
     end
     test_case("{+var}")
     test_case("{+hello}")
@@ -66,11 +84,17 @@ GET /t
 --- error_code: 200
 --- response_body
 value
+value
 Hello%20World!
+Hello World!
 /foo/bar/here
+/foo/bar
 here?ref=/foo/bar
+/foo/bar
 X#value
+value
 X#Hello%20World!
+Hello World!
 
 
 === Level 3
@@ -93,7 +117,15 @@ location = /t {
       if not t then
         error(err)
       end
-      ngx.say(t:expand(ctx))
+      local uri = t:expand(ctx)
+      ngx.say(uri)
+      local m, err = t:match(uri)
+      if not m then
+        error(err)
+      end
+      for i, v in ipairs(t.variables) do
+        ngx.say(ngx.unescape_uri(m[v]))
+      end
     end
     test_case("map?{x,y}")
     test_case("{x,hello,y}")
@@ -111,6 +143,7 @@ location = /t {
     test_case("{?x,y,empty}")
     test_case("?fixed=yes{&x}")
     test_case("{&x,y,empty}")
+    ngx.say("END")
   }
 }
 --- request
@@ -118,21 +151,57 @@ GET /t
 --- error_code: 200
 --- response_body
 map?1024,768
+1024
+768
 1024,Hello%20World%21,768
+1024
+Hello World!
+768
 1024,Hello%20World!,768
+1024
+Hello World!
+768
 /foo/bar,1024/here
+/foo/bar
+1024
 #1024,Hello%20World!,768
+1024
+Hello World!
+768
 #/foo/bar,1024/here
+/foo/bar
+1024
 X.value
+value
 X.1024.768
+1024
+768
 /value
+value
 /value/1024/here
+value
+1024
 ;x=1024;y=768
+1024
+768
 ;x=1024;y=768;empty
+1024
+768
+
 ?x=1024&y=768
+1024
+768
 ?x=1024&y=768&empty=
+1024
+768
+
 ?fixed=yes&x=1024
+1024
 &x=1024&y=768&empty=
+1024
+768
+
+END
 
 
 === Level 4
@@ -148,35 +217,41 @@ location = /t {
       list = {"red", "green", "blue"},
       keys = {semi = ";", dot = ".", comma = ","}
     }
-    local function test_case(case, reorder, prefix)
+    local function test_case(case, reorder)
       local utils = require("resty.mcp.utils")
       local t, err = utils.uri_template(case)
       if not t then
         error(err)
       end
-      local out = t:expand(ctx)
+      local uri = t:expand(ctx)
       if reorder then
-        local prefix = #out
+        local prefix = #uri
         local sep
         for i, v in ipairs(reorder) do
-          local from, to = string.find(out, v, 1, true)
+          local from, to = string.find(uri, v, 1, true)
           if not from then
             error("dismatch")
           end
           if from < prefix then
             prefix = from
           end
-          if to < #out then
-            sep = string.sub(out, to + 1, to + 1)
+          if to < #uri then
+            sep = string.sub(uri, to + 1, to + 1)
           end
         end
-        local reordered_out = string.sub(out, 1, prefix - 1)..table.concat(reorder, sep)
-        if #reordered_out ~= #out then
+        local reordered_uri = string.sub(uri, 1, prefix - 1)..table.concat(reorder, sep)
+        if #reordered_uri ~= #uri then
           error("dismatch")
         end
-        ngx.say(reordered_out)
-      else
-        ngx.say(out)
+        uri = reordered_uri
+      end
+      ngx.say(uri)
+      local m, err = t:match(uri)
+      if not m then
+        error(err)
+      end
+      for i, v in ipairs(t.variables) do
+        ngx.say(ngx.unescape_uri(m[v]))
       end
     end
     test_case("{var:3}")
@@ -228,44 +303,88 @@ GET /t
 --- error_code: 200
 --- response_body
 val
+val
+value
 value
 red,green,blue
 red,green,blue
+red,green,blue
+red,green,blue
 semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 semi=%3B,dot=.,comma=%2C
+semi=;,dot=.,comma=,
 /foo/b/here
+/foo/b
+red,green,blue
+red,green,blue
 red,green,blue
 red,green,blue
 semi,;,dot,.,comma,,
+semi,;,dot,.,comma,,
+semi=;,dot=.,comma=,
 semi=;,dot=.,comma=,
 #/foo/b/here
+/foo/b
 #red,green,blue
+red,green,blue
 #red,green,blue
+red,green,blue
 #semi,;,dot,.,comma,,
+semi,;,dot,.,comma,,
 #semi=;,dot=.,comma=,
+semi=;,dot=.,comma=,
 X.val
+val
 X.red,green,blue
+red,green,blue
 X.red.green.blue
+red.green.blue
 X.semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 X.semi=%3B.dot=..comma=%2C
+semi=;.dot=..comma=,
 /v/value
+value
+value
 /red,green,blue
+red,green,blue
 /red/green/blue
+red/green/blue
 /red/green/blue/%2Ffoo
+red/green/blue
+/foo
 /semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 /semi=%3B/dot=./comma=%2C
+semi=;/dot=./comma=,
 ;hello=Hello
+Hello
 ;list=red,green,blue
+red,green,blue
 ;list=red;list=green;list=blue
+red;list=green;list=blue
 ;keys=semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 ;semi=%3B;dot=.;comma=%2C
+semi=;;dot=.;comma=,
 ?var=val
+val
 ?list=red,green,blue
+red,green,blue
 ?list=red&list=green&list=blue
+red&list=green&list=blue
 ?keys=semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 ?semi=%3B&dot=.&comma=%2C
+semi=;&dot=.&comma=,
 &var=val
+val
 &list=red,green,blue
+red,green,blue
 &list=red&list=green&list=blue
+red&list=green&list=blue
 &keys=semi,%3B,dot,.,comma,%2C
+semi,;,dot,.,comma,,
 &semi=%3B&dot=.&comma=%2C
+semi=;&dot=.&comma=,
