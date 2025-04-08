@@ -81,10 +81,9 @@ function _MT.__index.get(self, args)
       error("invalid content format")
     end
   end
-  setmetatable(messages, cjson.array_mt)
   return {
     description = self.description,
-    messages = messages
+    messages = setmetatable(messages, cjson.array_mt)
   }
 end
 

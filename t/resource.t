@@ -30,7 +30,7 @@ location = /t {
     ngx.say(schema.annotations.priority)
     local result, code, message, data = res:read()
     if not result then
-      error(string.format("%d %s %s", code, message))
+      error(string.format("%d %s", code, message))
     end
     for i, v in ipairs(result.contents) do
       ngx.say(v.uri)

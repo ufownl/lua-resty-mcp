@@ -43,7 +43,7 @@ location = /t {
     end
     local result, code, message, data = pt:get({a = "foo", b = "bar", c = "foobar"})
     if not result then
-      error(string.format("%d %s %s", code, message))
+      error(string.format("%d %s", code, message))
     end
     ngx.say(result.description)
     for i, v in ipairs(result.messages) do
@@ -53,7 +53,7 @@ location = /t {
     end
     local result, code, message, data = pt:get({b = "bar", c = "foobar"})
     if not result then
-      error(string.format("%d %s %s", code, message))
+      error(string.format("%d %s", code, message))
     end
     ngx.say(result.description)
     for i, v in ipairs(result.messages) do

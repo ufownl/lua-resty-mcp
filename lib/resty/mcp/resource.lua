@@ -31,9 +31,11 @@ function _MT.__index.read(self)
     if not mcp.utils.check_resource(v) then
       error("invalid resource format")
     end
+    if self.mime and v.uri == self.uri and v.mimeType ~= self.mime then
+      error("resource MIME type mismatch")
+    end
   end
-  setmetatable(contents, cjson.array_mt)
-  return {contents = contents}
+  return {contents = setmetatable(contents, cjson.array_mt)}
 end
 
 local _M = {

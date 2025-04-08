@@ -78,9 +78,8 @@ function _MT.__call(self, args)
       error("invalid content format")
     end
   end
-  setmetatable(content, cjson.array_mt)
   return {
-    content = content,
+    content = setmetatable(content, cjson.array_mt),
     isError = is_error and true or false
   }
 end
