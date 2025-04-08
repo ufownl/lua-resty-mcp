@@ -17,27 +17,36 @@ if not sess then
   error(err)
 end
 
-local available_prompts = {
-  simple_prompt = mcp.prompt.new("simple_prompt", function(args)
-    return {
-      {role = "user", content = {type = "text", text = "This is a simple prompt without arguments."}}
-    }
-  end, "A prompt without arguments."),
-  complex_prompt = mcp.prompt.new("complex_prompt", function(args)
-    return {
-      {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
-      {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
-    }
-  end, "A prompt with arguments.", {
-    temperature = {description = "Temperature setting.", required = true},
-    style = {description = "Output style."}
-  })
-}
+local available_prompts = {}
+
+local prompt = mcp.prompt.new("simple_prompt", function(args)
+  return {
+    {role = "user", content = {type = "text", text = "This is a simple prompt without arguments."}}
+  }
+end, "A prompt without arguments.")
+available_prompts[prompt.name] = prompt
+
+local prompt = mcp.prompt.new("complex_prompt", function(args)
+  return {
+    {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
+    {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
+  }
+end, "A prompt with arguments.", {
+  temperature = {description = "Temperature setting.", required = true},
+  style = {description = "Output style."}
+})
+available_prompts[prompt.name] = prompt
 
 local enable_mock_error = mcp.tool.new("enable_mock_error", function(args)
-  available_prompts.mock_error = mcp.prompt.new("mock_error", function(args)
+  if available_prompts.mock_error then
+    return {
+      {type = "text", text = "Mock error prompt has been enabled!"}
+    }, true
+  end
+  local prompt = mcp.prompt.new("mock_error", function(args)
     return nil, "mock error"
   end, "Mock error message.")
+  available_prompts[prompt.name] = prompt
   local ok, err = sess:send_notification("list_changed", {"prompts"})
   if not ok then
     return {

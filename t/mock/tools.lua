@@ -17,7 +17,8 @@ if not sess then
 end
 
 local available_tools = {}
-available_tools.add = mcp.tool.new("add", function(args)
+
+local tool = mcp.tool.new("add", function(args)
   return {
     {type = "text", text = tostring(args.a + args.b)}
   }
@@ -31,13 +32,15 @@ end, "Adds two numbers.", {
     required = true
   }
 })
-available_tools.enable_echo = mcp.tool.new("enable_echo", function(args)
+available_tools[tool.name] = tool
+
+local tool = mcp.tool.new("enable_echo", function(args)
   if available_tools.echo then
     return {
       {type = "text", text = "Echo tool has been enabled!"}
     }, true
   end
-  available_tools.echo = mcp.tool.new("echo", function(args)
+  local tool = mcp.tool.new("echo", function(args)
     return {
       {type = "text", text = args.message}
     }
@@ -48,6 +51,7 @@ available_tools.enable_echo = mcp.tool.new("enable_echo", function(args)
       required = true
     }
   })
+  available_tools[tool.name] = tool
   local ok, err = sess:send_notification("list_changed", {"tools"})
   if not ok then
     return {
@@ -56,6 +60,7 @@ available_tools.enable_echo = mcp.tool.new("enable_echo", function(args)
   end
   return {}
 end, "Enables the echo tool.")
+available_tools[tool.name] = tool
 
 sess:initialize({
   initialize = function(params)
