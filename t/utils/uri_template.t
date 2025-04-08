@@ -22,6 +22,9 @@ location = /t {
       end
       local uri = t:expand(ctx)
       ngx.say(uri)
+      if not t:test(uri) then
+        error("test failure")
+      end
       local m, err = t:match(uri)
       if not m then
         error(err)
@@ -63,6 +66,9 @@ location = /t {
       end
       local uri = t:expand(ctx)
       ngx.say(uri)
+      if not t:test(uri) then
+        error("test failure")
+      end
       local m, err = t:match(uri)
       if not m then
         error(err)
@@ -119,6 +125,9 @@ location = /t {
       end
       local uri = t:expand(ctx)
       ngx.say(uri)
+      if not t:test(uri) then
+        error("test failure")
+      end
       local m, err = t:match(uri)
       if not m then
         error(err)
@@ -246,6 +255,9 @@ location = /t {
         uri = reordered_uri
       end
       ngx.say(uri)
+      if not t:test(uri) then
+        error("test failure")
+      end
       local m, err = t:match(uri)
       if not m then
         error(err)

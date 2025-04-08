@@ -239,6 +239,14 @@ function _MT.__index.expand(self, ctx)
   return out
 end
 
+function _MT.__index.test(self, uri)
+  local from, to, err = ngx_re_find(uri, self.match_regex, "o")
+  if err then
+    error(err)
+  end
+  return from == 1 and to == #uri
+end
+
 -- Known issue: parse unpacked list variables following a key operator (`;?&`).
 function _MT.__index.match(self, uri)
   local m, err = ngx_re_match(uri, self.match_regex, "o")

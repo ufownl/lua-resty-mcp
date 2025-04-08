@@ -20,6 +20,10 @@ function _MT.__index.to_mcp(self)
   }
 end
 
+function _MT.__index.test(self, uri)
+  return self.uri_template:test(uri)
+end
+
 function _MT.__index.read(self, uri)
   local vars, err = self.uri_template:match(uri)
   if not vars then
