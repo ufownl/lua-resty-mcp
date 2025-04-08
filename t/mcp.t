@@ -304,3 +304,164 @@ simple_prompt
 A prompt without arguments.
 true
 -32603 Internal errors {"errmsg":"mock error"}
+
+
+=== TEST 6: resources
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "resty -I lib t/mock/resources.lua"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    for i, uri in ipairs({"mock://static/text", "mock://static/blob", "mock://static/hidden"}) do
+      local res, err = client:read_resource(uri)
+      if res then
+        for j, v in ipairs(res.contents) do
+          ngx.say(v.uri)
+          ngx.say(tostring(v.mimeType))
+          ngx.say(tostring(v.text))
+          ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+        end
+      else
+        ngx.say(err)
+      end
+    end
+    local res, err = client:call_tool("enable_hidden_resource")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:read_resource("mock://static/hidden")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+      ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+    end
+    local ok, err = client:wait_background_tasks()
+    if not ok then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    for i, v in ipairs(templates) do
+      ngx.say(v.uriTemplate)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    for i, uri in ipairs({"mock://dynamic/text/abc", "mock://dynamic/blob/123", "mock://dynamic/blob/"}) do
+      local res, err = client:read_resource(uri)
+      if res then
+        for j, v in ipairs(res.contents) do
+          ngx.say(v.uri)
+          ngx.say(tostring(v.mimeType))
+          ngx.say(tostring(v.text))
+          ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+        end
+      else
+        ngx.say(err)
+      end
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
+mock://static/text
+TextResource
+Static text resource.
+text/plain
+true
+mock://static/text
+text/plain
+Hello, world!
+nil
+mock://static/blob
+application/octet-stream
+nil
+Hello, world!
+-32002 Resource not found {"uri":"mock:\/\/static\/hidden"}
+false
+mock://static/hidden
+application/octet-stream
+nil
+content of hidden resource
+false
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
+mock://static/hidden
+HiddenResource
+Hidden blob resource.
+nil
+mock://static/text
+TextResource
+Static text resource.
+text/plain
+true
+mock://dynamic/text/{id}
+DynamicText
+Dynamic text resource.
+text/plain
+mock://dynamic/blob/{id}
+DynamicBlob
+Dynamic blob resource.
+application/octet-stream
+mock://dynamic/text/abc
+text/plain
+content of dynamic text resource mock://dynamic/text/abc, id=abc
+nil
+mock://dynamic/blob/123
+application/octet-stream
+nil
+content of dynamic blob resource mock://dynamic/blob/123, id=123
+-32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
