@@ -239,6 +239,7 @@ function _MT.__index.expand(self, ctx)
   return out
 end
 
+-- Known issue: parse unpacked list variables following a key operator (`;?&`).
 function _MT.__index.match(self, uri)
   local m, err = ngx_re_match(uri, self.match_regex, "o")
   if err then
