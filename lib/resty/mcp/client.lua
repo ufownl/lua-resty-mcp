@@ -1,5 +1,6 @@
 local mcp = {
   version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils"),
   session = require("resty.mcp.session")
 }
 
@@ -23,6 +24,11 @@ end
 
 local function define_methods(self)
   local methods = {
+    ["roots/list"] = function(params)
+      return {
+        roots = self.exposed_roots or {}
+      }
+    end,
     ["notifications/resources/updated"] = function(params)
       local cap = self.server.capabilities.resources
       if not cap or not cap.subscribe or not self.subscribed_resources or not self.subscribed_resources[params.uri] then
@@ -66,15 +72,35 @@ local function list_impl(self, category)
   return self.server[key]
 end
 
+local function expose_roots_impl(self, roots)
+  local template, err = mcp.utils.uri_template("file://{path}")
+  if not template then
+    error(err)
+  end
+  self.exposed_roots = {}
+  for i, v in ipairs(roots) do
+    if v.path and v.path ~= "" then
+      table.insert(self.exposed_roots, {
+        uri = template:expand({path = v.path}),
+        name = type(v.name) == "string" and v.name or nil
+      })
+    end
+  end
+end
+
 local _MT = {
   __index = {
     wait_background_tasks = mcp.session.wait_background_tasks
   }
 }
 
-function _MT.__index.initialize(self)
+function _MT.__index.initialize(self, roots)
+  if type(roots) == "table" and #roots > 0 then
+    expose_roots_impl(self, roots)
+  end
   mcp.session.initialize(self, define_methods(self))
-  local res, err = mcp.session.send_request(self, "initialize", {nil, self.name})
+  local capabilities = {roots = true}
+  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.name})
   if not res then
     self.conn:close()
     return nil, err
@@ -94,6 +120,21 @@ end
 
 function _MT.__index.shutdown(self)
   mcp.session.shutdown(self)
+end
+
+function _MT.__index.expose_roots(self, roots)
+  local original_roots = self.exposed_roots
+  if type(roots) == "table" and #roots > 0 then
+    expose_roots_impl(self, roots)
+  else
+    self.exposed_roots = nil
+  end
+  local ok, err = mcp.session.send_notification(self, "list_changed", {"roots"})
+  if not ok then
+    self.exposed_roots = original_roots
+    return nil, err
+  end
+  return true
 end
 
 function _MT.__index.list_prompts(self)
