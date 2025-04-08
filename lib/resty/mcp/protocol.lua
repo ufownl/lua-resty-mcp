@@ -79,4 +79,33 @@ function _M.result.list(field_name, tbl, next_cursor)
   }
 end
 
+function _M.annotations(annos)
+  local annotations = {}
+  if type(annos.audience) == "table" then
+    for i, v in ipairs(annos.audience) do
+      if v == "user" or v == "assistant" then
+        if annotations.audience then
+          table.insert(annotations.audience, v)
+        else
+          annotations.audience = {v}
+        end
+      end
+    end
+  end
+  if tonumber(annos.priority) then
+    annotations.priority = math.min(math.max(tonumber(annos.priority), 0), 1)
+  end
+  return annotations
+end
+
+function _M.tool_annotations(annos)
+  local annotations = {title = type(annos.title) == "string" and annos.title or nil}
+  for i, k in ipairs({"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}) do
+    if type(annos[k]) == "boolean" then
+      annotations[k] = annos[k]
+    end
+  end
+  return annotations
+end
+
 return _M

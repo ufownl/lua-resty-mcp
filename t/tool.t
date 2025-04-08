@@ -29,6 +29,12 @@ location = /t {
         type = "string",
         description = "Result format string."
       }
+    }, {
+      title = "Mock Tool Annotations",
+      readOnlyHint = false,
+      destructiveHint = true,
+      idempotentHint = false,
+      openWorldHint = true
     })
     local schema = fn:to_mcp()
     ngx.say(schema.name)
@@ -45,6 +51,11 @@ location = /t {
     for i, v in ipairs(props) do
       ngx.say(v)
     end
+    ngx.say(schema.annotations.title)
+    ngx.say(tostring(schema.annotations.readOnlyHint))
+    ngx.say(tostring(schema.annotations.destructiveHint))
+    ngx.say(tostring(schema.annotations.idempotentHint))
+    ngx.say(tostring(schema.annotations.openWorldHint))
     local result, code, message, data = fn({a = 1, b = 2})
     if not result then
       error(string.format("%d %s", code, message))
@@ -78,6 +89,11 @@ Adds two numbers.
 a number
 b number
 format string Result format string.
+Mock Tool Annotations
+false
+true
+false
+true
 false
 text 3
 false

@@ -1,6 +1,7 @@
 local mcp = {
   version = require("resty.mcp.version"),
-  utils = require("resty.mcp.utils")
+  utils = require("resty.mcp.utils"),
+  protocol = require("resty.mcp.protocol")
 }
 
 local cjson = require("cjson.safe")
@@ -102,21 +103,12 @@ function _M.new(name, cb, desc, args, annos)
   if args and (type(args) ~= "table" or #args > 0) then
     error("expected arguments of tool MUST be a dict.")
   end
-  local annotations
-  if annos then
-    annotations = {title = type(annos.title) == "string" and annos.title or nil}
-    for i, k in ipairs({"readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"}) do
-      if type(annos[k]) == "boolean" then
-        annotations[k] = annos[k]
-      end
-    end
-  end
   return setmetatable({
     name = name,
     callback = cb,
     description = desc,
     expected_args = args or {},
-    annotations = annotations
+    annotations = annos and mcp.protocol.tool_annotations(annos) or nil
   }, _MT)
 end
 

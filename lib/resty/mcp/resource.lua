@@ -1,6 +1,7 @@
 local mcp = {
   version = require("resty.mcp.version"),
-  utils = require("resty.mcp.utils")
+  utils = require("resty.mcp.utils"),
+  protocol = require("resty.mcp.protocol")
 }
 
 local cjson = require("cjson.safe")
@@ -56,31 +57,13 @@ function _M.new(uri, name, cb, desc, mime, annos)
   if mime and type(mime) ~= "string" then
     error("MIME type of resource MUST be a string.")
   end
-  local annotations
-  if annos then
-    annotations = {}
-    if type(annos.audience) == "table" then
-      for i, v in ipairs(annos.audience) do
-        if v == "user" or v == "assistant" then
-          if annotations.audience then
-            table.insert(annotations.audience, v)
-          else
-            annotations.audience = {v}
-          end
-        end
-      end
-    end
-    if tonumber(annos.priority) then
-      annotations.priority = math.min(math.max(tonumber(annos.priority), 0), 1)
-    end
-  end
   return setmetatable({
     uri = uri,
     name = name,
     callback = cb,
     description = desc,
     mime = mime,
-    annotations = annotations
+    annotations = annos and mcp.protocol.annotations(annos) or nil
   }, _MT)
 end
 
