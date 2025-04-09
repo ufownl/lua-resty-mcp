@@ -107,9 +107,6 @@ function _M.wait_background_tasks(self, timeout)
 end
 
 function _M.send_request(self, name, args, timeout)
-  if coroutine.running() == self.main_loop then
-    error("cannot call send_request in main loop thread")
-  end
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
@@ -117,39 +114,32 @@ function _M.send_request(self, name, args, timeout)
   if not msg then
     return nil, err
   end
-  local co = ngx_thread_spawn(function()
-    local sema, err = ngx_semaphore.new()
-    if not sema then
-      return nil, err
-    end
-    local ok, err = self.conn:send(msg)
-    if not ok then
-      return nil, err
-    end
-    local result, errobj
-    self.pending_requests[rid] = function(r, e)
-      result = r
-      errobj = e
-      sema:post()
-    end
-    local ok, err = sema:wait(tonumber(timeout) or 10)
-    if not ok then
-      return nil, err
-    end
-    if errobj then
-      if errobj.data then
-        local data, err = cjson.encode(errobj.data)
-        return nil, string.format("%d %s %s", errobj.code, errobj.message, data or err)
-      end
-      return nil, string.format("%d %s", errobj.code, errobj.message)
-    end
-    return result
-  end)
-  local ok, res, err = ngx_thread_wait(co)
-  if not ok then
-    return nil, res
+  local sema, err = ngx_semaphore.new()
+  if not sema then
+    return nil, err
   end
-  return res, err
+  local ok, err = self.conn:send(msg)
+  if not ok then
+    return nil, err
+  end
+  local result, errobj
+  self.pending_requests[rid] = function(r, e)
+    result = r
+    errobj = e
+    sema:post()
+  end
+  local ok, err = sema:wait(tonumber(timeout) or 10)
+  if not ok then
+    return nil, err
+  end
+  if errobj then
+    if errobj.data then
+      local data, err = cjson.encode(errobj.data)
+      return nil, string.format("%d %s %s", errobj.code, errobj.message, data or err)
+    end
+    return nil, string.format("%d %s", errobj.code, errobj.message)
+  end
+  return result
 end
 
 function _M.send_notification(self, name, args)
