@@ -99,7 +99,11 @@ local _M = {
 
 function _M.new(subproc_opts)
   if not subproc_opts then
-    return setmetatable({stdin = io.input(), stdout = io.output()}, _STDIO_MT)
+    return setmetatable({
+      stdin = io.input(),
+      stdout = io.output(),
+      blocking_io = true
+    }, _STDIO_MT)
   end
   if type(subproc_opts) ~= "table" then
     error("options of subprocess MUST be a table.")
