@@ -618,3 +618,116 @@ file:///path/to/foo/bar
 file:///path/to/hello/world
 Hello, world!
 END
+
+
+=== TEST 8: sampling (simple string)
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "resty -I lib t/mock/sampling.lua"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params)
+      return "Hey there! What's up?"
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:get_prompt("simple_sampling")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s %s", v.role, v.content.type, v.content.text, tostring(v.model)))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+mock://client_capabilities/sampling
+true
+Sampling prompt from client without arguments.
+user text Hey, man! nil
+assistant text Hey there! What's up? unknown
+
+
+=== TEST 9: sampling (result structure)
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "resty -I lib t/mock/sampling.lua"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params)
+      return {
+        content = {
+          type = "image",
+          data = "SGV5LCBtYW4h",
+          mimeType = "image/jpeg"
+        },
+        model = "mock"
+      }
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:get_prompt("simple_sampling")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s %s %s", v.role, v.content.type, v.content.text or v.content.data, tostring(v.content.mimeType), tostring(v.model)))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+mock://client_capabilities/sampling
+true
+Sampling prompt from client without arguments.
+user text Hey, man! nil nil
+assistant image SGV5LCBtYW4h image/jpeg mock

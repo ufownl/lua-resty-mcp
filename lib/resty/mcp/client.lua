@@ -29,6 +29,60 @@ local function define_methods(self)
         roots = self.exposed_roots or {}
       }
     end,
+    ["sampling/createMessage"] = self.sampling_callback and function(params)
+      if type(params) ~= "table" or type(params.messages) ~= "table" or type(params.maxTokens) ~= "number" then
+        return nil, -32602, "Invalid params", {errmsg = "messages and maxTokens MUST be set"}
+      end
+      for i, v in ipairs(params.messages) do
+        if not mcp.utils.check_role(v.role) then
+          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].role=%s", i, tostring(v.role))}
+        end
+        if type(v.content) ~= "table" then
+          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content=%s", i, tostring(v.content))}
+        end
+        if type(v.content.type) ~= "string" or v.content.type == "resource" then
+          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content.type=%s", i, tostring(v.content.type))}
+        end
+        if not mcp.utils.check_content(v.content) then
+          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content: invalid %s content format", i, v.content.type)}
+        end
+      end
+      local result, code, message, data = self.sampling_callback(params)
+      if not result then
+        return nil, code, message, data
+      end
+      if type(result) == "table" then
+        if result.role then
+          if not mcp.utils.check_role(result.role) then
+            error("role MUST be \"user\" or \"assistant\"")
+          end
+        else
+          result.role = "assistant"
+        end
+        if type(result.content) ~= "table" or result.content.type == "resource" or not mcp.utils.check_content(result.content) then
+          error("invalid content format")
+        end
+        if result.model then
+          if type(result.model) ~= "string" then
+            error("model MUST be a string")
+          end
+        else
+          result.model = "unknown"
+        end
+        if result.stopReason and type(result.stopReason) ~= "string" then
+          error("stopReason MUST be a string")
+        end
+        return result
+      end
+      return {
+        role = "assistant",
+        content = {
+          type = "text",
+          text = tostring(result)
+        },
+        model = "unknown"
+      }
+    end or nil,
     ["notifications/resources/updated"] = function(params)
       local cap = self.server.capabilities.resources
       if not cap or not cap.subscribe or
@@ -96,12 +150,13 @@ local _MT = {
   }
 }
 
-function _MT.__index.initialize(self, roots)
+function _MT.__index.initialize(self, roots, sampling_cb)
   if type(roots) == "table" and #roots > 0 then
     expose_roots_impl(self, roots)
   end
+  self.sampling_callback = sampling_cb
   mcp.session.initialize(self, define_methods(self))
-  local capabilities = {roots = true}
+  local capabilities = {roots = true, sampling = sampling_cb}
   local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.name})
   if not res then
     self.conn:close()

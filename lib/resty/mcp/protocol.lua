@@ -50,6 +50,19 @@ function _M.request.call_tool(name, args)
   return mcp.rpc.request("tools/call", {name = name, arguments = args})
 end
 
+function _M.request.create_message(messages, max_tokens, options)
+  return mcp.rpc.request("sampling/createMessage", {
+    messages = messages,
+    maxTokens = tonumber(max_tokens),
+    modelPreferences = options and options.modelPreferences,
+    systemPrompt = options and tostring(options.systemPrompt),
+    includeContext = options and tostring(options.includeContext),
+    temperature = options and tonumber(options.temperature),
+    stopSequences = options and options.stopSequences,
+    metadata = options and options.metadata
+  })
+end
+
 function _M.notification.initialized()
   return mcp.rpc.notification("notifications/initialized")
 end
