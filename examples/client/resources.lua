@@ -7,7 +7,9 @@ local client, err = mcp.client(mcp.transport.stdio, {
 if not client then
   error(err)
 end
-local ok, err = client:initialize()
+local ok, err = client:initialize(nil, function(params)
+  return "Mock sampling message!"
+end)
 if not ok then
   error(err)
 end
@@ -41,5 +43,22 @@ print("resource blob: ", cjson.encode(resource))
 local _, err = client:read_resource("foobar")
 print("invalid resource: ", err)
 
+local count = 0
+local ok, err = client:subscribe_resource("test://static/resource/42", function(uri)
+  print(string.format("%s updated!", uri))
+  count = count + 1
+  if count >= 3 then
+    local ok, err = client:unsubscribe_resource("test://static/resource/42")
+    if not ok then
+      error(err)
+    end
+  end
+end)
+if not ok then
+  error(err)
+end
+
+print("sleep 30 seconds")
+ngx.sleep(30)
 client:shutdown()
 print(ngx.localtime(), " shutdown")
