@@ -73,7 +73,7 @@ local function list_impl(self, category)
 end
 
 local function expose_roots_impl(self, roots)
-  local template, err = mcp.utils.uri_template("file://{path}")
+  local template, err = mcp.utils.uri_template("file://{+path}")
   if not template then
     error(err)
   end
