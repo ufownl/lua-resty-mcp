@@ -31,7 +31,9 @@ local function define_methods(self)
     end,
     ["notifications/resources/updated"] = function(params)
       local cap = self.server.capabilities.resources
-      if not cap or not cap.subscribe or not self.subscribed_resources or not self.subscribed_resources[params.uri] then
+      if not cap or not cap.subscribe or
+         type(params) ~= "table" or type(params.uri) ~= "string" or
+         not self.subscribed_resources or not self.subscribed_resources[params.uri] then
         return
       end
       self.subscribed_resources[params.uri](params.uri)
