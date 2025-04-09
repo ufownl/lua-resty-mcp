@@ -517,3 +517,104 @@ false
 sub 2: mock://dynamic/text/123
 false
 false
+
+
+=== TEST 7: roots
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "resty -I lib t/mock/roots.lua"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize({
+      {path = "/path/to/foo/bar", name = "Foobar"},
+      {path = "/path/to/hello/world"}
+    })
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:read_resource("mock://discovered_roots")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.contents)
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local sema, err = require("ngx.semaphore").new()
+    if not sema then
+      error(err)
+    end
+    local ok, err = client:subscribe_resource("mock://discovered_roots", function(uri)
+      local res, err = client:read_resource("mock://discovered_roots")
+      if not res then
+        error(err)
+      end
+      ngx.say(#res.contents)
+      for i, v in ipairs(res.contents) do
+        ngx.say(v.uri)
+        ngx.say(v.text)
+      end
+      sema:post()
+    end)
+    if not ok then
+      ngx.say(err)
+    end
+    local ok, err = client:expose_roots()
+    if not ok then
+      error(err)
+    end
+    local ok, err = sema:wait(5)
+    if not ok then
+      error(err)
+    end
+    local ok, err = client:expose_roots({
+      {path = "/path/to/foo/bar"},
+      {path = "/path/to/hello/world", name = "Hello, world!"}
+    })
+    if not ok then
+      error(err)
+    end
+    local ok, err = sema:wait(5)
+    if not ok then
+      error(err)
+    end
+    ngx.say("END")
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+2
+file:///path/to/foo/bar
+Foobar
+file:///path/to/hello/world
+
+0
+2
+file:///path/to/foo/bar
+
+file:///path/to/hello/world
+Hello, world!
+END
