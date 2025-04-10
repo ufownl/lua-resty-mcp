@@ -30,6 +30,8 @@ GET /t
 --- error_code: 200
 --- response_body
 Hello, MCP!
+--- no_error_log
+[error]
 
 
 === TEST 2: handshake error
@@ -55,6 +57,8 @@ GET /t
 --- error_code: 200
 --- response_body
 -32601 Method not found
+--- no_error_log
+[error]
 
 
 === TEST 3: server has no capability
@@ -99,6 +103,8 @@ lua-resty-mcp v\S+ has no resources capability
 lua-resty-mcp v\S+ has no resources capability
 lua-resty-mcp v\S+ has no tools capability
 lua-resty-mcp v\S+ has no tools capability
+--- no_error_log
+[error]
 
 
 === TEST 4: tools
@@ -203,6 +209,8 @@ false
 text Hello, world!
 true
 text Echo tool has been enabled!
+--- no_error_log
+[error]
 
 
 === TEST 5: prompts
@@ -304,6 +312,8 @@ simple_prompt
 A prompt without arguments.
 true
 -32603 Internal errors {"errmsg":"mock error"}
+--- no_error_log
+[error]
 
 
 === TEST 6: resources
@@ -517,6 +527,8 @@ false
 sub 2: mock://dynamic/text/123
 false
 false
+--- no_error_log
+[error]
 
 
 === TEST 7: roots
@@ -618,6 +630,8 @@ file:///path/to/foo/bar
 file:///path/to/hello/world
 Hello, world!
 END
+--- no_error_log
+[error]
 
 
 === TEST 8: sampling (simple string)
@@ -671,6 +685,8 @@ true
 Sampling prompt from client without arguments.
 user text Hey, man! nil
 assistant text Hey there! What's up? unknown
+--- no_error_log
+[error]
 
 
 === TEST 9: sampling (result structure)
@@ -731,3 +747,5 @@ true
 Sampling prompt from client without arguments.
 user text Hey, man! nil nil
 assistant image SGV5LCBtYW4h image/jpeg mock
+--- no_error_log
+[error]

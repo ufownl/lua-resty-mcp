@@ -42,6 +42,8 @@ rid: true
 result: nil
 code: -32601
 message: Method not found
+--- no_error_log
+[error]
 
 
 === TEST 2: request with params
@@ -85,6 +87,8 @@ rid: true
 result: nil
 code: -32601
 message: Method not found
+--- no_error_log
+[error]
 
 
 === TEST 3: notification with no params
@@ -109,6 +113,8 @@ GET /t
 --- response_body
 notification: nil
 response: nil
+--- no_error_log
+[error]
 
 
 === TEST 4: notification with no params
@@ -136,6 +142,8 @@ GET /t
 --- response_body
 notification: {"foo":1}
 response: nil
+--- no_error_log
+[error]
 
 
 === TEST 5: batch messages
@@ -186,6 +194,8 @@ rid1: false
 rid2: true
 result: {"foo":3}
 error: nil
+--- no_error_log
+[error]
 
 
 === TEST 6: handle errors
@@ -250,3 +260,5 @@ rid: true
 result: nil
 code: -32600
 message: Invalid Request
+--- no_error_log
+[error]

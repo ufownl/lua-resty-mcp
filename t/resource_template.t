@@ -79,6 +79,8 @@ SGVsbG8sIHdvcmxkIQ==
 invalid id
 -32002 Resource not found mock://foobar/
 -32002 Resource not found mock://hello
+--- no_error_log
+[error]
 
 
 === TEST 2: handle errors return by callback
@@ -111,3 +113,5 @@ nil
 nil
 nil
 -32603 Internal errors mock error
+--- no_error_log
+[error]

@@ -37,3 +37,5 @@ GET /t
 Hello, world!
 nil
 closed
+--- no_error_log
+[error]

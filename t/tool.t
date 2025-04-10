@@ -100,6 +100,8 @@ false
 text result=3
 -32602 Invalid arguments format string number
 -32602 Missing required arguments a number true
+--- no_error_log
+[error]
 
 
 === TEST 2: handle tool execution errors
@@ -154,3 +156,5 @@ false
 text 0.5
 true
 text ERROR: divisor cannot be 0!
+--- no_error_log
+[error]

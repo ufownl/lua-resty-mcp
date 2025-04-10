@@ -58,6 +58,8 @@ mock://foobar/bin
 application/octet-stream
 nil
 SGVsbG8sIHdvcmxkIQ==
+--- no_error_log
+[error]
 
 
 === TEST 2: handle errors return by callback
@@ -90,3 +92,5 @@ nil
 nil
 nil
 -32603 Internal errors mock error
+--- no_error_log
+[error]

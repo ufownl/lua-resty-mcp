@@ -45,6 +45,8 @@ value
 value
 Hello%20World%21
 Hello World!
+--- no_error_log
+[error]
 
 
 === Level 2
@@ -101,6 +103,8 @@ X#value
 value
 X#Hello%20World!
 Hello World!
+--- no_error_log
+[error]
 
 
 === Level 3
@@ -211,6 +215,8 @@ value
 768
 
 END
+--- no_error_log
+[error]
 
 
 === Level 4
@@ -400,3 +406,5 @@ red&list=green&list=blue
 semi,;,dot,.,comma,,
 &semi=%3B&dot=.&comma=%2C
 semi=;&dot=.&comma=,
+--- no_error_log
+[error]

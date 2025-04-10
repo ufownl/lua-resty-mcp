@@ -6,7 +6,6 @@ local mcp = {
 }
 
 local cjson = require("cjson.safe")
-local ngx_log = ngx.log
 
 local _M = {
   _NAME = "resty.mcp.protocol.rpc",
@@ -119,8 +118,7 @@ function _M.handle(msg, methods, resp_cb)
   end
   local dm, err = cjson.decode(msg)
   if err then
-    ngx_log(ngx.ERR, "JSONRPC: ", err)
-    return _M.fail_resp(cjson.null, -32700, "Parse error")
+    return _M.fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})
   end
   if type(dm) ~= "table" then
     return _M.fail_resp(cjson.null, -32600, "Invalid Request")

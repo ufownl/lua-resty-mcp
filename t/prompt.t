@@ -95,6 +95,8 @@ b=bar
 c=foobar
 -32602 Invalid arguments b string number
 -32602 Missing required arguments b string true
+--- no_error_log
+[error]
 
 
 === TEST 2: handle errors return by callback
@@ -116,3 +118,5 @@ GET /t
 --- error_code: 200
 --- response_body
 -32603 Internal errors mock error
+--- no_error_log
+[error]
