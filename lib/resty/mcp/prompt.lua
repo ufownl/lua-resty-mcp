@@ -42,7 +42,7 @@ function _MT.__index.to_mcp(self)
   }
 end
 
-function _MT.__index.get(self, args)
+function _MT.__index.get(self, args, ctx)
   if args then
     if type(args) ~= "table" or #args > 0 then
       return nil, -32602, "Invalid arguments"
@@ -69,7 +69,7 @@ function _MT.__index.get(self, args)
       }
     end
   end
-  local messages, err = self.callback(args)
+  local messages, err = self.callback(args, ctx)
   if not messages then
     return nil, -32603, "Internal errors", {errmsg = err}
   end

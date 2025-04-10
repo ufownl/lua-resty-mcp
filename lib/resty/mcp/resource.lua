@@ -20,8 +20,8 @@ function _MT.__index.to_mcp(self)
   }
 end
 
-function _MT.__index.read(self)
-  local contents, err = self.callback(self.uri)
+function _MT.__index.read(self, ctx)
+  local contents, err = self.callback(self.uri, ctx)
   if not contents then
     return nil, -32603, "Internal errors", {errmsg = err}
   end

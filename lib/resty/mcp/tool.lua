@@ -45,7 +45,7 @@ function _MT.__index.to_mcp(self)
   }
 end
 
-function _MT.__call(self, args)
+function _MT.__call(self, args, ctx)
   if args then
     if type(args) ~= "table" or #args > 0 then
       return nil, -32602, "Invalid arguments"
@@ -72,7 +72,7 @@ function _MT.__call(self, args)
       }
     end
   end
-  local content, is_error = self.callback(args)
+  local content, is_error = self.callback(args, ctx)
   for i, v in ipairs(content) do
     if not mcp.utils.check_content(v) then
       error("invalid content format")
