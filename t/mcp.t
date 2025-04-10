@@ -12,7 +12,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/handshake.lua"
+      command = "resty -I lib t/mock/handshake.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -42,7 +42,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/empty.lua"
+      command = "resty -I lib t/mock/empty.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -69,7 +69,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/handshake.lua"
+      command = "resty -I lib t/mock/handshake.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -115,7 +115,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/tools.lua"
+      command = "resty -I lib t/mock/tools.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -221,7 +221,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/prompts.lua"
+      command = "resty -I lib t/mock/prompts.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -324,7 +324,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/resources.lua"
+      command = "resty -I lib t/mock/resources.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -539,7 +539,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/roots.lua"
+      command = "resty -I lib t/mock/roots.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -642,7 +642,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/sampling.lua"
+      command = "resty -I lib t/mock/sampling.lua 2>> error.log"
     })
     if not client then
       error(err)
@@ -697,7 +697,7 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
-      command = "resty -I lib t/mock/sampling.lua"
+      command = "resty -I lib t/mock/sampling.lua 2>> error.log"
     })
     if not client then
       error(err)

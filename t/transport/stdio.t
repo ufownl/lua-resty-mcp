@@ -11,7 +11,7 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local stdio = require("resty.mcp.transport.stdio")
-    local conn, err = stdio.new({command = "resty -I lib t/transport/tee.lua"})
+    local conn, err = stdio.new({command = "resty -I lib t/transport/tee.lua 2>> error.log"})
     if not conn then
       error("conn "..err)
     end
