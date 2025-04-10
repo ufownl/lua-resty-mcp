@@ -28,6 +28,9 @@ location = /t {
     local ok, err = conn:send(data)
     ngx.say(tostring(ok))
     ngx.say(err)
+    local ok, err = conn:recv(data)
+    ngx.say(tostring(ok))
+    ngx.say(err)
   }
 }
 --- request
@@ -35,6 +38,8 @@ GET /t
 --- error_code: 200
 --- response_body
 Hello, world!
+nil
+closed
 nil
 closed
 --- no_error_log
