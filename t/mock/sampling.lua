@@ -8,7 +8,7 @@ local mcp = {
   prompt = require("resty.mcp.prompt")
 }
 
-local conn, err = mcp.transport.stdio.new()
+local conn, err = mcp.transport.stdio.server()
 if not conn then
   error(err)
 end

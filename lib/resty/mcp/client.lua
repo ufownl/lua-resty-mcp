@@ -315,7 +315,7 @@ local _M = {
 }
 
 function _M.new(transport, options)
-  local conn, err = transport.new(options)
+  local conn, err = transport.client(options)
   if not conn then
     return nil, err
   end

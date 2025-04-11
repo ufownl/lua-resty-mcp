@@ -1,5 +1,5 @@
 local stdio = require("resty.mcp.transport.stdio")
-local conn, err = stdio.new()
+local conn, err = stdio.server()
 if not conn then
   error(err)
 end
