@@ -1,5 +1,11 @@
 local mcp = {
-  version = require("resty.mcp.version")
+  version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils")
+}
+
+local _M = {
+  _NAME = "resty.mcp.transport.stdio.client",
+  _VERSION = mcp.version.module
 }
 
 local resty_signal = require("resty.signal")
@@ -7,7 +13,9 @@ local ngx_pipe = require("ngx.pipe")
 local ngx_log = ngx.log
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.send(self, data)
@@ -60,11 +68,6 @@ function _MT.__index.close(self)
   end
 end
 
-local _M = {
-  _NAME = "resty.mcp.transport.stdio.client",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(options)
   if type(options) ~= "table" then
     error("options of stdio client transport MUST be a table.")
@@ -77,6 +80,10 @@ function _M.new(options)
     return nil, err
   end
   return setmetatable({pipe = pipe}, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M

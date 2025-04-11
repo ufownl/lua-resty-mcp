@@ -2,6 +2,11 @@ local mcp = {
   version = require("resty.mcp.version")
 }
 
+local _M = {
+  _NAME = "resty.mcp.utils.uri_template",
+  _VERSION = mcp.version.module
+}
+
 local ngx_escape_uri = ngx.escape_uri
 local ngx_re_gsub = ngx.re.gsub
 local ngx_re_find = ngx.re.find
@@ -228,7 +233,9 @@ local function expand_impl(pattern, ctx)
 end
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.expand(self, ctx)
@@ -265,11 +272,6 @@ function _MT.__index.match(self, uri)
   return res
 end
 
-local _M = {
-  _NAME = "resty.mcp.utils.uri_template",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(pattern)
   local regex, vars = expand_impl(pattern)
   if #vars == 0 then
@@ -280,6 +282,10 @@ function _M.new(pattern)
     match_regex = regex,
     variables = vars
   }, _MT)
+end
+
+function _M.check(v)
+  return type(v) == "table" and v._NAME == _M._NAME and v or nil
 end
 
 return _M

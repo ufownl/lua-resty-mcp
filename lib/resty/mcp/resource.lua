@@ -4,10 +4,17 @@ local mcp = {
   protocol = require("resty.mcp.protocol")
 }
 
+local _M = {
+  _NAME = "resty.mcp.resource",
+  _VERSION = mcp.version.module
+}
+
 local cjson = require("cjson.safe")
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.to_mcp(self)
@@ -38,11 +45,6 @@ function _MT.__index.read(self, ctx)
   return {contents = setmetatable(contents, cjson.array_mt)}
 end
 
-local _M = {
-  _NAME = "resty.mcp.resource",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(uri, name, cb, desc, mime, annos)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
@@ -67,6 +69,10 @@ function _M.new(uri, name, cb, desc, mime, annos)
     mime = mime,
     annotations = annos and mcp.protocol.annotations(annos) or nil
   }, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M

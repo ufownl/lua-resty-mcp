@@ -2,17 +2,17 @@ local mcp = {
   version = require("resty.mcp.version")
 }
 
-local resty_random = require("resty.random")
-local resty_sha256 = require("resty.sha256")
-local ngx_base64 = require("ngx.base64")
-local ngx_worker_pid = ngx.worker.pid
-local ngx_time = ngx.time
-
 local _M = {
   _NAME = "resty.mcp.utils",
   _VERSION = mcp.version.module,
   uri_template = require("resty.mcp.utils.uri_template").new
 }
+
+local resty_random = require("resty.random")
+local resty_sha256 = require("resty.sha256")
+local ngx_base64 = require("ngx.base64")
+local ngx_worker_pid = ngx.worker.pid
+local ngx_time = ngx.time
 
 local id_counter = 0
 
@@ -96,6 +96,10 @@ end
 
 function _M.check_role(role)
   return role == "user" or role == "assistant"
+end
+
+function _M.check_mcp_type(module, v)
+  return type(v) == "table" and v._NAME == module._NAME and v or nil
 end
 
 return _M

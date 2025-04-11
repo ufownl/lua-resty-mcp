@@ -5,6 +5,11 @@ local mcp = {
   protocol = require("resty.mcp.protocol")
 }
 
+local _M = {
+  _NAME = "resty.mcp.session",
+  _VERSION = mcp.version.module
+}
+
 local cjson = require("cjson.safe")
 local ngx_semaphore = require("ngx.semaphore")
 local ngx_log = ngx.log
@@ -139,11 +144,6 @@ local function request_sync_nonblocking(self, req, rid, timeout)
   end
   return return_result(result, errobj)
 end
-
-local _M = {
-  _NAME = "resty.mcp.session",
-  _VERSION = mcp.version.module
-}
 
 function _M.new(conn, name, mt)
   local bg_tasks

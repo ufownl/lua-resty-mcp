@@ -3,10 +3,17 @@ local mcp = {
   utils = require("resty.mcp.utils")
 }
 
+local _M = {
+  _NAME = "resty.mcp.prompt",
+  _VERSION = mcp.version.module
+}
+
 local cjson = require("cjson.safe")
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.to_mcp(self)
@@ -87,11 +94,6 @@ function _MT.__index.get(self, args, ctx)
   }
 end
 
-local _M = {
-  _NAME = "resty.mcp.prompt",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(name, cb, desc, args)
   if type(name) ~= "string" then
     error("prompt name MUST be a string.")
@@ -111,6 +113,10 @@ function _M.new(name, cb, desc, args)
     description = desc,
     expected_args = args or {}
   }, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M

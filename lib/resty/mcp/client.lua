@@ -4,6 +4,11 @@ local mcp = {
   session = require("resty.mcp.session")
 }
 
+local _M = {
+  _NAME = "resty.mcp.client",
+  _VERSION = mcp.version.module
+}
+
 local ngx_log = ngx.log
 
 local function get_list(self, category, field_name)
@@ -146,6 +151,7 @@ end
 
 local _MT = {
   __index = {
+    _NAME = _M._NAME,
     wait_background_tasks = mcp.session.wait_background_tasks
   }
 }
@@ -309,17 +315,16 @@ function _MT.__index.call_tool(self, name, args)
   return res
 end
 
-local _M = {
-  _NAME = "resty.mcp.client",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(transport, options)
   local conn, err = transport.client(options)
   if not conn then
     return nil, err
   end
   return mcp.session.new(conn, options.name, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M

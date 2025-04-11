@@ -4,10 +4,17 @@ local mcp = {
   protocol = require("resty.mcp.protocol")
 }
 
+local _M = {
+  _NAME = "resty.mcp.tool",
+  _VERSION = mcp.version.module
+}
+
 local cjson = require("cjson.safe")
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.to_mcp(self)
@@ -84,11 +91,6 @@ function _MT.__call(self, args, ctx)
   }
 end
 
-local _M = {
-  _NAME = "resty.mcp.tool",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(name, cb, desc, args, annos)
   if type(name) ~= "string" then
     error("tool name MUST be a string.")
@@ -109,6 +111,10 @@ function _M.new(name, cb, desc, args, annos)
     expected_args = args or {},
     annotations = annos and mcp.protocol.tool_annotations(annos) or nil
   }, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M

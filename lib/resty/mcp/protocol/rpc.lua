@@ -5,12 +5,12 @@ local mcp = {
   utils = require("resty.mcp.utils")
 }
 
-local cjson = require("cjson.safe")
-
 local _M = {
   _NAME = "resty.mcp.protocol.rpc",
   _VERSION = mcp.version.module
 }
+
+local cjson = require("cjson.safe")
 
 function _M.request(method, params)
   if type(method) ~= "string" then

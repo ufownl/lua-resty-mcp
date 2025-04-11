@@ -1,9 +1,17 @@
 local mcp = {
-  version = require("resty.mcp.version")
+  version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils")
+}
+
+local _M = {
+  _NAME = "resty.mcp.transport.stdio.server",
+  _VERSION = mcp.version.module
 }
 
 local _MT = {
-  __index = {}
+  __index = {
+    _NAME = _M._NAME
+  }
 }
 
 function _MT.__index.send(self, data)
@@ -34,17 +42,16 @@ function _MT.__index.close(self)
   self.stdout = nil
 end
 
-local _M = {
-  _NAME = "resty.mcp.transport.stdio.server",
-  _VERSION = mcp.version.module
-}
-
 function _M.new(options)
   return setmetatable({
     stdin = io.input(),
     stdout = io.output(),
     blocking_io = true
   }, _MT)
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M
