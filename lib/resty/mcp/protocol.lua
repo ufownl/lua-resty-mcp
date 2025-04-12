@@ -14,7 +14,7 @@ local _M = {
 local cjson = require("cjson.safe")
 
 function _M.request.initialize(capabilities, name, version)
-  return mcp.rpc.request("initialize", {
+  local msg, rid, err = mcp.rpc.request("initialize", {
     protocolVersion = mcp.version.protocol,
     capabilities = capabilities and {
       roots = capabilities.roots and (type(capabilities.roots) == "table" and capabilities.roots or {listChanged = true}) or nil,
@@ -26,34 +26,76 @@ function _M.request.initialize(capabilities, name, version)
       version = version or mcp.version.module
     }
   })
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.list(category, cursor)
-  return mcp.rpc.request(category.."/list", {cursor = cursor})
+  local msg, rid, err = mcp.rpc.request(category.."/list", {cursor = cursor})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.get_prompt(name, args)
-  return mcp.rpc.request("prompts/get", {name = name, arguments = args})
+  local msg, rid, err = mcp.rpc.request("prompts/get", {name = name, arguments = args})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.read_resource(uri)
-  return mcp.rpc.request("resources/read", {uri = uri})
+  local msg, rid, err = mcp.rpc.request("resources/read", {uri = uri})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.subscribe_resource(uri)
-  return mcp.rpc.request("resources/subscribe", {uri = uri})
+  local msg, rid, err = mcp.rpc.request("resources/subscribe", {uri = uri})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.unsubscribe_resource(uri)
-  return mcp.rpc.request("resources/unsubscribe", {uri = uri})
+  local msg, rid, err = mcp.rpc.request("resources/unsubscribe", {uri = uri})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.call_tool(name, args)
-  return mcp.rpc.request("tools/call", {name = name, arguments = args})
+  local msg, rid, err = mcp.rpc.request("tools/call", {name = name, arguments = args})
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.request.create_message(messages, max_tokens, options)
-  return mcp.rpc.request("sampling/createMessage", {
+  local msg, rid, err = mcp.rpc.request("sampling/createMessage", {
     messages = messages,
     maxTokens = tonumber(max_tokens),
     modelPreferences = options and options.modelPreferences,
@@ -63,6 +105,12 @@ function _M.request.create_message(messages, max_tokens, options)
     stopSequences = options and options.stopSequences,
     metadata = options and options.metadata
   })
+  return msg and {
+    body = msg,
+    validator = function(res)
+      return true
+    end
+  } or nil, rid, err
 end
 
 function _M.notification.initialized()

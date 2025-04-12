@@ -78,16 +78,7 @@ local function main_loop(self)
   self.main_loop = nil
 end
 
-local function request_async(self, req, rid, cb)
-  local ok, err = self.conn:send(req)
-  if not ok then
-    return nil, err
-  end
-  self.pending_requests[rid] = cb
-  return true
-end
-
-local function return_result(result, errobj)
+local function return_result(result, errobj, validator)
   if errobj then
     if errobj.data then
       local data, err = cjson.encode(errobj.data)
@@ -95,11 +86,26 @@ local function return_result(result, errobj)
     end
     return nil, string.format("%d %s", errobj.code, errobj.message)
   end
+  if not validator(result) then
+    return nil, "invalid result format"
+  end
   return result
 end
 
+local function request_async(self, req, rid, cb)
+  local ok, err = self.conn:send(req.body)
+  if not ok then
+    return nil, err
+  end
+  self.pending_requests[rid] = function(result, errobj)
+    local res, err = return_result(result, errobj, req.validator)
+    cb(res, err)
+  end
+  return true
+end
+
 local function request_sync_blocking(self, req, rid)
-  local ok, err = self.conn:send(req)
+  local ok, err = self.conn:send(req.body)
   if not ok then
     return nil, err
   end
@@ -119,7 +125,7 @@ local function request_sync_blocking(self, req, rid)
       return nil, err
     end
   until result or errobj
-  return return_result(result, errobj)
+  return return_result(result, errobj, req.validator)
 end
 
 local function request_sync_nonblocking(self, req, rid, timeout)
@@ -127,7 +133,7 @@ local function request_sync_nonblocking(self, req, rid, timeout)
   if not sema then
     return nil, err
   end
-  local ok, err = self.conn:send(req)
+  local ok, err = self.conn:send(req.body)
   if not ok then
     return nil, err
   end
@@ -141,7 +147,7 @@ local function request_sync_nonblocking(self, req, rid, timeout)
   if not ok then
     return nil, err
   end
-  return return_result(result, errobj)
+  return return_result(result, errobj, req.validator)
 end
 
 function _M.new(conn, name, version, mt)
