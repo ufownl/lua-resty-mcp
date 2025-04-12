@@ -14,7 +14,6 @@ local cjson = require("cjson.safe")
 local ngx_semaphore = require("ngx.semaphore")
 local ngx_log = ngx.log
 local ngx_thread_spawn = ngx.thread.spawn
-local ngx_thread_kill = ngx.thread.kill
 local ngx_thread_wait = ngx.thread.wait
 local unpack = table.unpack or unpack
 
@@ -173,14 +172,15 @@ function _M.initialize(self, methods)
   self.main_loop = ngx_thread_spawn(main_loop, self)
 end
 
-function _M.shutdown(self, kill)
+function _M.shutdown(self, dont_wait)
   local co = self.main_loop
   if co then
     self.conn:close()
-    local fn = kill and ngx_thread_kill or ngx_thread_wait
-    local ok, err = fn(co)
-    if not ok then
-      ngx_log(ngx.ERR, "ngx thread: ", err)
+    if not dont_wait then
+      local ok, err = ngx_thread_wait(co)
+      if not ok then
+        ngx_log(ngx.ERR, "ngx thread: ", err)
+      end
     end
   end
 end
