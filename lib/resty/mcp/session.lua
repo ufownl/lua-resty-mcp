@@ -145,7 +145,7 @@ local function request_sync_nonblocking(self, req, rid, timeout)
   return return_result(result, errobj)
 end
 
-function _M.new(conn, name, mt)
+function _M.new(conn, name, version, mt)
   local bg_tasks
   if not conn.blocking_io then
     local sema, err = ngx_semaphore.new()
@@ -162,6 +162,7 @@ function _M.new(conn, name, mt)
   return setmetatable({
     conn = conn,
     name = name,
+    version = version,
     pending_requests = {},
     bg_tasks = bg_tasks
   }, mt or {__index = _M})

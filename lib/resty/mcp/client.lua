@@ -163,7 +163,7 @@ function _MT.__index.initialize(self, roots, sampling_cb)
   self.sampling_callback = sampling_cb
   mcp.session.initialize(self, define_methods(self))
   local capabilities = {roots = true, sampling = sampling_cb}
-  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.name})
+  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.name, self.version})
   if not res then
     self.conn:close()
     return nil, err
@@ -320,7 +320,7 @@ function _M.new(transport, options)
   if not conn then
     return nil, err
   end
-  return mcp.session.new(conn, options.name, _MT)
+  return mcp.session.new(conn, options.name, options.version, _MT)
 end
 
 function _M.check(v)

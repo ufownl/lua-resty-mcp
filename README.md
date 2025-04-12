@@ -93,6 +93,7 @@ Available options:
 {
   -- Common options
   name = "lua-resty-mcp",  -- Name of this session (optional)
+  version = "1.0",  -- Version of this session (optional)
 
   -- Options for stdio transport
   -- Command and arguments for starting server (required)

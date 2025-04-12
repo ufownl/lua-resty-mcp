@@ -11,7 +11,7 @@ local _M = {
   result = {}
 }
 
-function _M.request.initialize(capabilities, name)
+function _M.request.initialize(capabilities, name, version)
   return mcp.rpc.request("initialize", {
     protocolVersion = mcp.version.protocol,
     capabilities = capabilities and {
@@ -21,7 +21,7 @@ function _M.request.initialize(capabilities, name)
     } or {},
     clientInfo = {
       name = name or "lua-resty-mcp",
-      version = mcp.version.module
+      version = version or mcp.version.module
     }
   })
 end
