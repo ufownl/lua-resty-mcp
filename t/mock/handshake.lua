@@ -1,11 +1,6 @@
-local mcp = {
-  transport = {
-    stdio = require("resty.mcp.transport.stdio")
-  },
-  server = require("resty.mcp.server")
-}
+local mcp = require("resty.mcp")
 
-local server, err = mcp.server.new(mcp.transport.stdio, {})
+local server, err = mcp.server(mcp.transport.stdio, {})
 if not server then
   error(err)
 end

@@ -11,6 +11,8 @@ local _M = {
   result = {}
 }
 
+local cjson = require("cjson.safe")
+
 function _M.request.initialize(capabilities, name, version)
   return mcp.rpc.request("initialize", {
     protocolVersion = mcp.version.protocol,
@@ -99,7 +101,7 @@ function _M.result.list(field_name, tbl, next_cursor)
     table.insert(schemas, v:to_mcp())
   end
   return {
-    [field_name] = schemas,
+    [field_name] = setmetatable(schemas, cjson.array_mt),
     nextCursor = next_cursor
   }
 end

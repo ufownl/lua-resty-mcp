@@ -4,5 +4,7 @@ return {
   transport = {
     stdio = require("resty.mcp.transport.stdio")
   },
-  client = require("resty.mcp.client").new
+  client = require("resty.mcp.client").new,
+  server = require("resty.mcp.server").new,
+  tool = require("resty.mcp.tool").new
 }

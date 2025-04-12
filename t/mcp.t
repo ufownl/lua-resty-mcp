@@ -200,15 +200,15 @@ false
 false
 add
 Adds two numbers.
-echo
-Echoes back the input.
 enable_echo
 Enables the echo tool.
+echo
+Echoes back the input.
 true
 false
 text Hello, world!
 true
-text Echo tool has been enabled!
+text tool (name: echo) had been registered
 --- no_error_log
 [error]
 
