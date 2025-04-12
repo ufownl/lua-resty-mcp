@@ -28,7 +28,7 @@ local function define_methods(self)
         capabilities = params.capabilities,
         info = params.clientInfo
       }
-      return mcp.protocol.result.initialize(self.capabilities, self.name, self.version)
+      return mcp.protocol.result.initialize(self.capabilities, self.name, self.version, self.instructions)
     end,
     ["notifications/initialized"] = function(params)
       self.initialized = true
@@ -132,7 +132,7 @@ function _MT.__index.unregister_tool(self, name)
   return unregister_impl(self, name, "tools", "name")
 end
 
-function _MT.__index.run(self, capabilities, pagination)
+function _MT.__index.run(self, options)
   self.capabilities = {
     prompts = {
       listChanged = true
@@ -145,28 +145,33 @@ function _MT.__index.run(self, capabilities, pagination)
       listChanged = true
     }
   }
-  if type(capabilities) == "table" then
-    for k, v in pairs(self.capabilities) do
-      local val = capabilities[k]
-      local typ = type(val)
-      if typ == "table" then
-        self.capabilities[k] = val
-      elseif typ ~= "nil" and not val then
-        self.capabilities[k] = nil
-      end
-    end
-  end
   self.pagination = {
     prompts = 0,
     resources = 0,
     tools = 0
   }
-  if type(pagination) == "table" then
-    for k, v in pairs(self.pagination) do
-      local val = tonumber(pagination[k])
-      if val and val > 0 then
-        self.pagination[k] = math.floor(val)
+  if options then
+    if type(options.capabilities) == "table" then
+      for k, v in pairs(self.capabilities) do
+        local val = options.capabilities[k]
+        local typ = type(val)
+        if typ == "table" then
+          self.capabilities[k] = val
+        elseif typ ~= "nil" and not val then
+          self.capabilities[k] = nil
+        end
       end
+    end
+    if type(options.pagination) == "table" then
+      for k, v in pairs(self.pagination) do
+        local val = tonumber(options.pagination[k])
+        if val and val > 0 then
+          self.pagination[k] = math.floor(val)
+        end
+      end
+    end
+    if type(options.instructions) == "string" then
+      self.instructions = options.instructions
     end
   end
   mcp.session.initialize(self, define_methods(self))

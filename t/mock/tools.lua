@@ -44,8 +44,13 @@ local ok, err = server:register(mcp.tool("enable_echo", function(args)
 end, "Enables the echo tool."))
 
 server:run({
-  prompts = false,
-  resources = false,
-  completions = false,
-  logging = false
-}, {tools = 1})
+  capabilities = {
+    prompts = false,
+    resources = false,
+    completions = false,
+    logging = false
+  },
+  pagination = {
+    tools = 1
+  }
+})

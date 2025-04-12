@@ -77,7 +77,7 @@ function _M.notification.resource_updated(uri)
   return mcp.rpc.notification("notifications/resources/updated", {uri = uri})
 end
 
-function _M.result.initialize(capabilities, name, version)
+function _M.result.initialize(capabilities, name, version, instructions)
   return {
     protocolVersion = mcp.version.protocol,
     capabilities = capabilities and {
@@ -91,7 +91,8 @@ function _M.result.initialize(capabilities, name, version)
     serverInfo = {
       name = name or "lua-resty-mcp",
       version = version or mcp.version.module
-    }
+    },
+    instructions = instructions
   }
 end
 

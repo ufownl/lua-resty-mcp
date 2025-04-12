@@ -171,7 +171,8 @@ function _MT.__index.initialize(self, roots, sampling_cb)
   self.server = {
     protocol = res.protocolVersion,
     capabilities = res.capabilities,
-    info = res.serverInfo
+    info = res.serverInfo,
+    instructions = res.instructions
   }
   local ok, err = mcp.session.send_notification(self, "initialized", {})
   if not ok then

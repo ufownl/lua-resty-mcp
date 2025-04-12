@@ -22,7 +22,7 @@ location = /t {
       error(err)
     end
     client:shutdown()
-    ngx.say("Hello, MCP!")
+    ngx.say(client.server.instructions)
   }
 }
 --- request
