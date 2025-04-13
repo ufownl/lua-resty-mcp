@@ -4,6 +4,7 @@ local mcp = {
   session = require("resty.mcp.session"),
   protocol = require("resty.mcp.protocol"),
   validator = require("resty.mcp.protocol.validator"),
+  prompt = require("resty.mcp.prompt"),
   tool = require("resty.mcp.tool")
 }
 
@@ -32,6 +33,17 @@ local function define_methods(self)
     ["notifications/initialized"] = function(params)
       self.initialized = true
     end,
+    ["prompts/get"] = self.capabilities.prompts and function(params)
+      local ok, err = mcp.validator.GetPromptRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      local prompt = self.available_prompts and self.available_prompts.dict[params.name]
+      if not prompt then
+        return nil, -32602, "Invalid prompt name", {name = params.name}
+      end
+      return prompt:get(params.arguments)
+    end or nil,
     ["tools/call"] = self.capabilities.tools and function(params)
       local ok, err = mcp.validator.CallToolRequest(params)
       if not ok then
@@ -133,10 +145,17 @@ local _MT = {
 }
 
 function _MT.__index.register(self, component)
+  if mcp.prompt.check(component) then
+    return register_impl(self, component, "prompts", "name")
+  end
   if mcp.tool.check(component) then
     return register_impl(self, component, "tools", "name")
   end
   error("unsupported component")
+end
+
+function _MT.__index.unregister_prompt(self, name)
+  return unregister_impl(self, name, "prompts", "name")
 end
 
 function _MT.__index.unregister_tool(self, name)

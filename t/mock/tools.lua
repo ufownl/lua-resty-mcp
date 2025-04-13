@@ -42,6 +42,9 @@ local ok, err = server:register(mcp.tool("enable_echo", function(args)
   end
   return {}
 end, "Enables the echo tool."))
+if not ok then
+  error(err)
+end
 
 server:run({
   capabilities = {

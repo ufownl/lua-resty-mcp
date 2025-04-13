@@ -6,5 +6,6 @@ return {
   },
   client = require("resty.mcp.client").new,
   server = require("resty.mcp.server").new,
+  prompt = require("resty.mcp.prompt").new,
   tool = require("resty.mcp.tool").new
 }

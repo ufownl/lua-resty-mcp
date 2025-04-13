@@ -284,6 +284,14 @@ location = /t {
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     local _, err = client:get_prompt("mock_error")
     ngx.say(err)
+    local res, err = client:call_tool("enable_mock_error")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
     client:shutdown()
   }
 }
@@ -291,10 +299,10 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-complex_prompt
-A prompt with arguments.
 simple_prompt
 A prompt without arguments.
+complex_prompt
+A prompt with arguments.
 true
 A prompt without arguments.
 user text This is a simple prompt without arguments.
@@ -304,14 +312,16 @@ assistant text Assistant reply: temperature=0.4, style=json
 -32602 Invalid prompt name {"name":"mock_error"}
 false
 false
+simple_prompt
+A prompt without arguments.
 complex_prompt
 A prompt with arguments.
 mock_error
 Mock error message.
-simple_prompt
-A prompt without arguments.
 true
 -32603 Internal errors {"errmsg":"mock error"}
+true
+text prompt (name: mock_error) had been registered
 --- no_error_log
 [error]
 
