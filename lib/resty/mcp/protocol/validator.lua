@@ -31,15 +31,10 @@ for key, def in pairs(mcp_schema.definitions) do
   remove_meta(def)
 end
 for key, def in pairs(mcp_schema.definitions) do
-  local schema = {}
+  local schema = {definitions = mcp_schema.definitions}
   for k, v in pairs(def) do
     schema[k] = v
   end
-  schema.definitions = {}
-  for k, v in pairs(mcp_schema.definitions) do
-    schema.definitions[k] = v
-  end
-  schema.definitions[key] = nil
   local validator = jsonschema.generate_validator(schema)
   if schema.properties and schema.properties.method and schema.properties.method.const then
     _M[key] = function(params)
