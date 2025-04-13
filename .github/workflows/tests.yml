@@ -44,6 +44,8 @@ jobs:
       run: cpanm -S -q -n Test::Nginx
 
     - uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
     - name: Run tests
       run: TEST_NGINX_BINARY=/usr/local/openresty/bin/openresty prove -r t/ || ( cat error.log && exit 1 )

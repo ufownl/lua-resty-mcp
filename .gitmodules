@@ -1,0 +1,6 @@
+[submodule "deps/neturl"]
+	path = deps/neturl
+	url = https://github.com/golgote/neturl.git
+[submodule "deps/jsonschema"]
+	path = deps/jsonschema
+	url = https://github.com/api7/jsonschema.git
