@@ -33,7 +33,7 @@ function _M.succ_resp(rid, result)
   if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
     error("JSONRPC: ID MUST be a string or integer.")
   end
-  if type(result) == "nil" then
+  if result == nil then
     error("JSONRPC: result MUST be set in a successful response.")
   end
   local msg, err = cjson.encode({
@@ -104,7 +104,7 @@ local function handle_impl(dm, methods, resp_cb)
   end
   if dm.id then
     local result, code, message, data = fn(dm.params)
-    return type(result) ~= "nil" and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+    return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
   end
   fn(dm.params)
 end

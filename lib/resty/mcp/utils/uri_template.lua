@@ -86,13 +86,13 @@ local function get_values(ctx, op, key, mod)
       if mod == "*" then
         if #val > 0 then
           for i, v in ipairs(val) do
-            if type(v) ~= "nil" then
+            if v ~= nil then
               table.insert(res, encode_value(op, tostring(v), key_operator(op) and key))
             end
           end
         else
           for k, v in pairs(val) do
-            if type(v) ~= "nil" then
+            if v ~= nil then
               table.insert(res, encode_value(op, tostring(v), k))
             end
           end
@@ -101,13 +101,13 @@ local function get_values(ctx, op, key, mod)
         local t = {}
         if #val > 0 then
           for i, v in ipairs(val) do
-            if type(v) ~= "nil" then
+            if v ~= nil then
               table.insert(t, encode_value(op, tostring(v)))
             end
           end
         else
           for k, v in pairs(val) do
-            if type(v) ~= "nil" then
+            if v ~= nil then
               table.insert(t, encode_unreserved(k))
               table.insert(t, encode_value(op, tostring(v)))
             end
