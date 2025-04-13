@@ -1,6 +1,7 @@
 local mcp = {
   version = require("resty.mcp.version"),
-  rpc = require("resty.mcp.protocol.rpc")
+  rpc = require("resty.mcp.protocol.rpc"),
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -28,19 +29,23 @@ function _M.request.initialize(capabilities, name, version)
   })
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = mcp.validator.InitializeResult
   } or nil, rid, err
 end
+
+local list_result_validator = {
+  prompts = mcp.validator.ListPromptsResult,
+  resources = mcp.validator.ListResourcesResult,
+  ["resources/templates"] = mcp.validator.ListResourceTemplatesResult,
+  tools = mcp.validator.ListToolsResult,
+  roots = mcp.validator.ListRootsResult
+}
 
 function _M.request.list(category, cursor)
   local msg, rid, err = mcp.rpc.request(category.."/list", {cursor = cursor})
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = list_result_validator[category]
   } or nil, rid, err
 end
 
@@ -48,9 +53,7 @@ function _M.request.get_prompt(name, args)
   local msg, rid, err = mcp.rpc.request("prompts/get", {name = name, arguments = args})
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = mcp.validator.GetPromptResult
   } or nil, rid, err
 end
 
@@ -58,9 +61,7 @@ function _M.request.read_resource(uri)
   local msg, rid, err = mcp.rpc.request("resources/read", {uri = uri})
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = mcp.validator.ReadResourceResult
   } or nil, rid, err
 end
 
@@ -88,9 +89,7 @@ function _M.request.call_tool(name, args)
   local msg, rid, err = mcp.rpc.request("tools/call", {name = name, arguments = args})
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = mcp.validator.CallToolResult
   } or nil, rid, err
 end
 
@@ -107,9 +106,7 @@ function _M.request.create_message(messages, max_tokens, options)
   })
   return msg and {
     body = msg,
-    validator = function(res)
-      return true
-    end
+    validator = mcp.validator.CreateMessageResult
   } or nil, rid, err
 end
 

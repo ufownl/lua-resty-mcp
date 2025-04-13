@@ -1,7 +1,8 @@
 local mcp = {
   version = require("resty.mcp.version"),
   utils = require("resty.mcp.utils"),
-  session = require("resty.mcp.session")
+  session = require("resty.mcp.session"),
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -35,8 +36,9 @@ local function define_methods(self)
       }
     end,
     ["sampling/createMessage"] = self.sampling_callback and function(params)
-      if type(params) ~= "table" or type(params.messages) ~= "table" or type(params.maxTokens) ~= "number" then
-        return nil, -32602, "Invalid params", {errmsg = "messages and maxTokens MUST be set"}
+      local ok, err = mcp.validator.CreateMessageRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
       end
       for i, v in ipairs(params.messages) do
         if not mcp.utils.check_role(v.role) then
@@ -89,9 +91,13 @@ local function define_methods(self)
       }
     end or nil,
     ["notifications/resources/updated"] = function(params)
+      local ok, err = mcp.validator.ResourceUpdatedNotification(params)
+      if not ok then
+        ngx_log(ngx.ERR, err)
+        return
+      end
       local cap = self.server.capabilities.resources
       if not cap or not cap.subscribe or
-         type(params) ~= "table" or type(params.uri) ~= "string" or
          not self.subscribed_resources or not self.subscribed_resources[params.uri] then
         return
       end
@@ -106,7 +112,7 @@ local function define_methods(self)
       end
       local list, err = get_list(self, v)
       if not list then
-        ngx_log(ngx.ERR, "client: ", err)
+        ngx_log(ngx.ERR, err)
         return
       end
       self.server["discovered_"..v] = list

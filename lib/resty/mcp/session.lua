@@ -86,8 +86,9 @@ local function return_result(result, errobj, validator)
     end
     return nil, string.format("%d %s", errobj.code, errobj.message)
   end
-  if not validator(result) then
-    return nil, "invalid result format"
+  local ok, err = validator(result)
+  if not ok then
+    return nil, err
   end
   return result
 end

@@ -3,6 +3,7 @@ local mcp = {
   utils = require("resty.mcp.utils"),
   session = require("resty.mcp.session"),
   protocol = require("resty.mcp.protocol"),
+  validator = require("resty.mcp.protocol.validator"),
   tool = require("resty.mcp.tool")
 }
 
@@ -17,11 +18,9 @@ local ngx_encode_args = ngx.encode_args
 local function define_methods(self)
   local methods = {
     initialize = function(params)
-      if type(params) ~= "table" or
-         type(params.protocolVersion) ~= "string" or
-         type(params.capabilities) ~= "table" or
-         type(params.clientInfo) ~= "table" then
-        return nil, -32602, "Invalid params"
+      local ok, err = mcp.validator.InitializeRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
       end
       self.client = {
         protocol = params.protocolVersion,
@@ -33,38 +32,50 @@ local function define_methods(self)
     ["notifications/initialized"] = function(params)
       self.initialized = true
     end,
-    ["tools/call"] = function(params)
-      if type(params) ~= "table" or type(params.name) ~= "string" then
-        return nil, -32602, "Invalid params", {errmsg = "name of tool MUST be set"}
+    ["tools/call"] = self.capabilities.tools and function(params)
+      local ok, err = mcp.validator.CallToolRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
       end
       local tool = self.available_tools and self.available_tools.dict[params.name]
       if not tool then
         return nil, -32602, "Unknown tool", {name = params.name}
       end
       return tool(params.arguments)
-    end
+    end or nil
   }
-  for cap_k, cap_v in pairs(self.capabilities) do
-    methods[cap_k.."/list"] = function(params)
-      local prop = self["available_"..cap_k]
-      if not prop then
-        return mcp.protocol.result.list(cap_k, {})
-      end
-      local page_size = self.pagination[cap_k]
-      if page_size > 0 and #prop.list > page_size and type(params) == "table" and type(params.cursor) == "string" then
-        local cursor = ngx_decode_args(params.cursor)
-        if not cursor or not tonumber(cursor.idx) or not tonumber(cursor.idx) < 1 then
-          return nil, -32602, "Invalid params", {errmsg = "invalid cursor"}
+  local validator = {
+    mcp.validator.ListPromptsRequest,
+    mcp.validator.ListResourcesRequest,
+    mcp.validator.ListToolsRequest
+  }
+  for i, cap_k in ipairs({"prompts", "resources", "tools"}) do
+    if self.capabilities[cap_k] then
+      methods[cap_k.."/list"] = function(params)
+        local ok, err = validator[i](params)
+        if not ok then
+          return nil, -32602, "Invalid params", {errmsg = err}
         end
-        local l = math.floor(cursor.idx)
-        local r = math.min(l + page_size - 1, #prop.list)
-        local page = {}
-        for i = l, r do
-          table.insert(page, prop.list[i])
+        local prop = self["available_"..cap_k]
+        if not prop then
+          return mcp.protocol.result.list(cap_k, {})
         end
-        return mcp.protocol.result.list(cap_k, page, r < #prop.list and ngx_encode_args({idx = r + 1}) or nil)
-      else
-        return mcp.protocol.result.list(cap_k, prop.list)
+        local page_size = self.pagination[cap_k]
+        if page_size > 0 and #prop.list > page_size and params and params.cursor then
+          local cursor = ngx_decode_args(params.cursor)
+          if not cursor or not tonumber(cursor.idx) or not tonumber(cursor.idx) < 1 then
+            return nil, -32602, "Invalid params", {errmsg = "invalid cursor"}
+          end
+          local l = math.floor(cursor.idx)
+          local r = math.min(l + page_size - 1, #prop.list)
+          local page = {}
+          for j = l, r do
+            table.insert(page, prop.list[j])
+          end
+          return mcp.protocol.result.list(cap_k, page, r < #prop.list and ngx_encode_args({idx = r + 1}) or nil)
+        else
+          return mcp.protocol.result.list(cap_k, prop.list)
+        end
       end
     end
   end
