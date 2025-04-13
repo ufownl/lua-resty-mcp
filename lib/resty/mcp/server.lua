@@ -42,7 +42,10 @@ local function define_methods(self)
       if not prompt then
         return nil, -32602, "Invalid prompt name", {name = params.name}
       end
-      return prompt:get(params.arguments)
+      return prompt:get(params.arguments, {
+        session = self,
+        _meta = params._meta
+      })
     end or nil,
     ["tools/call"] = self.capabilities.tools and function(params)
       local ok, err = mcp.validator.CallToolRequest(params)
@@ -53,7 +56,10 @@ local function define_methods(self)
       if not tool then
         return nil, -32602, "Unknown tool", {name = params.name}
       end
-      return tool(params.arguments)
+      return tool(params.arguments, {
+        session = self,
+        _meta = params._meta
+      })
     end or nil
   }
   local validator = {
