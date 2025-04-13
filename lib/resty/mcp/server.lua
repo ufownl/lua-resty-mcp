@@ -5,6 +5,8 @@ local mcp = {
   protocol = require("resty.mcp.protocol"),
   validator = require("resty.mcp.protocol.validator"),
   prompt = require("resty.mcp.prompt"),
+  resource = require("resty.mcp.resource"),
+  resource_template = require("resty.mcp.resource_template"),
   tool = require("resty.mcp.tool")
 }
 
@@ -15,6 +17,18 @@ local _M = {
 
 local ngx_decode_args = ngx.decode_args
 local ngx_encode_args = ngx.encode_args
+
+local function paginate(cursor, page_size, total_size)
+  local i = 1
+  if cursor then
+    local dc = ngx_decode_args(cursor)
+    if not dc or not tonumber(dc.idx) or tonumber(dc.idx) < 1 then
+      return nil, nil, "invalid cursor"
+    end
+    i = math.floor(dc.idx)
+  end
+  return i, math.min(i + page_size - 1, total_size)
+end
 
 local function define_methods(self)
   local methods = {
@@ -46,6 +60,98 @@ local function define_methods(self)
         session = self,
         _meta = params._meta
       })
+    end or nil,
+    ["resources/templates/list"] = self.capabilities.resources and function(params)
+      local ok, err = mcp.validator.ListResourceTemplatesRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      if not self.available_res_templates then
+        return mcp.protocol.result.list("resourceTemplates", {})
+      end
+      local page_size = self.pagination.resources
+      if page_size > 0 and #self.available_res_templates > page_size then
+        local l, r, err = paginate(params and params.cursor, page_size, #self.available_res_templates)
+        if err then
+          return nil, -32602, "Invalid params", {errmsg = err}
+        end
+        local page = {}
+        for j = l, r do
+          table.insert(page, self.available_res_templates[j])
+        end
+        return mcp.protocol.result.list("resourceTemplates", page, r < #self.available_res_templates and ngx_encode_args({idx = r + 1}) or nil)
+      else
+        return mcp.protocol.result.list("resourceTemplates", self.available_res_templates)
+      end
+    end or nil,
+    ["resources/read"] = self.capabilities.resources and function(params)
+      local ok, err = mcp.validator.ReadResourceRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      local resource = self.available_resources and self.available_resources.dict[params.uri]
+      if resource then
+        return resource:read({
+          session = self,
+          _meta = params._meta
+        })
+      end
+      if self.available_res_templates then
+        for i, res_template in ipairs(self.available_res_templates) do
+          local result, code, message, data = res_template:read(params.uri, {
+            session = self,
+            _meta = params._meta
+          })
+          if result then
+            return result
+          end
+          if code ~= -32002 then
+            return nil, code, message, data
+          end
+        end
+      end
+      return nil, -32002, "Resource not found", {uri = params.uri}
+    end or nil,
+    ["resources/subscribe"] = self.capabilities.resources and function(params)
+      local ok, err = mcp.validator.SubscribeRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      if self.subscribed_resources and self.subscribed_resources[params.uri] then
+        return {}
+      end
+      local resource = self.available_resources and self.available_resources.dict[params.uri]
+      if resource then
+        if self.subscribed_resources then
+          self.subscribed_resources[params.uri] = true
+        else
+          self.subscribed_resources = {[params.uri] = true}
+        end
+        return {}
+      end
+      if self.available_res_templates then
+        for i, res_template in ipairs(self.available_res_templates) do
+          if res_template:test(params.uri) then
+            if self.subscribed_resources then
+              self.subscribed_resources[params.uri] = true
+            else
+              self.subscribed_resources = {[params.uri] = true}
+            end
+            return {}
+          end
+        end
+      end
+      return nil, -32002, "Resource not found", {uri = params.uri}
+    end or nil,
+    ["resources/unsubscribe"] = self.capabilities.resources and function(params)
+      local ok, err = mcp.validator.UnsubscribeRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      if self.subscribed_resources then
+        self.subscribed_resources[params.uri] = nil
+      end
+      return {}
     end or nil,
     ["tools/call"] = self.capabilities.tools and function(params)
       local ok, err = mcp.validator.CallToolRequest(params)
@@ -80,15 +186,10 @@ local function define_methods(self)
         end
         local page_size = self.pagination[cap_k]
         if page_size > 0 and #prop.list > page_size then
-          local l = 1
-          if params and params.cursor then
-            local cursor = ngx_decode_args(params.cursor)
-            if not cursor or not tonumber(cursor.idx) or tonumber(cursor.idx) < 1 then
-              return nil, -32602, "Invalid params", {errmsg = "invalid cursor"}
-            end
-            l = math.floor(cursor.idx)
+          local l, r, err = paginate(params and params.cursor, page_size, #prop.list)
+          if err then
+            return nil, -32602, "Invalid params", {errmsg = err}
           end
-          local r = math.min(l + page_size - 1, #prop.list)
           local page = {}
           for j = l, r do
             table.insert(page, prop.list[j])
@@ -130,6 +231,20 @@ local function register_impl(self, component, category, key_field)
   return list_changed(self, category)
 end
 
+local function register_res_template(self, res_template)
+  if self.available_res_templates then
+    for i, v in ipairs(self.available_res_templates) do
+      if res_template.uri_template.pattern == v.uri_template.pattern then
+        return nil, string.format("resource template (pattern: %s) had been registered", res_template.uri_template.pattern)
+      end
+    end
+    table.insert(self.available_res_templates, res_template)
+  else
+    self.available_res_templates = {res_template}
+  end
+  return true
+end
+
 local function unregister_impl(self, key, category, key_field)
   local prop = self["available_"..category]
   local component = prop and prop.dict[key]
@@ -157,6 +272,12 @@ function _MT.__index.register(self, component)
   if mcp.prompt.check(component) then
     return register_impl(self, component, "prompts", "name")
   end
+  if mcp.resource.check(component) then
+    return register_impl(self, component, "resources", "uri")
+  end
+  if mcp.resource_template.check(component) then
+    return register_res_template(self, component)
+  end
   if mcp.tool.check(component) then
     return register_impl(self, component, "tools", "name")
   end
@@ -165,6 +286,38 @@ end
 
 function _MT.__index.unregister_prompt(self, name)
   return unregister_impl(self, name, "prompts", "name")
+end
+
+function _MT.__index.unregister_resource(self, uri)
+  return unregister_impl(self, uri, "resources", "uri")
+end
+
+function _MT.__index.unregister_res_template(self, pattern)
+  if self.available_res_templates then
+    for i, v in ipairs(self.available_res_templates) do
+      if pattern == v.uri_template.pattern then
+        table.remove(self.available_res_templates, i)
+        return true
+      end
+    end
+  end
+  return nil, string.format("resource template (pattern: %s) is not registered", pattern)
+end
+
+function _MT.__index.resource_updated(self, uri)
+  if not self.initialized then
+    return nil, "session has not been initialized"
+  end
+  if not self.capabilities.resources then
+    return nil, "resources capability has been disabled"
+  end
+  if self.subscribed_resources and self.subscribed_resources[uri] then
+    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri})
+    if not ok then
+      return nil, err
+    end
+  end
+  return true
 end
 
 function _MT.__index.unregister_tool(self, name)

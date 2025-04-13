@@ -32,12 +32,12 @@ function _MT.__index.test(self, uri)
   return self.uri_template:test(uri)
 end
 
-function _MT.__index.read(self, uri)
+function _MT.__index.read(self, uri, ctx)
   local vars, err = self.uri_template:match(uri)
   if not vars then
     return nil, -32002, "Resource not found", {uri = uri}
   end
-  local found, contents, err = self.callback(uri, vars)
+  local found, contents, err = self.callback(uri, vars, ctx)
   if not contents then
     if found then
       return nil, -32603, "Internal errors", {errmsg = err}

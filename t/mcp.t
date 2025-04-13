@@ -472,14 +472,14 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-mock://static/blob
-BlobResource
-Static blob resource.
-application/octet-stream
 mock://static/text
 TextResource
 Static text resource.
 text/plain
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
 true
 mock://static/text
 text/plain
@@ -496,6 +496,10 @@ application/octet-stream
 nil
 content of hidden resource
 false
+mock://static/text
+TextResource
+Static text resource.
+text/plain
 mock://static/blob
 BlobResource
 Static blob resource.
@@ -504,10 +508,6 @@ mock://static/hidden
 HiddenResource
 Hidden blob resource.
 nil
-mock://static/text
-TextResource
-Static text resource.
-text/plain
 true
 mock://dynamic/text/{id}
 DynamicText
