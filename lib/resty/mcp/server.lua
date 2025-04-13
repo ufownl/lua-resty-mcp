@@ -73,12 +73,15 @@ local function define_methods(self)
           return mcp.protocol.result.list(cap_k, {})
         end
         local page_size = self.pagination[cap_k]
-        if page_size > 0 and #prop.list > page_size and params and params.cursor then
-          local cursor = ngx_decode_args(params.cursor)
-          if not cursor or not tonumber(cursor.idx) or not tonumber(cursor.idx) < 1 then
-            return nil, -32602, "Invalid params", {errmsg = "invalid cursor"}
+        if page_size > 0 and #prop.list > page_size then
+          local l = 1
+          if params and params.cursor then
+            local cursor = ngx_decode_args(params.cursor)
+            if not cursor or not tonumber(cursor.idx) or tonumber(cursor.idx) < 1 then
+              return nil, -32602, "Invalid params", {errmsg = "invalid cursor"}
+            end
+            l = math.floor(cursor.idx)
           end
-          local l = math.floor(cursor.idx)
           local r = math.min(l + page_size - 1, #prop.list)
           local page = {}
           for j = l, r do
