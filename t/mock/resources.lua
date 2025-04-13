@@ -89,11 +89,14 @@ local tool = mcp.tool.new("touch_resource", function(args)
   end
   return {}
 end, "Trigger resource updated notification.", {
-  uri = {
-    type = "string",
-    description = "URI of updated resource.",
-    required = true
-  }
+  type = "object",
+  properties = {
+    uri = {
+      type = "string",
+      description = "URI of updated resource."
+    }
+  },
+  required = {"uri"}
 })
 available_tools[tool.name] = tool
 

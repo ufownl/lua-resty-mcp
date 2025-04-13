@@ -193,10 +193,10 @@ Adds two numbers.
 enable_echo
 Enables the echo tool.
 true
-false
+nil
 text 3
 -32602 Unknown tool {"name":"echo"}
-false
+nil
 false
 add
 Adds two numbers.
@@ -205,7 +205,7 @@ Enables the echo tool.
 echo
 Echoes back the input.
 true
-false
+nil
 text Hello, world!
 true
 text tool (name: echo) had been registered
@@ -310,7 +310,7 @@ A prompt with arguments.
 user text This is a complex prompt with arguments: temperature=0.4, style=json
 assistant text Assistant reply: temperature=0.4, style=json
 -32602 Invalid prompt name {"name":"mock_error"}
-false
+nil
 false
 simple_prompt
 A prompt without arguments.
@@ -490,7 +490,7 @@ application/octet-stream
 nil
 Hello, world!
 -32002 Resource not found {"uri":"mock:\/\/static\/hidden"}
-false
+nil
 mock://static/hidden
 application/octet-stream
 nil
@@ -526,17 +526,17 @@ application/octet-stream
 nil
 content of dynamic blob resource mock://dynamic/blob/123, id=123
 -32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
-false
+nil
 -32002 Resource not found {"uri":"mock:\/\/unknown"}
 sub 1: mock://static/text
-false
+nil
 sub 2: mock://dynamic/text/123
-false
-false
-false
+nil
+nil
+nil
 sub 2: mock://dynamic/text/123
-false
-false
+nil
+nil
 --- no_error_log
 [error]
 

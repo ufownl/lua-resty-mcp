@@ -1,7 +1,8 @@
 local mcp = {
   version = require("resty.mcp.version"),
   utils = require("resty.mcp.utils"),
-  protocol = require("resty.mcp.protocol")
+  protocol = require("resty.mcp.protocol"),
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -35,9 +36,12 @@ function _MT.__index.read(self, ctx)
   for i, v in ipairs(contents) do
     v.uri = v.uri or self.uri
     v.mimeType = v.mimeType or self.mime
-    if not mcp.utils.check_resource(v) then
-      error("invalid resource format")
-    end
+  end
+  local ok, err = mcp.validator.ReadResourceResult({contents = contents})
+  if not ok then
+    error(err)
+  end
+  for i, v in ipairs(contents) do
     if self.mime and v.uri == self.uri and v.mimeType ~= self.mime then
       error("resource MIME type mismatch")
     end

@@ -1,7 +1,8 @@
 local mcp = {
   version = require("resty.mcp.version"),
   utils = require("resty.mcp.utils"),
-  protocol = require("resty.mcp.protocol")
+  protocol = require("resty.mcp.protocol"),
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -10,6 +11,7 @@ local _M = {
 }
 
 local cjson = require("cjson.safe")
+local jsonschema = require("jsonschema")
 
 local _MT = {
   __index = {
@@ -18,98 +20,56 @@ local _MT = {
 }
 
 function _MT.__index.to_mcp(self)
-  local properties, required
-  for name, schema in pairs(self.expected_args) do
-    local prop = {}
-    for k, v in pairs(schema) do
-      if k == "required" then
-        if v then
-          if required then
-            table.insert(required, name)
-          else
-            required = {name}
-          end
-        end
-      else
-        prop[k] = v
-      end
-    end
-    if properties then
-      properties[name] = prop
-    else
-      properties = {[name] = prop}
-    end
-  end
   return {
     name = self.name,
     description = self.description,
-    inputSchema = {
-      type = "object",
-      properties = properties,
-      required = required
-    },
+    inputSchema = self.input_schema or {type = "object"},
     annotations = self.annotations
   }
 end
 
 function _MT.__call(self, args, ctx)
-  if args then
-    if type(args) ~= "table" or #args > 0 then
-      return nil, -32602, "Invalid arguments"
-    end
-  else
-    args = {}
-  end
-  for k, v in pairs(self.expected_args) do
-    local actual_value = args[k]
-    local actual_type = type(actual_value)
-    if actual_type == "nil" then
-      if v.required then
-        return nil, -32602, "Missing required arguments", {
-          argument = k,
-          expected = v.type,
-          required = true
-        }
-      end
-    elseif not mcp.utils.check_argument(v.type, actual_type, actual_value) then
-      return nil, -32602, "Invalid arguments", {
-        argument = k,
-        expected = v.type,
-        actual = actual_type
-      }
-    end
+  local ok, err = self.args_validator(args)
+  if not ok then
+    return nil, -32602, "Invalid arguments", {errmsg = err}
   end
   local content, is_error = self.callback(args, ctx)
-  for i, v in ipairs(content) do
-    if not mcp.utils.check_content(v) then
-      error("invalid content format")
-    end
+  local ok, err = mcp.validator.CallToolResult({
+    content = content,
+    isError = is_error
+  })
+  if not ok then
+    error(err)
   end
   return {
     content = setmetatable(content, cjson.array_mt),
-    isError = is_error and true or false
+    isError = is_error
   }
 end
 
-function _M.new(name, cb, desc, args, annos)
-  if type(name) ~= "string" then
-    error("tool name MUST be a string.")
-  end
+function _M.new(name, cb, desc, input_schema, annos)
   if not cb then
     error("callback of tool MUST be set.")
   end
-  if desc and type(desc) ~= "string" then
-    error("description of tool MUST be a string.")
-  end
-  if args and (type(args) ~= "table" or #args > 0) then
-    error("expected arguments of tool MUST be a dict.")
+  local annotations = annos and mcp.protocol.tool_annotations(annos) or nil
+  local ok, err = mcp.validator.Tool({
+    name = name,
+    description = desc,
+    inputSchema = input_schema or {type = "object"},
+    annotations = annotations
+  })
+  if not ok then
+    error(err)
   end
   return setmetatable({
     name = name,
     callback = cb,
     description = desc,
-    expected_args = args or {},
-    annotations = annos and mcp.protocol.tool_annotations(annos) or nil
+    args_validator = input_schema and jsonschema.generate_validator(input_schema) or function(args)
+      return true
+    end,
+    input_schema = input_schema,
+    annotations = annotations
   }, _MT)
 end
 

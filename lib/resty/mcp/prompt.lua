@@ -1,6 +1,7 @@
 local mcp = {
   version = require("resty.mcp.version"),
-  utils = require("resty.mcp.utils")
+  utils = require("resty.mcp.utils"),
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -18,13 +19,12 @@ local _MT = {
 
 function _MT.__index.to_mcp(self)
   local arguments
-  for name, schema in pairs(self.expected_args) do
-    local prompt_arg = {name = name}
-    for k, v in pairs(schema) do
-      if k ~= "name" then
-        prompt_arg[k] = v
-      end
+  for name, decl in pairs(self.expected_args) do
+    local prompt_arg = {}
+    for k, v in pairs(decl) do
+      prompt_arg[k] = v
     end
+    prompt_arg.name = name
     if arguments then
       table.insert(arguments, prompt_arg)
     else
@@ -80,13 +80,11 @@ function _MT.__index.get(self, args, ctx)
   if not messages then
     return nil, -32603, "Internal errors", {errmsg = err}
   end
-  for i, v in ipairs(messages) do
-    if not mcp.utils.check_role(v.role) then
-      error("invalid message role")
-    end
-    if not mcp.utils.check_content(v.content) then
-      error("invalid content format")
-    end
+  local ok, err = mcp.validator.GetPromptResult({
+    messages = messages
+  })
+  if not ok then
+    error(err)
   end
   return {
     description = self.description,

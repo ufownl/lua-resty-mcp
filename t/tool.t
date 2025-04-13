@@ -17,18 +17,16 @@ location = /t {
         {type = "text", text = args.format and string.format(args.format, r) or tostring(r)}
       }
     end, "Adds two numbers.", {
-      a = {
-        type = "number",
-        required = true
+      type = "object",
+      properties = {
+        a = {type = "number"},
+        b = {type = "number"},
+        format = {
+          type = "string",
+          description = "Result format string."
+        }
       },
-      b = {
-        type = "number",
-        required = true
-      },
-      format = {
-        type = "string",
-        description = "Result format string."
-      }
+      required = {"a", "b"}
     }, {
       title = "Mock Tool Annotations",
       readOnlyHint = false,
@@ -73,9 +71,9 @@ location = /t {
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     local _, code, message, data = fn({a = 1, b = 2, format = 1})
-    ngx.say(string.format("%d %s %s %s %s", code, message, data.argument, data.expected, data.actual))
+    ngx.say(string.format("%d %s", code, message))
     local _, code, message, data = fn({b = 2})
-    ngx.say(string.format("%d %s %s %s %s", code, message, data.argument, data.expected, tostring(data.required)))
+    ngx.say(string.format("%d %s", code, message))
   }
 }
 --- request
@@ -94,12 +92,12 @@ false
 true
 false
 true
-false
+nil
 text 3
-false
+nil
 text result=3
--32602 Invalid arguments format string number
--32602 Missing required arguments a number true
+-32602 Invalid arguments
+-32602 Invalid arguments
 --- no_error_log
 [error]
 
@@ -121,14 +119,12 @@ location = /t {
         {type = "text", text = tostring(args.a / args.b)}
       }
     end, "Calculate `a` divided by `b`.", {
-      a = {
-        type = "number",
-        required = true
+      type = "object",
+      properties = {
+        a = {type = "number"},
+        b = {type = "number"}
       },
-      b = {
-        type = "number",
-        required = true
-      }
+      required = {"a", "b"}
     })
     local result, code, message, data = fn({a = 1, b = 2})
     if not result then
@@ -152,7 +148,7 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-false
+nil
 text 0.5
 true
 text ERROR: divisor cannot be 0!

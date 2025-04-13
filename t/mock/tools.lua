@@ -10,14 +10,12 @@ local ok, err = server:register(mcp.tool("add", function(args)
     {type = "text", text = tostring(args.a + args.b)}
   }
 end, "Adds two numbers.", {
-  a = {
-    type = "number",
-    required = true
+  type = "object",
+  properties = {
+    a = {type = "number"},
+    b = {type = "number"}
   },
-  b = {
-    type = "number",
-    required = true
-  }
+  required = {"a", "b"}
 }))
 if not ok then
   error(err)
@@ -29,11 +27,14 @@ local ok, err = server:register(mcp.tool("enable_echo", function(args)
       {type = "text", text = args.message}
     }
   end, "Echoes back the input.", {
-    message = {
-      type = "string",
-      description = "Message to echo.",
-      required = true
-    }
+    type = "object",
+    properties = {
+      message = {
+        type = "string",
+        description = "Message to echo."
+      }
+    },
+    required = {"message"}
   }))
   if not ok then
     return {

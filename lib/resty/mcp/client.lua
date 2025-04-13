@@ -40,44 +40,20 @@ local function define_methods(self)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
       end
-      for i, v in ipairs(params.messages) do
-        if not mcp.utils.check_role(v.role) then
-          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].role=%s", i, tostring(v.role))}
-        end
-        if type(v.content) ~= "table" then
-          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content=%s", i, tostring(v.content))}
-        end
-        if type(v.content.type) ~= "string" or v.content.type == "resource" then
-          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content.type=%s", i, tostring(v.content.type))}
-        end
-        if not mcp.utils.check_content(v.content) then
-          return nil, -32602, "Invalid params", {errmsg = string.format("messages[%d].content: invalid %s content format", i, v.content.type)}
-        end
-      end
       local result, code, message, data = self.sampling_callback(params)
       if not result then
         return nil, code, message, data
       end
       if type(result) == "table" then
-        if result.role then
-          if not mcp.utils.check_role(result.role) then
-            error("role MUST be \"user\" or \"assistant\"")
-          end
-        else
+        if not result.role then
           result.role = "assistant"
         end
-        if type(result.content) ~= "table" or result.content.type == "resource" or not mcp.utils.check_content(result.content) then
-          error("invalid content format")
-        end
-        if result.model then
-          if type(result.model) ~= "string" then
-            error("model MUST be a string")
-          end
-        else
+        if not result.model then
           result.model = "unknown"
         end
-        if result.stopReason and type(result.stopReason) ~= "string" then
-          error("stopReason MUST be a string")
+        local ok, err = mcp.validator.CreateMessageResult(result)
+        if not ok then
+          error(err)
         end
         return result
       end
