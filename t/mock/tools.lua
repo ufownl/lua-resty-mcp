@@ -21,8 +21,8 @@ if not ok then
   error(err)
 end
 
-local ok, err = server:register(mcp.tool("enable_echo", function(args)
-  local ok, err = server:register(mcp.tool("echo", function(args)
+local ok, err = server:register(mcp.tool("enable_echo", function(args, ctx)
+  local ok, err = ctx.session:register(mcp.tool("echo", function(args)
     return {
       {type = "text", text = args.message}
     }

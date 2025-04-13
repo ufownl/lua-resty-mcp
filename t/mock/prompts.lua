@@ -27,8 +27,8 @@ if not ok then
   error(err)
 end
 
-local ok, err = server:register(mcp.tool("enable_mock_error", function(args)
-  local ok, err = server:register(mcp.prompt("mock_error", function(args)
+local ok, err = server:register(mcp.tool("enable_mock_error", function(args, ctx)
+  local ok, err = ctx.session:register(mcp.prompt("mock_error", function(args)
     return nil, "mock error"
   end, "Mock error message."))
   if not ok then
