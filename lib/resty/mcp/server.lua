@@ -30,7 +30,7 @@ local function paginate(cursor, page_size, total_size)
   return i, math.min(i + page_size - 1, total_size)
 end
 
-local function define_methods(self)
+local function define_methods(self, event_handlers)
   local methods = {
     initialize = function(params)
       local ok, err = mcp.validator.InitializeRequest(params)
@@ -46,6 +46,10 @@ local function define_methods(self)
     end,
     ["notifications/initialized"] = function(params)
       self.initialized = true
+      local handler = event_handlers and event_handlers.initialized
+      if handler then
+        handler(params, {session = self})
+      end
     end,
     ["notifications/roots/list_changed"] = function(params)
       if not self.client.capabilities.roots or not self.client.capabilities.roots.listChanged then
@@ -56,6 +60,10 @@ local function define_methods(self)
         return nil, err
       end
       self.client.discovered_roots = res.roots
+      local handler = event_handlers and event_handlers["roots/list_changed"]
+      if handler then
+        handler(params, {session = self})
+      end
     end,
     ["prompts/get"] = self.capabilities.prompts and function(params)
       local ok, err = mcp.validator.GetPromptRequest(params)
@@ -400,7 +408,7 @@ function _MT.__index.run(self, options)
       self.instructions = options.instructions
     end
   end
-  mcp.session.initialize(self, define_methods(self))
+  mcp.session.initialize(self, define_methods(self, options.event_handlers))
 end
 
 function _MT.__index.shutdown(self)
