@@ -24,7 +24,8 @@ function _MT.__index.to_mcp(self)
     name = self.name,
     description = self.description,
     mimeType = self.mime,
-    annotations = self.annotations
+    annotations = self.annotations,
+    size = self.size and math.floor(self.size)
   }
 end
 
@@ -56,7 +57,7 @@ function _MT.__index.read(self, ctx)
   }
 end
 
-function _M.new(uri, name, cb, desc, mime, annos)
+function _M.new(uri, name, cb, desc, mime, annos, size)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
   end
@@ -78,7 +79,8 @@ function _M.new(uri, name, cb, desc, mime, annos)
     callback = cb,
     description = desc,
     mime = mime,
-    annotations = annos and mcp.protocol.annotations(annos) or nil
+    annotations = annos and mcp.protocol.annotations(annos) or nil,
+    size = tonumber(size)
   }, _MT)
 end
 
