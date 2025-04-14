@@ -24,7 +24,7 @@ end
 local ok, err = server:register(mcp.tool("enable_echo", function(args, ctx)
   local ok, err = ctx.session:register(mcp.tool("echo", function(args)
     return {
-      {type = "text", text = args.message}
+      {type = "text", text = string.format("%s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.version, args.message)}
     }
   end, "Echoes back the input.", {
     type = "object",

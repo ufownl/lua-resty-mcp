@@ -42,7 +42,7 @@ local function define_methods(self)
         capabilities = params.capabilities,
         info = params.clientInfo
       }
-      return mcp.protocol.result.initialize(self.capabilities, self.name, self.version, self.instructions)
+      return mcp.protocol.result.initialize(self.capabilities, self.options.name, self.options.version, self.instructions)
     end,
     ["notifications/initialized"] = function(params)
       self.initialized = true
@@ -378,7 +378,7 @@ function _M.new(transport, options)
   if not conn then
     return nil, err
   end
-  return mcp.session.new(conn, options.name, options.version, _MT)
+  return mcp.session.new(conn, options, _MT)
 end
 
 function _M.check(v)

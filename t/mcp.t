@@ -22,6 +22,8 @@ location = /t {
       error(err)
     end
     client:shutdown()
+    ngx.say(client.server.info.name)
+    ngx.say(client.server.info.version)
     ngx.say(client.server.instructions)
   }
 }
@@ -29,6 +31,8 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+MCP Handshake
+1.0_alpha
 Hello, MCP!
 --- no_error_log
 [error]
@@ -96,13 +100,13 @@ location = /t {
 --- request
 GET /t
 --- error_code: 200
---- response_body_like
-lua-resty-mcp v\S+ has no prompts capability
-lua-resty-mcp v\S+ has no prompts capability
-lua-resty-mcp v\S+ has no resources capability
-lua-resty-mcp v\S+ has no resources capability
-lua-resty-mcp v\S+ has no tools capability
-lua-resty-mcp v\S+ has no tools capability
+--- response_body
+MCP Handshake v1.0_alpha has no prompts capability
+MCP Handshake v1.0_alpha has no prompts capability
+MCP Handshake v1.0_alpha has no resources capability
+MCP Handshake v1.0_alpha has no resources capability
+MCP Handshake v1.0_alpha has no tools capability
+MCP Handshake v1.0_alpha has no tools capability
 --- no_error_log
 [error]
 
@@ -115,6 +119,8 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client, err = mcp.client(mcp.transport.stdio, {
+      name = "MCP Tools",
+      version = "1.0_alpha",
       command = "/usr/local/openresty/bin/resty -I lib t/mock/tools.lua 2>> error.log"
     })
     if not client then
@@ -206,7 +212,7 @@ echo
 Echoes back the input.
 true
 nil
-text Hello, world!
+text MCP Tools v1.0_alpha say: Hello, world!
 true
 text tool (name: echo) had been registered
 --- no_error_log

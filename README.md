@@ -106,6 +106,8 @@ Available options:
     stdout_read_timeout = 10000,  -- STDOUT read timeout threshold, in milliseconds (default: 10000, 0 for never timeout)
     wait_timeout = 10000,  -- Wait timeout threshold, in milliseconds (default: 10000, 0 for never timeout)
   }
+
+  -- You can also put your other options here and access them via `options` field of the session instance
 }
 ```
 
