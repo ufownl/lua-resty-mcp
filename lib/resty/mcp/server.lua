@@ -47,6 +47,16 @@ local function define_methods(self)
     ["notifications/initialized"] = function(params)
       self.initialized = true
     end,
+    ["notifications/roots/list_changed"] = function(params)
+      if not self.client.capabilities.roots or not self.client.capabilities.roots.listChanged then
+        return
+      end
+      local res, err = mcp.session.send_request(self, "list", {"roots"})
+      if not res then
+        return nil, err
+      end
+      self.client.discovered_roots = res.roots
+    end,
     ["prompts/get"] = self.capabilities.prompts and function(params)
       local ok, err = mcp.validator.GetPromptRequest(params)
       if not ok then
@@ -322,6 +332,30 @@ end
 
 function _MT.__index.unregister_tool(self, name)
   return unregister_impl(self, name, "tools", "name")
+end
+
+function _MT.__index.list_roots(self)
+  if not self.initialized then
+    return nil, "session has not been initialized"
+  end
+  if not self.client.capabilities.roots then
+    return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
+  end
+  if not self.client.capabilities.roots.listChanged then
+    local res, err = mcp.session.send_request(self, "list", {"roots"})
+    if not res then
+      return nil, err
+    end
+    return res.roots
+  end
+  if not self.client.discovered_roots then
+    local res, err = mcp.session.send_request(self, "list", {"roots"})
+    if not res then
+      return nil, err
+    end
+    self.client.discovered_roots = res.roots
+  end
+  return self.client.discovered_roots
 end
 
 function _MT.__index.run(self, options)
