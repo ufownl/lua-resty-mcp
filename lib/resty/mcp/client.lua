@@ -12,11 +12,11 @@ local _M = {
 
 local ngx_log = ngx.log
 
-local function get_list(self, category, field_name)
+local function get_list(self, category, timeout, field_name)
   local list = {}
   local cursor
   repeat
-    local res, err = mcp.session.send_request(self, "list", {category, cursor})
+    local res, err = mcp.session.send_request(self, "list", {category, cursor}, tonumber(timeout))
     if not res then
       return nil, err
     end
@@ -87,9 +87,8 @@ local function define_methods(self)
         return
       end
       local list, err = get_list(self, v)
-      if not list then
+      if err then
         ngx_log(ngx.ERR, err)
-        return
       end
       self.server["discovered_"..v] = list
     end
@@ -97,16 +96,16 @@ local function define_methods(self)
   return methods
 end
 
-local function list_impl(self, category)
+local function list_impl(self, category, timeout)
   if not self.server.capabilities[category] then
     return nil, string.format("%s v%s has no %s capability", self.server.info.name, self.server.info.version, category)
   end
   if not self.server.capabilities[category].listChanged then
-    return get_list(self, category)
+    return get_list(self, category, timeout)
   end
   local key = "discovered_"..category
   if not self.server[key] then
-    local list, err = get_list(self, category)
+    local list, err = get_list(self, category, timeout)
     if not list then
       return nil, err
     end
@@ -138,14 +137,14 @@ local _MT = {
   }
 }
 
-function _MT.__index.initialize(self, roots, sampling_cb)
+function _MT.__index.initialize(self, roots, sampling_cb, timeout)
   if type(roots) == "table" and #roots > 0 then
     expose_roots_impl(self, roots)
   end
   self.sampling_callback = sampling_cb
   mcp.session.initialize(self, define_methods(self))
   local capabilities = {roots = true, sampling = sampling_cb}
-  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version})
+  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
   if not res then
     self.conn:close()
     return nil, err
@@ -183,11 +182,11 @@ function _MT.__index.expose_roots(self, roots)
   return true
 end
 
-function _MT.__index.list_prompts(self)
-  return list_impl(self, "prompts")
+function _MT.__index.list_prompts(self, timeout)
+  return list_impl(self, "prompts", timeout)
 end
 
-function _MT.__index.get_prompt(self, name, args)
+function _MT.__index.get_prompt(self, name, args, timeout)
   if type(name) ~= "string" then
     error("prompt name MUST be a string.")
   end
@@ -197,39 +196,39 @@ function _MT.__index.get_prompt(self, name, args)
   if not self.server.capabilities.prompts then
     return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "get_prompt", {name, args})
+  local res, err = mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout))
   if not res then
     return nil, err
   end
   return res
 end
 
-function _MT.__index.list_resources(self)
-  return list_impl(self, "resources")
+function _MT.__index.list_resources(self, timeout)
+  return list_impl(self, "resources", timeout)
 end
 
-function _MT.__index.list_resource_templates(self)
+function _MT.__index.list_resource_templates(self, timeout)
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
-  return get_list(self, "resources/templates", "resourceTemplates")
+  return get_list(self, "resources/templates", timeout, "resourceTemplates")
 end
 
-function _MT.__index.read_resource(self, uri)
+function _MT.__index.read_resource(self, uri, timeout)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
   end
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "read_resource", {uri})
+  local res, err = mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout))
   if not res then
     return nil, err
   end
   return res
 end
 
-function _MT.__index.subscribe_resource(self, uri, cb)
+function _MT.__index.subscribe_resource(self, uri, cb, timeout)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
   end
@@ -245,7 +244,7 @@ function _MT.__index.subscribe_resource(self, uri, cb)
   if self.subscribed_resources and self.subscribed_resources[uri] then
     return nil, string.format("resource %s had been subscribed", uri)
   end
-  local res, err = mcp.session.send_request(self, "subscribe_resource", {uri})
+  local res, err = mcp.session.send_request(self, "subscribe_resource", {uri}, tonumber(timeout))
   if not res then
     return nil, err
   end
@@ -257,7 +256,7 @@ function _MT.__index.subscribe_resource(self, uri, cb)
   return true
 end
 
-function _MT.__index.unsubscribe_resource(self, uri)
+function _MT.__index.unsubscribe_resource(self, uri, timeout)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
   end
@@ -267,7 +266,7 @@ function _MT.__index.unsubscribe_resource(self, uri)
   if not self.server.capabilities.resources.subscribe then
     return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "unsubscribe_resource", {uri})
+  local res, err = mcp.session.send_request(self, "unsubscribe_resource", {uri}, tonumber(timeout))
   if not res then
     return nil, err
   end
@@ -277,11 +276,11 @@ function _MT.__index.unsubscribe_resource(self, uri)
   return true
 end
 
-function _MT.__index.list_tools(self)
-  return list_impl(self, "tools")
+function _MT.__index.list_tools(self, timeout)
+  return list_impl(self, "tools", timeout)
 end
 
-function _MT.__index.call_tool(self, name, args)
+function _MT.__index.call_tool(self, name, args, timeout)
   if type(name) ~= "string" then
     error("tool name MUST be a string.")
   end
@@ -291,7 +290,7 @@ function _MT.__index.call_tool(self, name, args)
   if not self.server.capabilities.tools then
     return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "call_tool", {name, args})
+  local res, err = mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout))
   if not res then
     return nil, err
   end

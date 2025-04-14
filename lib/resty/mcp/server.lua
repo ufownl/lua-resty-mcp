@@ -56,10 +56,14 @@ local function define_methods(self, event_handlers)
         return
       end
       local res, err = mcp.session.send_request(self, "list", {"roots"})
-      if not res then
-        return nil, err
+      if res then
+        self.client.discovered_roots = res.roots
+      else
+        if err then
+          ngx_log(ngx.ERR, err)
+        end
+        self.client.discovered_roots = nil
       end
-      self.client.discovered_roots = res.roots
       local handler = event_handlers and event_handlers["roots/list_changed"]
       if handler then
         handler(params, {session = self})
@@ -342,7 +346,7 @@ function _MT.__index.unregister_tool(self, name)
   return unregister_impl(self, name, "tools", "name")
 end
 
-function _MT.__index.list_roots(self)
+function _MT.__index.list_roots(self, timeout)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
@@ -350,14 +354,14 @@ function _MT.__index.list_roots(self)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err = mcp.session.send_request(self, "list", {"roots"})
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout))
     if not res then
       return nil, err
     end
     return res.roots
   end
   if not self.client.discovered_roots then
-    local res, err = mcp.session.send_request(self, "list", {"roots"})
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout))
     if not res then
       return nil, err
     end
@@ -366,14 +370,14 @@ function _MT.__index.list_roots(self)
   return self.client.discovered_roots
 end
 
-function _MT.__index.create_message(self, messages, max_tokens, options)
+function _MT.__index.create_message(self, messages, max_tokens, options, timeout)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options})
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout))
 end
 
 function _MT.__index.run(self, options)
