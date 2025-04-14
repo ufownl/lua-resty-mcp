@@ -1,85 +1,43 @@
-local mcp = {
-  transport = {
-    stdio = require("resty.mcp.transport.stdio")
-  },
-  session = require("resty.mcp.session"),
-  protocol = require("resty.mcp.protocol"),
-  resource = require("resty.mcp.resource"),
-  prompt = require("resty.mcp.prompt")
-}
+local mcp = require("resty.mcp")
 
-local conn, err = mcp.transport.stdio.server()
-if not conn then
-  error(err)
-end
-local sess, err = mcp.session.new(conn)
-if not sess then
+local server, err = mcp.server(mcp.transport.stdio, {})
+if not server then
   error(err)
 end
 
-local available_resources = {}
-local available_prompts = {}
+local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+  local contents = {}
+  if ctx.session.client.capabilities.roots then
+    table.insert(contents, {uri = uri.."/roots", text = "true"})
+    if ctx.session.client.capabilities.roots.listChanged then
+      table.insert(contents, {uri = uri.."/roots/listChanged", text = "true"})
+    end
+  end
+  if ctx.session.client.capabilities.sampling then
+    table.insert(contents, {uri = uri.."/sampling", text = "true"})
+  end
+  return contents
+end, "Capabilities of client."))
+if not ok then
+  error(err)
+end
 
-local prompt = mcp.prompt.new("simple_sampling", function(args)
+local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
   local messages =  {
     {role = "user", content = {type = "text", text = "Hey, man!"}}
   }
-  local res, err = sess:send_request("create_message", {messages, 128})
+  local res, err = ctx.session:create_message(messages, 128)
   if not res then
     return nil, err
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments.")
-available_prompts[prompt.name] = prompt
+end, "Sampling prompt from client without arguments."))
 
-sess:initialize({
-  initialize = function(params)
-    local resource = mcp.resource.new("mock://client_capabilities", "ClientCapabilities", function(uri)
-      local contents = {}
-      if params.capabilities.roots then
-        table.insert(contents, {uri = uri.."/roots", text = "true"})
-        if params.capabilities.roots.listChanged then
-          table.insert(contents, {uri = uri.."/roots/listChanged", text = "true"})
-        end
-      end
-      if params.capabilities.sampling then
-        table.insert(contents, {uri = uri.."/sampling", text = "true"})
-      end
-      return contents
-    end, "Capabilities of client.")
-    available_resources[resource.uri] = resource
-    return mcp.protocol.result.initialize({
-      resources = {listChanged = false},
-      prompts = true,
-    })
-  end,
-  ["resources/list"] = function(params)
-    local resources = {}
-    for k, v in pairs(available_resources) do
-      table.insert(resources, v)
-    end
-    return mcp.protocol.result.list("resources", resources)
-  end,
-  ["resources/read"] = function(params)
-    local resource = available_resources[params.uri]
-    if resource then
-      return resource:read()
-    end
-    return nil, -32002, "Resource not found", {uri = params.uri}
-  end,
-  ["prompts/list"] = function(params)
-    local prompts = {}
-    for k, v in pairs(available_prompts) do
-      table.insert(prompts, v)
-    end
-    return mcp.protocol.result.list("prompts", prompts)
-  end,
-  ["prompts/get"] = function(params)
-    local prompt = available_prompts[params.name]
-    if not prompt then
-      return nil, -32602, "Invalid prompt name", {name = params.name}
-    end
-    return prompt:get(params.arguments)
-  end
+server:run({
+  capabilities = {
+    tools = false,
+    completions = false,
+    logging = false
+  }
 })

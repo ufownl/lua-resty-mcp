@@ -366,6 +366,16 @@ function _MT.__index.list_roots(self)
   return self.client.discovered_roots
 end
 
+function _MT.__index.create_message(self, messages, max_tokens, options)
+  if not self.initialized then
+    return nil, "session has not been initialized"
+  end
+  if not self.client.capabilities.sampling then
+    return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
+  end
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options})
+end
+
 function _MT.__index.run(self, options)
   self.capabilities = {
     prompts = {
