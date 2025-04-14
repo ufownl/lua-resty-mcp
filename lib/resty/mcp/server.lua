@@ -422,7 +422,7 @@ function _MT.__index.run(self, options)
       self.instructions = options.instructions
     end
   end
-  mcp.session.initialize(self, define_methods(self, options.event_handlers))
+  mcp.session.initialize(self, define_methods(self, options and options.event_handlers))
 end
 
 function _MT.__index.shutdown(self)
