@@ -54,9 +54,7 @@ local ok, err = server:register(mcp.tool("enable_hidden_resource", function(args
     }
   end, "Hidden blob resource."))
   if not ok then
-    return {
-      {type = "text", text = err}
-    }, true
+    return nil, err
   end
   return {}
 end, "Enable hidden resource."))
@@ -67,9 +65,7 @@ end
 local ok, err = server:register(mcp.tool("touch_resource", function(args, ctx)
   local ok, err = ctx.session:resource_updated(args.uri)
   if not ok then
-    return {
-      {type = "text", text = err}
-    }, true
+    return nil, err
   end
   return {}
 end, "Trigger resource updated notification.", {

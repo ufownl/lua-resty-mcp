@@ -34,31 +34,38 @@ end
 
 function _MT.__index.read(self, uri, ctx)
   local vars, err = self.uri_template:match(uri)
-  if not vars then
+  if vars == nil then
     return nil, -32002, "Resource not found", {uri = uri}
   end
   local found, contents, err = self.callback(uri, vars, ctx)
-  if not contents then
+  if contents == nil then
     if found then
       return nil, -32603, "Internal errors", {errmsg = err}
     else
       return nil, -32002, "Resource not found", {uri = uri}
     end
   end
-  for i, v in ipairs(contents) do
-    v.uri = v.uri or uri
-    v.mimeType = v.mimeType or self.mime
-  end
-  local ok, err = mcp.validator.ReadResourceResult({contents = contents})
-  if not ok then
-    error(err)
-  end
-  for i, v in ipairs(contents) do
-    if self.mime and v.uri == uri and v.mimeType ~= self.mime then
-      error("resource MIME type mismatch")
+  if type(contents) == "table" then
+    for i, v in ipairs(contents) do
+      v.uri = v.uri or uri
+      v.mimeType = v.mimeType or self.mime
     end
+    local ok, err = mcp.validator.ReadResourceResult({contents = contents})
+    if not ok then
+      error(err)
+    end
+    for i, v in ipairs(contents) do
+      if self.mime and v.uri == uri and v.mimeType ~= self.mime then
+        error("resource MIME type mismatch")
+      end
+    end
+    return {contents = setmetatable(contents, cjson.array_mt)}
   end
-  return {contents = setmetatable(contents, cjson.array_mt)}
+  return {
+    contents = {
+      {uri = uri, mimeType = self.mime, text = tostring(contents)}
+    }
+  }
 end
 
 function _M.new(pattern, name, cb, desc, mime, annos)

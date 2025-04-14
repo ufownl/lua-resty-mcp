@@ -20,9 +20,7 @@ location = /t {
       if args.c then
         text = text..string.format("\nc=%s", args.c)
       end
-      return {
-        {role = "user", content = {type = "text", text = text}}
-      }
+      return text
     end, "Demo prompt definition and getting.", {
       a = {
         description = "First argument?"
@@ -99,7 +97,60 @@ c=foobar
 [error]
 
 
-=== TEST 2: handle errors return by callback
+=== TEST 2: multi-turns prompt definition and getting
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local prompt = require("resty.mcp.prompt")
+    local pt = prompt.new("foobar", function(args)
+      local n = tonumber(args.n) or 1
+      local messages = {}
+      for i = 1, n do
+        table.insert(messages, {
+          role = i % 2 == 0 and "assistant" or "user",
+          content = {
+            type = "text",
+            text = "Turn: "..i
+          }
+        })
+      end
+      return messages
+    end, "Demo multi-turns prompt.", {
+      n = {required = true}
+    })
+    local result, code, message, data = pt:get({n = "3"})
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    ngx.say(result.description)
+    for i, v in ipairs(result.messages) do
+      ngx.say(v.role)
+      ngx.say(v.content.type)
+      ngx.say(v.content.text)
+    end
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+Demo multi-turns prompt.
+user
+text
+Turn: 1
+assistant
+text
+Turn: 2
+user
+text
+Turn: 3
+--- no_error_log
+[error]
+
+
+=== TEST 3: handle errors return by callback
 --- http_config
 lua_package_path 'lib/?.lua;;';
 --- config

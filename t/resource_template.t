@@ -83,7 +83,41 @@ invalid id
 [error]
 
 
-=== TEST 2: handle errors return by callback
+=== TEST 2: simple text resource
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local template = require("resty.mcp.resource_template")
+    local res = template.new("mock://simple-text/{what}", "SimpleText", function(uri, vars)
+      return true, "content of simple text resource: "..vars.what
+    end, "Demo simple text resource template.", "text/plain")
+    local result, code, message, data = res:read("mock://simple-text/foobar")
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    for i, v in ipairs(result.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+      ngx.say(tostring(v.blob))
+    end
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://simple-text/foobar
+text/plain
+content of simple text resource: foobar
+nil
+--- no_error_log
+[error]
+
+
+=== TEST 3: handle errors return by callback
 --- http_config
 lua_package_path 'lib/?.lua;;';
 --- config

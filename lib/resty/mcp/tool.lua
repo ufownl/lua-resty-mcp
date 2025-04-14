@@ -33,16 +33,29 @@ function _MT.__call(self, args, ctx)
   if not ok then
     return nil, -32602, "Invalid arguments", {errmsg = err}
   end
-  local content, is_error = self.callback(args, ctx)
-  local ok, err = mcp.validator.CallToolResult({
-    content = content,
-    isError = is_error
-  })
-  if not ok then
-    error(err)
+  local content, err = self.callback(args, ctx)
+  local is_error
+  if content == nil then
+    content = err
+    is_error = true
+  end
+  if type(content) == "table" then
+    local ok, err = mcp.validator.CallToolResult({
+      content = content,
+      isError = is_error
+    })
+    if not ok then
+      error(err)
+    end
+    return {
+      content = setmetatable(content, cjson.array_mt),
+      isError = is_error
+    }
   end
   return {
-    content = setmetatable(content, cjson.array_mt),
+    content = {
+      {type = "text", text = tostring(content)}
+    },
     isError = is_error
   }
 end

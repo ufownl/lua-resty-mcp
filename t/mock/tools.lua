@@ -6,9 +6,7 @@ if not server then
 end
 
 local ok, err = server:register(mcp.tool("add", function(args)
-  return {
-    {type = "text", text = tostring(args.a + args.b)}
-  }
+  return args.a + args.b
 end, "Adds two numbers.", {
   type = "object",
   properties = {
@@ -23,9 +21,7 @@ end
 
 local ok, err = server:register(mcp.tool("enable_echo", function(args, ctx)
   local ok, err = ctx.session:register(mcp.tool("echo", function(args)
-    return {
-      {type = "text", text = string.format("%s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.version, args.message)}
-    }
+    return string.format("%s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.version, args.message)
   end, "Echoes back the input.", {
     type = "object",
     properties = {
@@ -37,9 +33,7 @@ local ok, err = server:register(mcp.tool("enable_echo", function(args, ctx)
     required = {"message"}
   }))
   if not ok then
-    return {
-      {type = "text", text = err}
-    }, true
+    return nil, err
   end
   return {}
 end, "Enables the echo tool."))

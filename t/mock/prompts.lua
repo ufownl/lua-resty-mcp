@@ -6,9 +6,7 @@ if not server then
 end
 
 local ok, err = server:register(mcp.prompt("simple_prompt", function(args)
-  return {
-    {role = "user", content = {type = "text", text = "This is a simple prompt without arguments."}}
-  }
+  return "This is a simple prompt without arguments."
 end, "A prompt without arguments."))
 if not ok then
   error(err)
@@ -32,9 +30,7 @@ local ok, err = server:register(mcp.tool("enable_mock_error", function(args, ctx
     return nil, "mock error"
   end, "Mock error message."))
   if not ok then
-    return {
-      {type = "text", text = err}
-    }, true
+    return nil, err
   end
   return {}
 end, "Enable mock error prompt."))

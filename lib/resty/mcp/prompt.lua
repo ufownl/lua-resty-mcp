@@ -77,18 +77,26 @@ function _MT.__index.get(self, args, ctx)
     end
   end
   local messages, err = self.callback(args, ctx)
-  if not messages then
+  if messages == nil then
     return nil, -32603, "Internal errors", {errmsg = err}
   end
-  local ok, err = mcp.validator.GetPromptResult({
-    messages = messages
-  })
-  if not ok then
-    error(err)
+  if type(messages) == "table" then
+    local ok, err = mcp.validator.GetPromptResult({
+      messages = messages
+    })
+    if not ok then
+      error(err)
+    end
+    return {
+      description = self.description,
+      messages = setmetatable(messages, cjson.array_mt)
+    }
   end
   return {
     description = self.description,
-    messages = setmetatable(messages, cjson.array_mt)
+    messages = {
+      {role = "user", content = {type = "text", text = tostring(messages)}}
+    }
   }
 end
 

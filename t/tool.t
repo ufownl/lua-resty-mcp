@@ -13,9 +13,7 @@ location = /t {
     local tool = require("resty.mcp.tool")
     local fn = tool.new("add", function(args)
       local r = args.a + args.b
-      return {
-        {type = "text", text = args.format and string.format(args.format, r) or tostring(r)}
-      }
+      return args.format and string.format(args.format, r) or r
     end, "Adds two numbers.", {
       type = "object",
       properties = {
@@ -111,13 +109,9 @@ location = /t {
     local tool = require("resty.mcp.tool")
     local fn = tool.new("div", function(args)
       if args.b == 0 then
-        return {
-          {type = "text", text = "ERROR: divisor cannot be 0!"}
-        }, true
+        return nil, "ERROR: divisor cannot be 0!"
       end
-      return {
-        {type = "text", text = tostring(args.a / args.b)}
-      }
+      return args.a / args.b
     end, "Calculate `a` divided by `b`.", {
       type = "object",
       properties = {
@@ -152,5 +146,114 @@ nil
 text 0.5
 true
 text ERROR: divisor cannot be 0!
+--- no_error_log
+[error]
+
+
+=== TEST 3: multi-content tool definition and calling
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local tool = require("resty.mcp.tool")
+    local fn = tool.new("multi_content", function(args)
+      local result = {
+        {type = "text", text = "text content"},
+        {type = "image", data = ngx.encode_base64("image content"), mimeType = "image/png"},
+        {type = "audio", data = ngx.encode_base64("audio content"), mimeType = "audio/mpeg"},
+        {type = "resource", resource = {uri = "mock://multi-content/resource/text", text = "text resource content"}},
+        {type = "resource", resource = {uri = "mock://multi-content/resource/blob", blob = ngx.encode_base64("blob resource content"), mimeType = "application/octet-stream"}}
+      }
+      if args.is_error then
+        return nil, result
+      end
+      return result
+    end, "Return multi-content.", {
+      type = "object",
+      properties = {
+        is_error = {type = "boolean"}
+      }
+    })
+    local result, code, message, data = fn({})
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    ngx.say(tostring(result.isError))
+    for i, v in ipairs(result.content) do
+      ngx.say(v.type)
+      if v.type == "text" then
+        ngx.say(v.text)
+        ngx.say(tostring(v.mimeType))
+      elseif v.type == "resource" then
+        ngx.say(v.resource.uri)
+        ngx.say(v.resource.text or v.resource.blob and ngx.decode_base64(v.resource.blob))
+        ngx.say(tostring(v.resource.mimeType))
+      else
+        ngx.say(ngx.decode_base64(v.data))
+        ngx.say(tostring(v.mimeType))
+      end
+    end
+    local result, code, message, data = fn({is_error = true})
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    ngx.say(tostring(result.isError))
+    for i, v in ipairs(result.content) do
+      ngx.say(v.type)
+      if v.type == "text" then
+        ngx.say(v.text)
+        ngx.say(tostring(v.mimeType))
+      elseif v.type == "resource" then
+        ngx.say(v.resource.uri)
+        ngx.say(v.resource.text or v.resource.blob and ngx.decode_base64(v.resource.blob))
+        ngx.say(tostring(v.resource.mimeType))
+      else
+        ngx.say(ngx.decode_base64(v.data))
+        ngx.say(tostring(v.mimeType))
+      end
+    end
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+nil
+text
+text content
+nil
+image
+image content
+image/png
+audio
+audio content
+audio/mpeg
+resource
+mock://multi-content/resource/text
+text resource content
+nil
+resource
+mock://multi-content/resource/blob
+blob resource content
+application/octet-stream
+true
+text
+text content
+nil
+image
+image content
+image/png
+audio
+audio content
+audio/mpeg
+resource
+mock://multi-content/resource/text
+text resource content
+nil
+resource
+mock://multi-content/resource/blob
+blob resource content
+application/octet-stream
 --- no_error_log
 [error]

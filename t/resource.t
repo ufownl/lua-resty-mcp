@@ -62,7 +62,41 @@ SGVsbG8sIHdvcmxkIQ==
 [error]
 
 
-=== TEST 2: handle errors return by callback
+=== TEST 2: simple text resource
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local resource = require("resty.mcp.resource")
+    local res = resource.new("mock://simple-text", "SimpleText", function(uri)
+      return "content of simple text resource"
+    end, "Demo simple text resource.", "text/plain")
+    local result, code, message, data = res:read()
+    if not result then
+      error(string.format("%d %s", code, message))
+    end
+    for i, v in ipairs(result.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+      ngx.say(tostring(v.blob))
+    end
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://simple-text
+text/plain
+content of simple text resource
+nil
+--- no_error_log
+[error]
+
+
+=== TEST 3: handle errors return by callback
 --- http_config
 lua_package_path 'lib/?.lua;;';
 --- config
