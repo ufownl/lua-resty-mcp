@@ -88,22 +88,22 @@ local function define_methods(self, event_handlers)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
       end
-      if not self.available_res_templates then
+      if not self.available_resource_templates then
         return mcp.protocol.result.list("resourceTemplates", {})
       end
       local page_size = self.pagination.resources
-      if page_size > 0 and #self.available_res_templates > page_size then
-        local l, r, err = paginate(params and params.cursor, page_size, #self.available_res_templates)
+      if page_size > 0 and #self.available_resource_templates > page_size then
+        local l, r, err = paginate(params and params.cursor, page_size, #self.available_resource_templates)
         if err then
           return nil, -32602, "Invalid params", {errmsg = err}
         end
         local page = {}
         for j = l, r do
-          table.insert(page, self.available_res_templates[j])
+          table.insert(page, self.available_resource_templates[j])
         end
-        return mcp.protocol.result.list("resourceTemplates", page, r < #self.available_res_templates and ngx_encode_args({idx = r + 1}) or nil)
+        return mcp.protocol.result.list("resourceTemplates", page, r < #self.available_resource_templates and ngx_encode_args({idx = r + 1}) or nil)
       else
-        return mcp.protocol.result.list("resourceTemplates", self.available_res_templates)
+        return mcp.protocol.result.list("resourceTemplates", self.available_resource_templates)
       end
     end or nil,
     ["resources/read"] = self.capabilities.resources and function(params)
@@ -118,9 +118,9 @@ local function define_methods(self, event_handlers)
           _meta = params._meta
         })
       end
-      if self.available_res_templates then
-        for i, res_template in ipairs(self.available_res_templates) do
-          local result, code, message, data = res_template:read(params.uri, {
+      if self.available_resource_templates then
+        for i, resource_template in ipairs(self.available_resource_templates) do
+          local result, code, message, data = resource_template:read(params.uri, {
             session = self,
             _meta = params._meta
           })
@@ -151,9 +151,9 @@ local function define_methods(self, event_handlers)
         end
         return {}
       end
-      if self.available_res_templates then
-        for i, res_template in ipairs(self.available_res_templates) do
-          if res_template:test(params.uri) then
+      if self.available_resource_templates then
+        for i, resource_template in ipairs(self.available_resource_templates) do
+          if resource_template:test(params.uri) then
             if self.subscribed_resources then
               self.subscribed_resources[params.uri] = true
             else
@@ -253,16 +253,16 @@ local function register_impl(self, component, category, key_field)
   return list_changed(self, category)
 end
 
-local function register_res_template(self, res_template)
-  if self.available_res_templates then
-    for i, v in ipairs(self.available_res_templates) do
-      if res_template.uri_template.pattern == v.uri_template.pattern then
-        return nil, string.format("resource template (pattern: %s) had been registered", res_template.uri_template.pattern)
+local function register_resource_template(self, resource_template)
+  if self.available_resource_templates then
+    for i, v in ipairs(self.available_resource_templates) do
+      if resource_template.uri_template.pattern == v.uri_template.pattern then
+        return nil, string.format("resource template (pattern: %s) had been registered", resource_template.uri_template.pattern)
       end
     end
-    table.insert(self.available_res_templates, res_template)
+    table.insert(self.available_resource_templates, resource_template)
   else
-    self.available_res_templates = {res_template}
+    self.available_resource_templates = {resource_template}
   end
   return true
 end
@@ -298,7 +298,7 @@ function _MT.__index.register(self, component)
     return register_impl(self, component, "resources", "uri")
   end
   if mcp.resource_template.check(component) then
-    return register_res_template(self, component)
+    return register_resource_template(self, component)
   end
   if mcp.tool.check(component) then
     return register_impl(self, component, "tools", "name")
@@ -314,11 +314,11 @@ function _MT.__index.unregister_resource(self, uri)
   return unregister_impl(self, uri, "resources", "uri")
 end
 
-function _MT.__index.unregister_res_template(self, pattern)
-  if self.available_res_templates then
-    for i, v in ipairs(self.available_res_templates) do
+function _MT.__index.unregister_resource_template(self, pattern)
+  if self.available_resource_templates then
+    for i, v in ipairs(self.available_resource_templates) do
       if pattern == v.uri_template.pattern then
-        table.remove(self.available_res_templates, i)
+        table.remove(self.available_resource_templates, i)
         return true
       end
     end

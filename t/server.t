@@ -203,7 +203,7 @@ location = /t {
     local mcp = require("resty.mcp")
     local server, err = mcp.server(mcp.transport.stdio, {})
     ngx.say(tostring(server.available_resources))
-    ngx.say(tostring(server.available_res_templates))
+    ngx.say(tostring(server.available_resource_templates))
     local function print_stats()
       for i, resource in ipairs(server.available_resources.list) do
         ngx.say(resource.uri)
@@ -216,9 +216,9 @@ location = /t {
           ngx.say(string.format("%s %s %s", v.uri, tostring(v.mimeType), v.text))
         end
       end
-      for i, res_template in ipairs(server.available_res_templates) do
-        ngx.say(res_template.uri_template.pattern)
-        ngx.say(res_template.name)
+      for i, resource_template in ipairs(server.available_resource_templates) do
+        ngx.say(resource_template.uri_template.pattern)
+        ngx.say(resource_template.name)
       end
     end
     for i, v in ipairs({"foo", "bar", "hello"}) do
@@ -257,14 +257,14 @@ location = /t {
     if not ok then
       error(err)
     end
-    local ok, err = server:unregister_res_template("dynamic://bar/{x}")
+    local ok, err = server:unregister_resource_template("dynamic://bar/{x}")
     if not ok then
       error(err)
     end
     print_stats()
     local ok, err = server:unregister_resource("static://bar")
     ngx.say(err)
-    local ok, err = server:unregister_res_template("dynamic://bar/{x}")
+    local ok, err = server:unregister_resource_template("dynamic://bar/{x}")
     ngx.say(err)
     print_stats()
     local ok, err = server:register(mcp.resource("static://bar", "NewBar", function(uri)

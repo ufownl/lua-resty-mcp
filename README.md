@@ -361,7 +361,7 @@ The 5th argument `annos`, is optional additional tool information. It should be 
 
 `syntax: ok, err = unregister_resource(uri)`
 
-`syntax: ok, err = unregister_res_template(pattern)`
+`syntax: ok, err = unregister_resource_template(pattern)`
 
 `syntax: ok, err = unregister_tool(name)`
 
