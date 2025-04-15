@@ -191,7 +191,12 @@ Register a context component to the server session.
 
 A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
 
-Available context components: `mcp.prompt`, `mcp.resource`, `mcp.resource_template`, `mcp.tool`
+Available context components:
+
+* [mcp.prompt](#mcpprompt)
+* [mcp.resource](#mcpresource)
+* [mcp.resource\_template](#mcpresource_template)
+* [mcp.tool](#mcptool)
 
 #### mcp.prompt
 
