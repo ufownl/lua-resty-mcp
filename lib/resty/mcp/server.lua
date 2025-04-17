@@ -18,6 +18,42 @@ local _M = {
 local ngx_decode_args = ngx.decode_args
 local ngx_encode_args = ngx.encode_args
 
+local function wrapper(server, rid)
+  local function rrid()
+    return {related_request = rid}
+  end
+  return setmetatable({
+    register = function(_, component)
+      return server:register(component, rrid)
+    end,
+    unregister_prompt = function(_, name)
+      return server:unregister_prompt(name, rrid)
+    end,
+    unregister_resource = function(_, uri)
+      return server:unregister_resource(uri, rrid)
+    end,
+    resource_updated = function(_, uri)
+      return server:resource_updated(uri, rrid)
+    end,
+    unregister_tool = function(_, name)
+      return server:unregister_tool(name, rrid)
+    end,
+    list_roots = function(_, timeout)
+      return server:list_roots(timeout, rrid)
+    end,
+    create_message = function(_, messages, max_tokens, options, timeout)
+      return server:create_message(messages, max_tokens, options, timeout, rrid)
+    end
+  }, {
+    __index = function(self, key)
+      return rawget(self, key) or server[key]
+    end,
+    __newindex = function(_, key, val)
+      server[key] = val
+    end
+  })
+end
+
 local function paginate(cursor, page_size, total_size)
   local i = 1
   if cursor then
@@ -79,8 +115,7 @@ local function define_methods(self, event_handlers)
         return nil, -32602, "Invalid prompt name", {name = params.name}
       end
       return prompt:get(params.arguments, {
-        session = self,
-        related_request = rid,
+        session = wrapper(self, rid),
         _meta = params._meta
       })
     end or nil,
@@ -115,16 +150,15 @@ local function define_methods(self, event_handlers)
       local resource = self.available_resources and self.available_resources.dict[params.uri]
       if resource then
         return resource:read({
-          session = self,
-          related_request = rid,
+          session = wrapper(self, rid),
           _meta = params._meta
         })
       end
       if self.available_resource_templates then
+        local session = wrapper(self, rid)
         for i, resource_template in ipairs(self.available_resource_templates) do
           local result, code, message, data = resource_template:read(params.uri, {
-            session = self,
-            related_request = rid,
+            session = session,
             _meta = params._meta
           })
           if result then
@@ -188,8 +222,7 @@ local function define_methods(self, event_handlers)
         return nil, -32602, "Unknown tool", {name = params.name}
       end
       return tool(params.arguments, {
-        session = self,
-        related_request = rid,
+        session = wrapper(self, rid),
         _meta = params._meta
       })
     end or nil
@@ -232,7 +265,7 @@ end
 
 local function list_changed(self, category, rrid)
   if self.initialized and self.capabilities[category] and self.capabilities[category].listChanged then
-    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, {related_request = rrid})
+    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, rrid and rrid() or nil)
     if not ok then
       return nil, err
     end
@@ -318,7 +351,7 @@ function _MT.__index.unregister_resource(self, uri, rrid)
   return unregister_impl(self, uri, "resources", "uri", rrid)
 end
 
-function _MT.__index.unregister_resource_template(self, pattern, rrid)
+function _MT.__index.unregister_resource_template(self, pattern)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if pattern == v.uri_template.pattern then
@@ -338,7 +371,7 @@ function _MT.__index.resource_updated(self, uri, rrid)
     return nil, "resources capability has been disabled"
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
-    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, {related_request = rrid})
+    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, rrid and rrid() or nil)
     if not ok then
       return nil, err
     end
@@ -358,14 +391,14 @@ function _MT.__index.list_roots(self, timeout, rrid)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), {related_request = rrid})
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
     if not res then
       return nil, err
     end
     return res.roots
   end
   if not self.client.discovered_roots then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), {related_request = rrid})
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
     if not res then
       return nil, err
     end
@@ -381,7 +414,7 @@ function _MT.__index.create_message(self, messages, max_tokens, options, timeout
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), {related_request = rrid})
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), rrid and rrid() or nil)
 end
 
 function _MT.__index.run(self, options)
