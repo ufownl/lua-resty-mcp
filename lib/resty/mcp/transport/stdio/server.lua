@@ -16,7 +16,7 @@ local _MT = {
   }
 }
 
-function _MT.__index.send(self, msg)
+function _MT.__index.send(self, msg, rrid)
   if type(msg) ~= "table" then
     error("message MUST be a table.")
   end
