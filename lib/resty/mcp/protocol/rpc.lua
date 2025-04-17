@@ -12,24 +12,7 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-function _M.request(method, params)
-  if type(method) ~= "string" then
-    error("JSONRPC: method MUST be a string.")
-  end
-  if params and type(params) ~= "table" then
-    error("JSONRPC: params MUST be a table.")
-  end
-  local rid = mcp.utils.generate_id()
-  local msg, err = cjson.encode({
-    jsonrpc = JSONRPC_VERSION,
-    id = rid,
-    method = method,
-    params = params or nil
-  })
-  return msg, rid, err
-end
-
-function _M.succ_resp(rid, result)
+local function succ_resp(rid, result)
   if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
     error("JSONRPC: ID MUST be a string or integer.")
   end
@@ -44,7 +27,7 @@ function _M.succ_resp(rid, result)
   return msg, err
 end
 
-function _M.fail_resp(rid, code, message, data)
+local function fail_resp(rid, code, message, data)
   if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) and rid ~= cjson.null then
     error("JSONRPC: ID MUST be a string or integer, or null.")
   end
@@ -64,6 +47,23 @@ function _M.fail_resp(rid, code, message, data)
     }
   })
   return msg, err
+end
+
+function _M.request(method, params)
+  if type(method) ~= "string" then
+    error("JSONRPC: method MUST be a string.")
+  end
+  if params and type(params) ~= "table" then
+    error("JSONRPC: params MUST be a table.")
+  end
+  local rid = mcp.utils.generate_id()
+  local msg, err = cjson.encode({
+    jsonrpc = JSONRPC_VERSION,
+    id = rid,
+    method = method,
+    params = params or nil
+  })
+  return msg, rid, err
 end
 
 function _M.notification(method, params)
@@ -90,7 +90,7 @@ local function handle_impl(dm, methods, resp_cb)
      dm.jsonrpc ~= JSONRPC_VERSION or
      dm.method and type(dm.method) ~= "string" or
      not dm.id and not dm.method then
-    return _M.fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
+    return fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
   end
   if not dm.method then
     if resp_cb then
@@ -100,11 +100,11 @@ local function handle_impl(dm, methods, resp_cb)
   end
   local fn = methods[dm.method]
   if not fn then
-    return dm.id and _M.fail_resp(dm.id, -32601, "Method not found") or nil
+    return dm.id and fail_resp(dm.id, -32601, "Method not found") or nil
   end
   if dm.id then
     local result, code, message, data = fn(dm.params)
-    return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+    return result ~= nil and succ_resp(dm.id, result) or fail_resp(dm.id, code, message, data)
   end
   fn(dm.params)
 end
@@ -118,10 +118,10 @@ function _M.handle(msg, methods, resp_cb)
   end
   local dm, err = cjson.decode(msg)
   if err then
-    return _M.fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})
+    return fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})
   end
   if type(dm) ~= "table" then
-    return _M.fail_resp(cjson.null, -32600, "Invalid Request")
+    return fail_resp(cjson.null, -32600, "Invalid Request")
   end
   if #dm > 0 then
     local replies = {}
