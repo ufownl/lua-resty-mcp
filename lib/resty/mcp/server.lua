@@ -226,9 +226,9 @@ local function define_methods(self, event_handlers)
   return methods
 end
 
-local function list_changed(self, category)
+local function list_changed(self, category, rrid)
   if self.initialized and self.capabilities[category] and self.capabilities[category].listChanged then
-    local ok, err = mcp.session.send_notification(self, "list_changed", {category})
+    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, rrid)
     if not ok then
       return nil, err
     end
@@ -236,7 +236,7 @@ local function list_changed(self, category)
   return true
 end
 
-local function register_impl(self, component, category, key_field)
+local function register_impl(self, component, category, key_field, rrid)
   local prop = self["available_"..category]
   if prop then
     if prop.dict[component[key_field]] then
@@ -250,7 +250,7 @@ local function register_impl(self, component, category, key_field)
       dict = {[component[key_field]] = component}
     }
   end
-  return list_changed(self, category)
+  return list_changed(self, category, rrid)
 end
 
 local function register_resource_template(self, resource_template)
@@ -267,7 +267,7 @@ local function register_resource_template(self, resource_template)
   return true
 end
 
-local function unregister_impl(self, key, category, key_field)
+local function unregister_impl(self, key, category, key_field, rrid)
   local prop = self["available_"..category]
   local component = prop and prop.dict[key]
   if not component then
@@ -280,7 +280,7 @@ local function unregister_impl(self, key, category, key_field)
       break
     end
   end
-  return list_changed(self, category)
+  return list_changed(self, category, rrid)
 end
 
 local _MT = {
@@ -290,31 +290,31 @@ local _MT = {
   }
 }
 
-function _MT.__index.register(self, component)
+function _MT.__index.register(self, component, rrid)
   if mcp.prompt.check(component) then
-    return register_impl(self, component, "prompts", "name")
+    return register_impl(self, component, "prompts", "name", rrid)
   end
   if mcp.resource.check(component) then
-    return register_impl(self, component, "resources", "uri")
+    return register_impl(self, component, "resources", "uri", rrid)
   end
   if mcp.resource_template.check(component) then
     return register_resource_template(self, component)
   end
   if mcp.tool.check(component) then
-    return register_impl(self, component, "tools", "name")
+    return register_impl(self, component, "tools", "name", rrid)
   end
   error("unsupported component")
 end
 
-function _MT.__index.unregister_prompt(self, name)
-  return unregister_impl(self, name, "prompts", "name")
+function _MT.__index.unregister_prompt(self, name, rrid)
+  return unregister_impl(self, name, "prompts", "name", rrid)
 end
 
-function _MT.__index.unregister_resource(self, uri)
-  return unregister_impl(self, uri, "resources", "uri")
+function _MT.__index.unregister_resource(self, uri, rrid)
+  return unregister_impl(self, uri, "resources", "uri", rrid)
 end
 
-function _MT.__index.unregister_resource_template(self, pattern)
+function _MT.__index.unregister_resource_template(self, pattern, rrid)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if pattern == v.uri_template.pattern then
@@ -326,7 +326,7 @@ function _MT.__index.unregister_resource_template(self, pattern)
   return nil, string.format("resource template (pattern: %s) is not registered", pattern)
 end
 
-function _MT.__index.resource_updated(self, uri)
+function _MT.__index.resource_updated(self, uri, rrid)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
@@ -334,7 +334,7 @@ function _MT.__index.resource_updated(self, uri)
     return nil, "resources capability has been disabled"
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
-    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri})
+    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, rrid)
     if not ok then
       return nil, err
     end
@@ -342,11 +342,11 @@ function _MT.__index.resource_updated(self, uri)
   return true
 end
 
-function _MT.__index.unregister_tool(self, name)
-  return unregister_impl(self, name, "tools", "name")
+function _MT.__index.unregister_tool(self, name, rrid)
+  return unregister_impl(self, name, "tools", "name", rrid)
 end
 
-function _MT.__index.list_roots(self, timeout)
+function _MT.__index.list_roots(self, timeout, rrid)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
@@ -354,14 +354,14 @@ function _MT.__index.list_roots(self, timeout)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout))
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid)
     if not res then
       return nil, err
     end
     return res.roots
   end
   if not self.client.discovered_roots then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout))
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid)
     if not res then
       return nil, err
     end
@@ -370,14 +370,14 @@ function _MT.__index.list_roots(self, timeout)
   return self.client.discovered_roots
 end
 
-function _MT.__index.create_message(self, messages, max_tokens, options, timeout)
+function _MT.__index.create_message(self, messages, max_tokens, options, timeout, rrid)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout))
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), rrid)
 end
 
 function _MT.__index.run(self, options)
