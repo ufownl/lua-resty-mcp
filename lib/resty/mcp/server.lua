@@ -228,7 +228,7 @@ end
 
 local function list_changed(self, category, rrid)
   if self.initialized and self.capabilities[category] and self.capabilities[category].listChanged then
-    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, rrid)
+    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, {related_request = rrid})
     if not ok then
       return nil, err
     end
@@ -334,7 +334,7 @@ function _MT.__index.resource_updated(self, uri, rrid)
     return nil, "resources capability has been disabled"
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
-    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, rrid)
+    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, {related_request = rrid})
     if not ok then
       return nil, err
     end
@@ -354,14 +354,14 @@ function _MT.__index.list_roots(self, timeout, rrid)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid)
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), {related_request = rrid})
     if not res then
       return nil, err
     end
     return res.roots
   end
   if not self.client.discovered_roots then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid)
+    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), {related_request = rrid})
     if not res then
       return nil, err
     end
@@ -377,7 +377,7 @@ function _MT.__index.create_message(self, messages, max_tokens, options, timeout
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), rrid)
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), {related_request = rrid})
 end
 
 function _MT.__index.run(self, options)

@@ -93,8 +93,8 @@ local function return_result(result, errobj, validator)
   return result
 end
 
-local function request_async(self, req, cb, rrid)
-  local ok, err = self.conn:send(req.msg, rrid)
+local function request_async(self, req, cb, options)
+  local ok, err = self.conn:send(req.msg, options)
   if not ok then
     return nil, err
   end
@@ -105,8 +105,8 @@ local function request_async(self, req, cb, rrid)
   return true
 end
 
-local function request_sync_blocking(self, req, rrid)
-  local ok, err = self.conn:send(req.msg, rrid)
+local function request_sync_blocking(self, req, options)
+  local ok, err = self.conn:send(req.msg, options)
   if not ok then
     return nil, err
   end
@@ -129,12 +129,12 @@ local function request_sync_blocking(self, req, rrid)
   return return_result(result, errobj, req.validator)
 end
 
-local function request_sync_nonblocking(self, req, timeout, rrid)
+local function request_sync_nonblocking(self, req, timeout, options)
   local sema, err = ngx_semaphore.new()
   if not sema then
     return nil, err
   end
-  local ok, err = self.conn:send(req.msg, rrid)
+  local ok, err = self.conn:send(req.msg, options)
   if not ok then
     return nil, err
   end
@@ -201,25 +201,25 @@ function _M.wait_background_tasks(self, timeout)
   return ok, err
 end
 
-function _M.send_request(self, name, args, cb_or_to, rrid)
+function _M.send_request(self, name, args, cb_or_to, options)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
   local req = mcp.protocol.request[name](unpack(args))
   if cb_or_to and not tonumber(cb_or_to) then
-    return request_async(self, req, cb_or_to, rrid)
+    return request_async(self, req, cb_or_to, options)
   elseif self.conn.blocking_io then
-    return request_sync_blocking(self, req, rrid)
+    return request_sync_blocking(self, req, options)
   else
-    return request_sync_nonblocking(self, req, cb_or_to, rrid)
+    return request_sync_nonblocking(self, req, cb_or_to, options)
   end
 end
 
-function _M.send_notification(self, name, args, rrid)
+function _M.send_notification(self, name, args, options)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid notification format")
   end
-  return self.conn:send(mcp.protocol.notification[name](unpack(args)), rrid)
+  return self.conn:send(mcp.protocol.notification[name](unpack(args)), options)
 end
 
 return _M
