@@ -265,10 +265,7 @@ end
 
 local function list_changed(self, category, rrid)
   if self.initialized and self.capabilities[category] and self.capabilities[category].listChanged then
-    local ok, err = mcp.session.send_notification(self, "list_changed", {category}, rrid and rrid() or nil)
-    if not ok then
-      return nil, err
-    end
+    return mcp.session.send_notification(self, "list_changed", {category}, rrid and rrid() or nil)
   end
   return true
 end
@@ -371,10 +368,7 @@ function _MT.__index.resource_updated(self, uri, rrid)
     return nil, "resources capability has been disabled"
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
-    local ok, err = mcp.session.send_notification(self, "resource_updated", {uri}, rrid and rrid() or nil)
-    if not ok then
-      return nil, err
-    end
+    return mcp.session.send_notification(self, "resource_updated", {uri}, rrid and rrid() or nil)
   end
   return true
 end
