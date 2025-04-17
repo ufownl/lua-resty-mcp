@@ -8,6 +8,7 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local cjson = require("cjson.safe")
 local resty_signal = require("resty.signal")
 local ngx_pipe = require("ngx.pipe")
 local ngx_log = ngx.log
@@ -18,12 +19,16 @@ local _MT = {
   }
 }
 
-function _MT.__index.send(self, data)
-  if type(data) ~= "string" then
-    error("data MUST be a string.")
+function _MT.__index.send(self, msg)
+  if type(msg) ~= "table" then
+    error("message MUST be a table.")
   end
   if not self.pipe then
     return nil, "closed"
+  end
+  local data, err = cjson.encode(msg)
+  if not data then
+    error(err)
   end
   local nbytes, err = self.pipe:write({data, "\n"})
   if not nbytes then

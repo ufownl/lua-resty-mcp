@@ -10,21 +10,22 @@ lua_package_path 'lib/?.lua;;';
 --- config
 location = /t {
   content_by_lua_block {
+    local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
-    local req, rid, _ = rpc.request("foobar")
-    local resp = rpc.handle(req, {
+    local req = rpc.request("foobar")
+    local resp = rpc.handle(cjson.encode(req), {
       foobar = function(params)
         return tostring(params)
       end
     })
-    rpc.handle(resp, {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == rid))
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+      ngx.say("rid: "..tostring(id == req.id))
       ngx.say("result: "..result)
       ngx.say("error: "..tostring(errobj))
     end)
-    local resp = rpc.handle(req, {})
-    rpc.handle(resp, {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == rid))
+    local resp = rpc.handle(cjson.encode(req), {})
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+      ngx.say("rid: "..tostring(id == req.id))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
@@ -54,22 +55,22 @@ location = /t {
   content_by_lua_block {
     local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
-    local req, rid, _ = rpc.request("foobar", {
+    local req = rpc.request("foobar", {
       foo = 1
     })
-    local resp = rpc.handle(req, {
+    local resp = rpc.handle(cjson.encode(req), {
       foobar = function(params)
         return cjson.encode(params)
       end
     })
-    rpc.handle(resp, {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == rid))
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+      ngx.say("rid: "..tostring(id == req.id))
       ngx.say("result: "..result)
       ngx.say("error: "..tostring(errobj))
     end)
-    local resp = rpc.handle(req, {})
-    rpc.handle(resp, {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == rid))
+    local resp = rpc.handle(cjson.encode(req), {})
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+      ngx.say("rid: "..tostring(id == req.id))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
@@ -97,9 +98,10 @@ lua_package_path 'lib/?.lua;;';
 --- config
 location = /t {
   content_by_lua_block {
+    local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
-    local ntf, _ = rpc.notification("foobar")
-    local resp = rpc.handle(ntf, {
+    local ntf = rpc.notification("foobar")
+    local resp = rpc.handle(cjson.encode(ntf), {
       foobar = function(params)
         ngx.say("notification: "..tostring(params))
       end
@@ -117,7 +119,7 @@ response: nil
 [error]
 
 
-=== TEST 4: notification with no params
+=== TEST 4: notification with params
 --- http_config
 lua_package_path 'lib/?.lua;;';
 --- config
@@ -125,10 +127,10 @@ location = /t {
   content_by_lua_block {
     local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
-    local ntf, _ = rpc.notification("foobar", {
+    local ntf = rpc.notification("foobar", {
       foo = 1
     })
-    local resp = rpc.handle(ntf, {
+    local resp = rpc.handle(cjson.encode(ntf), {
       foobar = function(params)
         ngx.say("notification: "..cjson.encode(params))
       end
@@ -154,24 +156,24 @@ location = /t {
   content_by_lua_block {
     local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
-    local req1, rid1, _ = rpc.request("foobar", {
+    local req1 = rpc.request("foobar", {
       foo = 1
     })
-    local ntf, _ = rpc.notification("foobar", {
+    local ntf = rpc.notification("foobar", {
       foo = 2
     })
-    local req2, rid2, _ = rpc.request("foobar", {
+    local req2 = rpc.request("foobar", {
       foo = 3
     })
-    local resp = rpc.handle(rpc.batch({req1, ntf, req2}), {
+    local resp = rpc.handle(cjson.encode({req1, ntf, req2}), {
       foobar = function(params)
         local res = cjson.encode(params)
         ngx.say("call foobar: "..res)
         return res
       end
     })
-    rpc.handle(resp, {}, function(id, result, errobj)
-      for i, v in ipairs({rid1, rid2}) do
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+      for i, v in ipairs({req1.id, req2.id}) do
         ngx.say("rid"..i..": "..tostring(id == v))
       end
       ngx.say("result: "..result)
@@ -207,28 +209,28 @@ location = /t {
     local cjson = require("cjson")
     local rpc = require("resty.mcp.protocol.rpc")
     local resp = rpc.handle('{"foo"', {})
-    rpc.handle(resp, {}, function(id, result, errobj)
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
       ngx.say("rid: "..tostring(id == cjson.null))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
     end)
     local resp = rpc.handle('123', {})
-    rpc.handle(resp, {}, function(id, result, errobj)
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
       ngx.say("rid: "..tostring(id == cjson.null))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
     end)
     local resp = rpc.handle('[1]', {})
-    rpc.handle(resp, {}, function(id, result, errobj)
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
       ngx.say("rid: "..tostring(id == cjson.null))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
     end)
     local resp = rpc.handle('[1,2]', {})
-    rpc.handle(resp, {}, function(id, result, errobj)
+    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
       ngx.say("rid: "..tostring(id == cjson.null))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)

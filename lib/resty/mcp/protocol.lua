@@ -15,22 +15,21 @@ local _M = {
 local cjson = require("cjson.safe")
 
 function _M.request.initialize(capabilities, name, version)
-  local msg, rid, err = mcp.rpc.request("initialize", {
-    protocolVersion = mcp.version.protocol,
-    capabilities = capabilities and {
-      roots = capabilities.roots and (type(capabilities.roots) == "table" and capabilities.roots or {listChanged = true}) or nil,
-      sampling = capabilities.sampling and {} or nil,
-      experimental = capabilities.experimental
-    } or {},
-    clientInfo = {
-      name = name or "lua-resty-mcp",
-      version = version or mcp.version.module
-    }
-  })
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("initialize", {
+      protocolVersion = mcp.version.protocol,
+      capabilities = capabilities and {
+        roots = capabilities.roots and (type(capabilities.roots) == "table" and capabilities.roots or {listChanged = true}) or nil,
+        sampling = capabilities.sampling and {} or nil,
+        experimental = capabilities.experimental
+      } or {},
+      clientInfo = {
+        name = name or "lua-resty-mcp",
+        version = version or mcp.version.module
+      }
+    }),
     validator = mcp.validator.InitializeResult
-  } or nil, rid, err
+  }
 end
 
 local list_result_validator = {
@@ -42,72 +41,65 @@ local list_result_validator = {
 }
 
 function _M.request.list(category, cursor)
-  local msg, rid, err = mcp.rpc.request(category.."/list", {cursor = cursor})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request(category.."/list", {cursor = cursor}),
     validator = list_result_validator[category]
-  } or nil, rid, err
+  }
 end
 
 function _M.request.get_prompt(name, args)
-  local msg, rid, err = mcp.rpc.request("prompts/get", {name = name, arguments = args})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("prompts/get", {name = name, arguments = args}),
     validator = mcp.validator.GetPromptResult
-  } or nil, rid, err
+  }
 end
 
 function _M.request.read_resource(uri)
-  local msg, rid, err = mcp.rpc.request("resources/read", {uri = uri})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("resources/read", {uri = uri}),
     validator = mcp.validator.ReadResourceResult
-  } or nil, rid, err
+  }
 end
 
 function _M.request.subscribe_resource(uri)
-  local msg, rid, err = mcp.rpc.request("resources/subscribe", {uri = uri})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("resources/subscribe", {uri = uri}),
     validator = function(res)
       return true
     end
-  } or nil, rid, err
+  }
 end
 
 function _M.request.unsubscribe_resource(uri)
-  local msg, rid, err = mcp.rpc.request("resources/unsubscribe", {uri = uri})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("resources/unsubscribe", {uri = uri}),
     validator = function(res)
       return true
     end
-  } or nil, rid, err
+  }
 end
 
 function _M.request.call_tool(name, args)
-  local msg, rid, err = mcp.rpc.request("tools/call", {name = name, arguments = args})
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("tools/call", {name = name, arguments = args}),
     validator = mcp.validator.CallToolResult
-  } or nil, rid, err
+  }
 end
 
 function _M.request.create_message(messages, max_tokens, options)
-  local msg, rid, err = mcp.rpc.request("sampling/createMessage", {
-    messages = messages,
-    maxTokens = tonumber(max_tokens),
-    modelPreferences = options and options.modelPreferences,
-    systemPrompt = options and tostring(options.systemPrompt),
-    includeContext = options and tostring(options.includeContext),
-    temperature = options and tonumber(options.temperature),
-    stopSequences = options and options.stopSequences,
-    metadata = options and options.metadata
-  })
-  return msg and {
-    body = msg,
+  return {
+    msg = mcp.rpc.request("sampling/createMessage", {
+      messages = messages,
+      maxTokens = tonumber(max_tokens),
+      modelPreferences = options and options.modelPreferences,
+      systemPrompt = options and tostring(options.systemPrompt),
+      includeContext = options and tostring(options.includeContext),
+      temperature = options and tonumber(options.temperature),
+      stopSequences = options and options.stopSequences,
+      metadata = options and options.metadata
+    }),
     validator = mcp.validator.CreateMessageResult
-  } or nil, rid, err
+  }
 end
 
 function _M.notification.initialized()

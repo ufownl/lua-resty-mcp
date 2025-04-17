@@ -8,18 +8,24 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local cjson = require("cjson.safe")
+
 local _MT = {
   __index = {
     _NAME = _M._NAME
   }
 }
 
-function _MT.__index.send(self, data)
-  if type(data) ~= "string" then
-    error("data MUST be a string.")
+function _MT.__index.send(self, msg)
+  if type(msg) ~= "table" then
+    error("message MUST be a table.")
   end
   if not self.stdout then
     return nil, "closed"
+  end
+  local data, err = cjson.encode(msg)
+  if not data then
+    error(err)
   end
   self.stdout:write(data, "\n")
   self.stdout:flush()

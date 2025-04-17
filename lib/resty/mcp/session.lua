@@ -93,25 +93,25 @@ local function return_result(result, errobj, validator)
   return result
 end
 
-local function request_async(self, req, rid, cb)
-  local ok, err = self.conn:send(req.body)
+local function request_async(self, req, cb)
+  local ok, err = self.conn:send(req.msg)
   if not ok then
     return nil, err
   end
-  self.pending_requests[rid] = function(result, errobj)
+  self.pending_requests[req.msg.id] = function(result, errobj)
     local res, err = return_result(result, errobj, req.validator)
     cb(res, err)
   end
   return true
 end
 
-local function request_sync_blocking(self, req, rid)
-  local ok, err = self.conn:send(req.body)
+local function request_sync_blocking(self, req)
+  local ok, err = self.conn:send(req.msg)
   if not ok then
     return nil, err
   end
   local result, errobj
-  self.pending_requests[rid] = function(res, err)
+  self.pending_requests[req.msg.id] = function(res, err)
     result = res
     errobj = err
   end
@@ -129,17 +129,17 @@ local function request_sync_blocking(self, req, rid)
   return return_result(result, errobj, req.validator)
 end
 
-local function request_sync_nonblocking(self, req, rid, timeout)
+local function request_sync_nonblocking(self, req, timeout)
   local sema, err = ngx_semaphore.new()
   if not sema then
     return nil, err
   end
-  local ok, err = self.conn:send(req.body)
+  local ok, err = self.conn:send(req.msg)
   if not ok then
     return nil, err
   end
   local result, errobj
-  self.pending_requests[rid] = function(res, err)
+  self.pending_requests[req.msg.id] = function(res, err)
     result = res
     errobj = err
     sema:post()
@@ -205,16 +205,13 @@ function _M.send_request(self, name, args, cb_or_to)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
-  local req, rid, err = mcp.protocol.request[name](unpack(args))
-  if not req then
-    return nil, err
-  end
+  local req = mcp.protocol.request[name](unpack(args))
   if cb_or_to and not tonumber(cb_or_to) then
-    return request_async(self, req, rid, cb_or_to)
+    return request_async(self, req, cb_or_to)
   elseif self.conn.blocking_io then
-    return request_sync_blocking(self, req, rid)
+    return request_sync_blocking(self, req)
   else
-    return request_sync_nonblocking(self, req, rid, cb_or_to)
+    return request_sync_nonblocking(self, req, cb_or_to)
   end
 end
 
@@ -222,15 +219,7 @@ function _M.send_notification(self, name, args)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid notification format")
   end
-  local msg, err = mcp.protocol.notification[name](unpack(args))
-  if not msg then
-    return nil, err
-  end
-  local ok, err = self.conn:send(msg)
-  if not ok then
-    return nil, err
-  end
-  return true
+  return self.conn:send(mcp.protocol.notification[name](unpack(args)))
 end
 
 return _M

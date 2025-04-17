@@ -15,7 +15,7 @@ location = /t {
     if not conn then
       error("conn "..err)
     end
-    local ok, err = conn:send("Hello, world!")
+    local ok, err = conn:send({"Hello, world!"})
     if not ok then
       error("send "..err)
     end
@@ -25,10 +25,10 @@ location = /t {
     end
     ngx.say(data)
     conn:close()
-    local ok, err = conn:send(data)
+    local ok, err = conn:send({"Hello, world!"})
     ngx.say(tostring(ok))
     ngx.say(err)
-    local ok, err = conn:recv(data)
+    local ok, err = conn:recv()
     ngx.say(tostring(ok))
     ngx.say(err)
   }
@@ -37,7 +37,7 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-Hello, world!
+["Hello, world!"]
 nil
 closed
 nil
