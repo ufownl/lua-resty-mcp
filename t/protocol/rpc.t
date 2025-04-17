@@ -14,18 +14,19 @@ location = /t {
     local rpc = require("resty.mcp.protocol.rpc")
     local req = rpc.request("foobar")
     local resp = rpc.handle(cjson.encode(req), {
-      foobar = function(params)
+      foobar = function(params, rid)
+        ngx.say("method rid: "..tostring(rid == req.id))
         return tostring(params)
       end
     })
-    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == req.id))
+    rpc.handle(cjson.encode(resp), {}, function(rid, result, errobj)
+      ngx.say("rid: "..tostring(rid == req.id))
       ngx.say("result: "..result)
       ngx.say("error: "..tostring(errobj))
     end)
     local resp = rpc.handle(cjson.encode(req), {})
-    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == req.id))
+    rpc.handle(cjson.encode(resp), {}, function(rid, result, errobj)
+      ngx.say("rid: "..tostring(rid == req.id))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
@@ -36,6 +37,7 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+method rid: true
 rid: true
 result: nil
 error: nil
@@ -59,18 +61,19 @@ location = /t {
       foo = 1
     })
     local resp = rpc.handle(cjson.encode(req), {
-      foobar = function(params)
+      foobar = function(params, rid)
+        ngx.say("method rid: "..tostring(rid == req.id))
         return cjson.encode(params)
       end
     })
-    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == req.id))
+    rpc.handle(cjson.encode(resp), {}, function(rid, result, errobj)
+      ngx.say("rid: "..tostring(rid == req.id))
       ngx.say("result: "..result)
       ngx.say("error: "..tostring(errobj))
     end)
     local resp = rpc.handle(cjson.encode(req), {})
-    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
-      ngx.say("rid: "..tostring(id == req.id))
+    rpc.handle(cjson.encode(resp), {}, function(rid, result, errobj)
+      ngx.say("rid: "..tostring(rid == req.id))
       ngx.say("result: "..tostring(result))
       ngx.say("code: "..errobj.code)
       ngx.say("message: "..errobj.message)
@@ -81,6 +84,7 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+method rid: true
 rid: true
 result: {"foo":1}
 error: nil
@@ -166,7 +170,11 @@ location = /t {
       foo = 3
     })
     local resp = rpc.handle(cjson.encode({req1, ntf, req2}), {
-      foobar = function(params)
+      foobar = function(params, rid)
+        if rid then
+          ngx.say("method rid1: "..tostring(rid == req1.id))
+          ngx.say("method rid2: "..tostring(rid == req2.id))
+        end
         local res = cjson.encode(params)
         ngx.say("call foobar: "..res)
         return res
@@ -185,8 +193,12 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+method rid1: true
+method rid2: false
 call foobar: {"foo":1}
 call foobar: {"foo":2}
+method rid1: false
+method rid2: true
 call foobar: {"foo":3}
 rid1: true
 rid2: false

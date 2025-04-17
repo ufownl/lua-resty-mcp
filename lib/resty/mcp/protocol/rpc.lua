@@ -94,7 +94,7 @@ local function handle_impl(dm, methods, resp_cb)
     return dm.id and fail_resp(dm.id, -32601, "Method not found") or nil
   end
   if dm.id then
-    local result, code, message, data = fn(dm.params)
+    local result, code, message, data = fn(dm.params, dm.id)
     return result ~= nil and succ_resp(dm.id, result) or fail_resp(dm.id, code, message, data)
   end
   fn(dm.params)

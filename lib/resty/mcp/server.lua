@@ -69,7 +69,7 @@ local function define_methods(self, event_handlers)
         handler(params, {session = self})
       end
     end,
-    ["prompts/get"] = self.capabilities.prompts and function(params)
+    ["prompts/get"] = self.capabilities.prompts and function(params, rid)
       local ok, err = mcp.validator.GetPromptRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -80,6 +80,7 @@ local function define_methods(self, event_handlers)
       end
       return prompt:get(params.arguments, {
         session = self,
+        related_request = rid,
         _meta = params._meta
       })
     end or nil,
@@ -106,7 +107,7 @@ local function define_methods(self, event_handlers)
         return mcp.protocol.result.list("resourceTemplates", self.available_resource_templates)
       end
     end or nil,
-    ["resources/read"] = self.capabilities.resources and function(params)
+    ["resources/read"] = self.capabilities.resources and function(params, rid)
       local ok, err = mcp.validator.ReadResourceRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -115,6 +116,7 @@ local function define_methods(self, event_handlers)
       if resource then
         return resource:read({
           session = self,
+          related_request = rid,
           _meta = params._meta
         })
       end
@@ -122,6 +124,7 @@ local function define_methods(self, event_handlers)
         for i, resource_template in ipairs(self.available_resource_templates) do
           local result, code, message, data = resource_template:read(params.uri, {
             session = self,
+            related_request = rid,
             _meta = params._meta
           })
           if result then
@@ -175,7 +178,7 @@ local function define_methods(self, event_handlers)
       end
       return {}
     end or nil,
-    ["tools/call"] = self.capabilities.tools and function(params)
+    ["tools/call"] = self.capabilities.tools and function(params, rid)
       local ok, err = mcp.validator.CallToolRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -186,6 +189,7 @@ local function define_methods(self, event_handlers)
       end
       return tool(params.arguments, {
         session = self,
+        related_request = rid,
         _meta = params._meta
       })
     end or nil
