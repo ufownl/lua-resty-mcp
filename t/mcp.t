@@ -157,10 +157,6 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local ok, err = client:wait_background_tasks()
-    if not ok then
-      error(err)
-    end
     ngx.say(tostring(client.server.discovered_tools == tools))
     local tools, err = client:list_tools()
     if not tools then
@@ -274,10 +270,6 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local ok, err = client:wait_background_tasks()
-    if not ok then
-      error(err)
-    end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     local prompts, err = client:list_prompts()
     if not prompts then
@@ -390,10 +382,6 @@ location = /t {
       ngx.say(tostring(v.mimeType))
       ngx.say(tostring(v.text))
       ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
-    end
-    local ok, err = client:wait_background_tasks()
-    if not ok then
-      error(err)
     end
     ngx.say(tostring(client.server.discovered_resources == resources))
     local resources, err = client:list_resources()

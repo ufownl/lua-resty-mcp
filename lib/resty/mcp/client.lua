@@ -86,11 +86,17 @@ local function define_methods(self)
       if not cap or not cap.listChanged then
         return
       end
-      local list, err = get_list(self, v)
-      if err then
-        ngx_log(ngx.ERR, err)
+      local key = "discovered_"..v
+      if self.server[key] then
+        local ok, err = mcp.utils.spin_until(function()
+          return type(self.server[key]) == "table" or not self.server[key]
+        end)
+        if not ok then
+          ngx_log(ngx.ERR, err)
+          return
+        end
+        self.server[key] = nil
       end
-      self.server["discovered_"..v] = list
     end
   end
   return methods
@@ -104,13 +110,24 @@ local function list_impl(self, category, timeout)
     return get_list(self, category, timeout)
   end
   local key = "discovered_"..category
-  if not self.server[key] then
-    local list, err = get_list(self, category, timeout)
-    if not list then
-      return nil, err
+  repeat
+    if self.server[key] then
+      local ok, err = mcp.utils.spin_until(function()
+        return type(self.server[key]) == "table" or not self.server[key]
+      end, {timeout = timeout})
+      if not ok then
+        return nil, err
+      end
+    else
+      self.server[key] = true
+      local list, err = get_list(self, category, timeout)
+      if not list then
+        self.server[key] = nil
+        return nil, err
+      end
+      self.server[key] = list
     end
-    self.server[key] = list
-  end
+  until self.server[key]
   return self.server[key]
 end
 
@@ -168,7 +185,6 @@ function _MT.__index.shutdown(self)
 end
 
 function _MT.__index.expose_roots(self, roots)
-  local original_roots = self.exposed_roots
   if type(roots) == "table" and #roots > 0 then
     expose_roots_impl(self, roots)
   else
@@ -176,7 +192,6 @@ function _MT.__index.expose_roots(self, roots)
   end
   local ok, err = mcp.session.send_notification(self, "list_changed", {"roots"})
   if not ok then
-    self.exposed_roots = original_roots
     return nil, err
   end
   return true

@@ -91,12 +91,13 @@ local function define_methods(self, event_handlers)
       if not self.client.capabilities.roots or not self.client.capabilities.roots.listChanged then
         return
       end
-      local res, err = mcp.session.send_request(self, "list", {"roots"})
-      if res then
-        self.client.discovered_roots = res.roots
-      else
-        if err then
+      if self.client.discovered_roots then
+        local ok, err = mcp.utils.spin_until(function()
+          return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
+        end)
+        if not ok then
           ngx_log(ngx.ERR, err)
+          return
         end
         self.client.discovered_roots = nil
       end
@@ -391,13 +392,24 @@ function _MT.__index.list_roots(self, timeout, rrid)
     end
     return res.roots
   end
-  if not self.client.discovered_roots then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
-    if not res then
-      return nil, err
+  repeat
+    if self.client.discovered_roots then
+      local ok, err = mcp.utils.spin_until(function()
+        return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
+      end, {timeout = timeout})
+      if not ok then
+        return nil, err
+      end
+    else
+      self.client.discovered_roots = true
+      local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
+      if not res then
+        self.client.discovered_roots = nil
+        return nil, err
+      end
+      self.client.discovered_roots = res.roots
     end
-    self.client.discovered_roots = res.roots
-  end
+  until self.client.discovered_roots
   return self.client.discovered_roots
 end
 
