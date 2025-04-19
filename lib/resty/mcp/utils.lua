@@ -22,7 +22,7 @@ function _M.generate_id()
   sha256:update(ngx_worker_pid().."&")
   sha256:update(ngx_time().."&")
   sha256:update(id_counter.."&")
-  id_counter = (id_counter + 1) % 1000
+  id_counter = (id_counter + 1) % 10000
   sha256:update(resty_random.bytes(8))
   return ngx_base64.encode_base64url(sha256:final())
 end
