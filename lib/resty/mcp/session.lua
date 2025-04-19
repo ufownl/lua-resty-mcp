@@ -12,16 +12,13 @@ local _M = {
 
 local cjson = require("cjson.safe")
 local ngx_semaphore = require("ngx.semaphore")
-local ngx_log = ngx.log
-local ngx_thread_spawn = ngx.thread.spawn
-local ngx_thread_wait = ngx.thread.wait
 local unpack = table.unpack or unpack
 
 local function handle_message(self, msg)
   local reply = mcp.rpc.handle(msg, self.methods, function(rid, result, errobj)
     local cb = self.pending_requests[rid]
     if not cb then
-      ngx_log(ngx.ERR, "response: request id mismatch")
+      ngx.log(ngx.ERR, "response: request id mismatch")
       return
     end
     self.pending_requests[rid] = nil
@@ -30,7 +27,7 @@ local function handle_message(self, msg)
   if reply then
     local ok, err = self.conn:send(reply)
     if not ok then
-      ngx_log(ngx.ERR, "transport: ", err)
+      ngx.log(ngx.ERR, "transport: ", err)
       return nil, err
     end
   end
@@ -44,7 +41,7 @@ local function main_loop(self)
     if msg then
       if running_tasks then
         local tid = mcp.utils.generate_id()
-        running_tasks[tid] = ngx_thread_spawn(function()
+        running_tasks[tid] = ngx.thread.spawn(function()
           self.bg_tasks.count = self.bg_tasks.count + 1
           handle_message(self, msg)
           self.bg_tasks.count = self.bg_tasks.count - 1
@@ -69,9 +66,9 @@ local function main_loop(self)
       table.insert(tasks, v)
     end
     if #tasks > 0 then
-      local ok, err = ngx_thread_wait(unpack(tasks))
+      local ok, err = ngx.thread.wait(unpack(tasks))
       if not ok then
-        ngx_log(ngx.ERR, "ngx thread: ", err)
+        ngx.log(ngx.ERR, "ngx thread: ", err)
       end
     end
   end
@@ -175,7 +172,7 @@ end
 
 function _M.initialize(self, methods)
   self.methods = methods
-  self.main_loop = ngx_thread_spawn(main_loop, self)
+  self.main_loop = ngx.thread.spawn(main_loop, self)
 end
 
 function _M.shutdown(self, dont_wait)
@@ -183,9 +180,9 @@ function _M.shutdown(self, dont_wait)
   if co then
     self.conn:close()
     if not dont_wait then
-      local ok, err = ngx_thread_wait(co)
+      local ok, err = ngx.thread.wait(co)
       if not ok then
-        ngx_log(ngx.ERR, "ngx thread: ", err)
+        ngx.log(ngx.ERR, "ngx thread: ", err)
       end
     end
   end

@@ -15,9 +15,6 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local ngx_decode_args = ngx.decode_args
-local ngx_encode_args = ngx.encode_args
-
 local function wrapper(server, rid)
   local function rrid()
     return {related_request = rid}
@@ -57,7 +54,7 @@ end
 local function paginate(cursor, page_size, total_size)
   local i = 1
   if cursor then
-    local dc = ngx_decode_args(cursor)
+    local dc = ngx.decode_args(cursor)
     if not dc or not tonumber(dc.idx) or tonumber(dc.idx) < 1 then
       return nil, nil, "invalid cursor"
     end
@@ -96,7 +93,7 @@ local function define_methods(self, event_handlers)
           return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
         end)
         if not ok then
-          ngx_log(ngx.ERR, err)
+          ngx.log(ngx.ERR, err)
           return
         end
         self.client.discovered_roots = nil
@@ -138,7 +135,7 @@ local function define_methods(self, event_handlers)
         for j = l, r do
           table.insert(page, self.available_resource_templates[j])
         end
-        return mcp.protocol.result.list("resourceTemplates", page, r < #self.available_resource_templates and ngx_encode_args({idx = r + 1}) or nil)
+        return mcp.protocol.result.list("resourceTemplates", page, r < #self.available_resource_templates and ngx.encode_args({idx = r + 1}) or nil)
       else
         return mcp.protocol.result.list("resourceTemplates", self.available_resource_templates)
       end
@@ -254,7 +251,7 @@ local function define_methods(self, event_handlers)
           for j = l, r do
             table.insert(page, prop.list[j])
           end
-          return mcp.protocol.result.list(cap_k, page, r < #prop.list and ngx_encode_args({idx = r + 1}) or nil)
+          return mcp.protocol.result.list(cap_k, page, r < #prop.list and ngx.encode_args({idx = r + 1}) or nil)
         else
           return mcp.protocol.result.list(cap_k, prop.list)
         end

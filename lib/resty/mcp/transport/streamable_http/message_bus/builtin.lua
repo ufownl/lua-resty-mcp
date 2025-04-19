@@ -9,8 +9,6 @@ local _M = {
 }
 
 local cjson = require("cjson.safe")
-local ngx_shared = ngx.shared
-local ngx_sleep = ngx.sleep
 
 local function pop_sync(self, pop_impl, timeout)
   local val, err = pop_impl()
@@ -28,7 +26,7 @@ local function pop_sync(self, pop_impl, timeout)
   local ratio = self.ratio
   local max_step = self.max_step
   while true do
-    ngx_sleep(step)
+    ngx.sleep(step)
     ttl = ttl - step
     local val, err = pop_impl()
     if val then
@@ -172,7 +170,7 @@ end
 
 function _M.new(options)
   local shm_zone = options and options.shm_zone or "mcp_message_bus"
-  local shm_dict = ngx_shared[shm_zone]
+  local shm_dict = ngx.shared[shm_zone]
   if not shm_dict then
     error(string.format("shm-zone named %s MUST be defined by `lua_shared_dict` directive", shm_zone))
   end

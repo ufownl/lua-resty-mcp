@@ -7,13 +7,8 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local ngx_escape_uri = ngx.escape_uri
-local ngx_re_gsub = ngx.re.gsub
-local ngx_re_find = ngx.re.find
-local ngx_re_match = ngx.re.match
-
 local function encode_unreserved(raw)
-  local out, n, err = ngx_re_gsub(ngx_escape_uri(raw, 2), "[!'()*]", function(m)
+  local out, n, err = ngx.re.gsub(ngx.escape_uri(raw, 2), "[!'()*]", function(m)
     return string.format("%%%02X", string.byte(m[0]))
   end, "o")
   if not out then
@@ -25,12 +20,12 @@ end
 local function encode_reserved(raw)
   local out = ""
   while true do
-    local from, to, err = ngx_re_find(raw, "%[0-9A-Fa-f]{2}", "o")
+    local from, to, err = ngx.re.find(raw, "%[0-9A-Fa-f]{2}", "o")
     if err then
       error(err)
     end
     local part = from and string.sub(raw, 1, from - 1) or raw
-    local s, n, err = ngx_re_gsub(ngx_escape_uri(part, 0), "%([35][bBdDfF])", function(m)
+    local s, n, err = ngx.re.gsub(ngx.escape_uri(part, 0), "%([35][bBdDfF])", function(m)
       local ch = string.upper(m[1])
       if ch == "3F" then
         return "?"
@@ -168,7 +163,7 @@ local function escape_regex(raw, ctx)
   if ctx then
     return raw
   end
-  local out, n, err = ngx_re_gsub(raw, "[\\$\\(\\)\\[\\]\\.\\?\\+\\*]", function(m)
+  local out, n, err = ngx.re.gsub(raw, "[\\$\\(\\)\\[\\]\\.\\?\\+\\*]", function(m)
     return "\\"..m[0]
   end, "o")
   if err then
@@ -179,12 +174,12 @@ end
 
 local function expand_impl(pattern, ctx)
   local vars = {}
-  local out, n, err = ngx_re_gsub(pattern, "{([^{}]+)}|([^{}]+)", function(m)
+  local out, n, err = ngx.re.gsub(pattern, "{([^{}]+)}|([^{}]+)", function(m)
     if m[1] then
       local op, exp = parse_operator(m[1])
       local vals = {}
       local function parse_variable(var)
-        local m, err = ngx_re_match(var, "([^:\\*]*)(?::(\\d+)|(\\*))?", "o")
+        local m, err = ngx.re.match(var, "([^:\\*]*)(?::(\\d+)|(\\*))?", "o")
         if m then
           if ctx then
             for i, v in ipairs(get_values(ctx, op, m[1], m[2] or m[3])) do
@@ -247,7 +242,7 @@ function _MT.__index.expand(self, ctx)
 end
 
 function _MT.__index.test(self, uri)
-  local from, to, err = ngx_re_find(uri, self.match_regex, "o")
+  local from, to, err = ngx.re.find(uri, self.match_regex, "o")
   if err then
     error(err)
   end
@@ -256,7 +251,7 @@ end
 
 -- Known issue: parse unpacked list variables following a key operator (`;?&`).
 function _MT.__index.match(self, uri)
-  local m, err = ngx_re_match(uri, self.match_regex, "o")
+  local m, err = ngx.re.match(uri, self.match_regex, "o")
   if err then
     error(err)
   end

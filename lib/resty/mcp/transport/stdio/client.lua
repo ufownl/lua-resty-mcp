@@ -11,7 +11,6 @@ local _M = {
 local cjson = require("cjson.safe")
 local resty_signal = require("resty.signal")
 local ngx_pipe = require("ngx.pipe")
-local ngx_log = ngx.log
 
 local _MT = {
   __index = {
@@ -54,14 +53,14 @@ function _MT.__index.close(self)
   end
   local ok, err = self.pipe:shutdown("stdin")
   if not ok then
-    ngx_log(ngx.ERR, "ngx pipe: ", err)
+    ngx.log(ngx.ERR, "ngx pipe: ", err)
     self.pipe = nil
     return
   end
   for i, sig in ipairs({"TERM", "KILL"}) do
     local ok, err = self.pipe:kill(resty_signal.signum(sig))
     if not ok then
-      ngx_log(ngx.ERR, "ngx pipe: ", err)
+      ngx.log(ngx.ERR, "ngx pipe: ", err)
       self.pipe = nil
       return
     end

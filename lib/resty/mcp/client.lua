@@ -10,8 +10,6 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local ngx_log = ngx.log
-
 local function get_list(self, category, timeout, field_name)
   local list = {}
   local cursor
@@ -69,7 +67,7 @@ local function define_methods(self)
     ["notifications/resources/updated"] = function(params)
       local ok, err = mcp.validator.ResourceUpdatedNotification(params)
       if not ok then
-        ngx_log(ngx.ERR, err)
+        ngx.log(ngx.ERR, err)
         return
       end
       local cap = self.server.capabilities.resources
@@ -92,7 +90,7 @@ local function define_methods(self)
           return type(self.server[key]) == "table" or not self.server[key]
         end)
         if not ok then
-          ngx_log(ngx.ERR, err)
+          ngx.log(ngx.ERR, err)
           return
         end
         self.server[key] = nil

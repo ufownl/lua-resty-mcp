@@ -7,8 +7,6 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local ngx_re_match = ngx.re.match
-
 local function new_state()
   return {event = "", data = ""}
 end
@@ -32,7 +30,7 @@ function _MT.__call(self, line)
     self.current_fields = new_state()
     return
   end
-  local m, err = ngx_re_match(line, "^([^:]+)(?:: ?(.*))?$", "o")
+  local m, err = ngx.re.match(line, "^([^:]+)(?:: ?(.*))?$", "o")
   if not m then
     if err then
       error(err)

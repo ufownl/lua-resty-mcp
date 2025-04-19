@@ -4,7 +4,6 @@ local mcp = {
 }
 
 local cjson = require("cjson.safe")
-local ngx_log = ngx.log
 
 local _M = {
   _NAME = "resty.mcp.transport.streamable_http.server",
@@ -21,7 +20,7 @@ local function route_single(msg, rrid)
     if not data then
       error(err)
     end
-    ngx_log(ngx.ERR, "unable to route: "..data)
+    ngx.log(ngx.ERR, "unable to route: "..data)
   end
 end
 
