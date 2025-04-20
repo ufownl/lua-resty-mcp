@@ -28,12 +28,18 @@ end
 
 local function define_methods(self)
   local methods = {
-    ["roots/list"] = function(params)
+    ["roots/list"] = function(params, rid)
+      if not rid then
+        return
+      end
       return {
         roots = self.exposed_roots or {}
       }
     end,
-    ["sampling/createMessage"] = self.sampling_callback and function(params)
+    ["sampling/createMessage"] = self.sampling_callback and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.CreateMessageRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}

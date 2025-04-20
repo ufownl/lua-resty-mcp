@@ -65,7 +65,10 @@ end
 
 local function define_methods(self, event_handlers)
   local methods = {
-    initialize = function(params)
+    initialize = function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.InitializeRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -104,6 +107,9 @@ local function define_methods(self, event_handlers)
       end
     end,
     ["prompts/get"] = self.capabilities.prompts and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.GetPromptRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -117,7 +123,10 @@ local function define_methods(self, event_handlers)
         _meta = params._meta
       })
     end or nil,
-    ["resources/templates/list"] = self.capabilities.resources and function(params)
+    ["resources/templates/list"] = self.capabilities.resources and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.ListResourceTemplatesRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -141,6 +150,9 @@ local function define_methods(self, event_handlers)
       end
     end or nil,
     ["resources/read"] = self.capabilities.resources and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.ReadResourceRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -169,7 +181,10 @@ local function define_methods(self, event_handlers)
       end
       return nil, -32002, "Resource not found", {uri = params.uri}
     end or nil,
-    ["resources/subscribe"] = self.capabilities.resources and function(params)
+    ["resources/subscribe"] = self.capabilities.resources and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.SubscribeRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -200,7 +215,10 @@ local function define_methods(self, event_handlers)
       end
       return nil, -32002, "Resource not found", {uri = params.uri}
     end or nil,
-    ["resources/unsubscribe"] = self.capabilities.resources and function(params)
+    ["resources/unsubscribe"] = self.capabilities.resources and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.UnsubscribeRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -211,6 +229,9 @@ local function define_methods(self, event_handlers)
       return {}
     end or nil,
     ["tools/call"] = self.capabilities.tools and function(params, rid)
+      if not rid then
+        return
+      end
       local ok, err = mcp.validator.CallToolRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -232,7 +253,10 @@ local function define_methods(self, event_handlers)
   }
   for i, cap_k in ipairs({"prompts", "resources", "tools"}) do
     if self.capabilities[cap_k] then
-      methods[cap_k.."/list"] = function(params)
+      methods[cap_k.."/list"] = function(params, rid)
+        if not rid then
+          return
+        end
         local ok, err = validator[i](params)
         if not ok then
           return nil, -32602, "Invalid params", {errmsg = err}
