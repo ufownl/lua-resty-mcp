@@ -258,7 +258,7 @@ GET /t
 400
 404
 404
-501
+405
 404
 application/json
 -32700 Parse error

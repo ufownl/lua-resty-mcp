@@ -227,7 +227,7 @@ end
 
 local function do_GET(message_bus, session_id)
   -- TODO:
-  ngx.exit(ngx.HTTP_NOT_IMPLEMENTED)
+  ngx.exit(ngx.HTTP_NOT_ALLOWED)
 end
 
 local function do_DELETE(message_bus, session_id)
