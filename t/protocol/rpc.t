@@ -180,13 +180,16 @@ location = /t {
         return res
       end
     })
-    rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
+    local nil_resp = rpc.handle(cjson.encode(resp), {}, function(id, result, errobj)
       for i, v in ipairs({req1.id, req2.id}) do
         ngx.say("rid"..i..": "..tostring(id == v))
       end
       ngx.say("result: "..result)
       ngx.say("error: "..tostring(errobj))
     end)
+    ngx.say(tostring(nil_resp))
+    local nil_resp = rpc.handle(cjson.encode({resp[1], ntf, resp[2]}), {})
+    ngx.say(tostring(nil_resp))
   }
 }
 --- request
@@ -208,6 +211,8 @@ rid1: false
 rid2: true
 result: {"foo":3}
 error: nil
+nil
+nil
 --- no_error_log
 [error]
 

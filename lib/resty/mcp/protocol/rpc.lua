@@ -104,8 +104,8 @@ function _M.handle(msg, methods, resp_cb)
   if type(msg) ~= "string" then
     error("JSONRPC: protocol message MUST be a string.")
   end
-  if type(methods) ~= "table" then
-    error("JSONRPC: methods MUST be a table.")
+  if not methods then
+    error("JSONRPC: methods MUST be set.")
   end
   local dm, err = cjson.decode(msg)
   if err then
@@ -122,7 +122,7 @@ function _M.handle(msg, methods, resp_cb)
         table.insert(replies, r)
       end
     end
-    return replies
+    return #replies > 0 and replies or nil
   end
   return handle_impl(dm, methods, resp_cb)
 end
