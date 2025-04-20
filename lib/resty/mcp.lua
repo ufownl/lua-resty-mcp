@@ -2,7 +2,8 @@ return {
   _NAME = "resty.mcp",
   _VERSION = require("resty.mcp.version").module,
   transport = {
-    stdio = require("resty.mcp.transport.stdio")
+    stdio = require("resty.mcp.transport.stdio"),
+    streamable_http = require("resty.mcp.transport.streamable_http")
   },
   client = require("resty.mcp.client").new,
   server = require("resty.mcp.server").new,

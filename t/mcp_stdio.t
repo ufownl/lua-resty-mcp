@@ -88,6 +88,8 @@ location = /t {
     ngx.say(err)
     local _, err = client:list_resources()
     ngx.say(err)
+    local _, err = client:list_resource_templates()
+    ngx.say(err)
     local _, err = client:read_resource("mock://foobar")
     ngx.say(err)
     local _, err = client:list_tools()
@@ -103,6 +105,7 @@ GET /t
 --- response_body
 MCP Handshake v1.0_alpha has no prompts capability
 MCP Handshake v1.0_alpha has no prompts capability
+MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no tools capability
