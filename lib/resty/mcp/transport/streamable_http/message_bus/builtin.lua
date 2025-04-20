@@ -125,11 +125,7 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
   if not data then
     error(err)
   end
-  local eid, err = self.shm_dict:incr("sess_mk#"..sid, 1)
-  if not eid then
-    return nil, err
-  end
-  return self.shm_dict:rpush(string.format("chan_mq#%s@%s", sid, chk), string.format("%u\n%s", eid, data))
+  return self.shm_dict:rpush(string.format("chan_mq#%s@%s", sid, chk), data)
 end
 
 function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
@@ -154,18 +150,16 @@ function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
           end
           break
         end
-        local sep = string.find(val, "\n", 1, true)
-        if sep then
-          table.insert(msgs, {
-            id = string.sub(val, 1, sep - 1),
-            data = string.sub(val, sep + 1)
-          })
-        end
+        table.insert(msgs, val)
       end
     end
     return #msgs > 0 and msgs or nil
   end
   return pop_sync(self, pop_impl, timeout)
+end
+
+function _MT.__index.alloc_eid(self, sid)
+  return self.shm_dict:incr("sess_mk#"..sid, 1)
 end
 
 function _M.new(options)

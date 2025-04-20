@@ -60,7 +60,7 @@ location = /t {
         error(err)
       end
       for i, msg in ipairs(msgs) do
-        local dm = cjson.decode(msg.data)
+        local dm = cjson.decode(msg)
         if #dm > 0 then
           ngx.say("batch:")
           for j, v in ipairs(dm) do
