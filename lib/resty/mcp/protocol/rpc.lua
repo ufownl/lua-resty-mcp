@@ -47,7 +47,7 @@ local function fail_resp(rid, code, message, data)
   }
 end
 
-function _M.request(method, params)
+function _M.request(method, params, rid)
   if type(method) ~= "string" then
     error("JSONRPC: method MUST be a string.")
   end
@@ -56,7 +56,7 @@ function _M.request(method, params)
   end
   return {
     jsonrpc = JSONRPC_VERSION,
-    id = mcp.utils.generate_id(),
+    id = rid or mcp.utils.generate_id(),
     method = method,
     params = params or nil
   }
