@@ -12,41 +12,6 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-local function succ_resp(rid, result)
-  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
-    error("JSONRPC: ID MUST be a string or integer.")
-  end
-  if result == nil then
-    error("JSONRPC: result MUST be set in a successful response.")
-  end
-  return {
-    jsonrpc = JSONRPC_VERSION,
-    id = rid,
-    result = result
-  }
-end
-
-local function fail_resp(rid, code, message, data)
-  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) and rid ~= cjson.null then
-    error("JSONRPC: ID MUST be a string or integer, or null.")
-  end
-  if type(code) ~= "number" or code % 1 ~= 0 then
-    error("JSONRPC: error code MUST be an integer.")
-  end
-  if type(message) ~= "string" then
-    error("JSONRPC: error message MUST be a string.")
-  end
-  return {
-    jsonrpc = JSONRPC_VERSION,
-    id = rid,
-    error = {
-      code = code,
-      message = message,
-      data = data
-    }
-  }
-end
-
 function _M.request(method, params, rid)
   if type(method) ~= "string" then
     error("JSONRPC: method MUST be a string.")
@@ -76,12 +41,47 @@ function _M.notification(method, params)
   }
 end
 
+function _M.succ_resp(rid, result)
+  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
+    error("JSONRPC: ID MUST be a string or integer.")
+  end
+  if result == nil then
+    error("JSONRPC: result MUST be set in a successful response.")
+  end
+  return {
+    jsonrpc = JSONRPC_VERSION,
+    id = rid,
+    result = result
+  }
+end
+
+function _M.fail_resp(rid, code, message, data)
+  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) and rid ~= cjson.null then
+    error("JSONRPC: ID MUST be a string or integer, or null.")
+  end
+  if type(code) ~= "number" or code % 1 ~= 0 then
+    error("JSONRPC: error code MUST be an integer.")
+  end
+  if type(message) ~= "string" then
+    error("JSONRPC: error message MUST be a string.")
+  end
+  return {
+    jsonrpc = JSONRPC_VERSION,
+    id = rid,
+    error = {
+      code = code,
+      message = message,
+      data = data
+    }
+  }
+end
+
 local function handle_impl(dm, methods, resp_cb)
   if type(dm) ~= "table" or
      dm.jsonrpc ~= JSONRPC_VERSION or
      dm.method and type(dm.method) ~= "string" or
      not dm.id and not dm.method then
-    return fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
+    return _M.fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
   end
   if not dm.method then
     if resp_cb then
@@ -91,11 +91,11 @@ local function handle_impl(dm, methods, resp_cb)
   end
   local fn = methods[dm.method]
   if not fn then
-    return dm.id and fail_resp(dm.id, -32601, "Method not found") or nil
+    return dm.id and _M.fail_resp(dm.id, -32601, "Method not found") or nil
   end
   if dm.id then
     local result, code, message, data = fn(dm.params, dm.id)
-    return result ~= nil and succ_resp(dm.id, result) or fail_resp(dm.id, code, message, data)
+    return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
   end
   fn(dm.params)
 end
@@ -109,10 +109,10 @@ function _M.handle(msg, methods, resp_cb)
   end
   local dm, err = cjson.decode(msg)
   if err then
-    return fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})
+    return _M.fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})
   end
   if type(dm) ~= "table" then
-    return fail_resp(cjson.null, -32600, "Invalid Request")
+    return _M.fail_resp(cjson.null, -32600, "Invalid Request")
   end
   if #dm > 0 then
     local replies = {}
