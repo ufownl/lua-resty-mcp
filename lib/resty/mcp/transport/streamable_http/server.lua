@@ -93,10 +93,15 @@ function _M.new(options)
     error("session ID MUST be a string")
   end
   local bus_type = options.message_bus and options.message_bus.type or "builtin"
+  local message_bus = require("resty.mcp.transport.streamable_http.message_bus."..bus_type)
+  local bus, err = message_bus.new(options.message_bus)
+  if not bus then
+    return nil, err
+  end
   return setmetatable({
     session_id = options.session_id,
     read_timeout = tonumber(options.read_timeout),
-    message_bus = require("resty.mcp.transport.streamable_http.message_bus."..bus_type).new(options.message_bus)
+    message_bus = bus
   }, _MT)
 end
 

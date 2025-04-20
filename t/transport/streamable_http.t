@@ -14,7 +14,10 @@ location = /t {
     local cjson = require("cjson")
     local message_bus = require("resty.mcp.transport.streamable_http.message_bus.builtin").new()
     local streamable_http = require("resty.mcp.transport.streamable_http")
-    local session_id = message_bus:new_session()
+    local session_id, err = message_bus:new_session()
+    if not session_id then
+      error(err)
+    end
     local conn = streamable_http.server({session_id = session_id})
     ngx.thread.spawn(function()
       local data, err = conn:recv()
