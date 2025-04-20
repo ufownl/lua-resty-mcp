@@ -77,27 +77,46 @@ function _M.fail_resp(rid, code, message, data)
 end
 
 local function handle_impl(dm, methods, resp_cb)
-  if type(dm) ~= "table" or
-     dm.jsonrpc ~= JSONRPC_VERSION or
-     dm.method and type(dm.method) ~= "string" or
-     not dm.id and not dm.method then
-    return _M.fail_resp(type(dm) == "table" and dm.id or cjson.null, -32600, "Invalid Request")
+  if dm.jsonrpc ~= JSONRPC_VERSION then
+    return _M.fail_resp(cjson.null, -32600, "Invalid Request")
   end
-  if not dm.method then
+  if dm.id ~= nil and type(dm.id) ~= "string" and (type(dm.id) ~= "number" or dm.id % 1 ~= 0) and dm.id ~= cjson.null then
+    return _M.fail_resp(cjson.null, -32600, "Invalid Request")
+  end
+  if dm.method == nil then
+    if not dm.id then
+      return _M.fail_resp(cjson.null, -32600, "Invalid Request")
+    end
+    if dm.result == nil then
+      if type(dm.error) ~= "table" or type(dm.error.code) ~= "number" or dm.error.code % 1 ~= 0 or type(dm.error.message) ~= "string" then
+        return _M.fail_resp(dm.id, -32600, "Invalid Request")
+      end
+    else
+      if dm.error ~= nil then
+        return _M.fail_resp(dm.id, -32600, "Invalid Request")
+      end
+    end
     if resp_cb then
       resp_cb(dm.id, dm.result, dm.error)
     end
-    return
+  else
+    if type(dm.method) ~= "string" then
+      return _M.fail_resp(dm.id or cjson.null, -32600, "Invalid Request")
+    end
+    local fn = methods[dm.method]
+    if dm.id then
+      if fn then
+        local result, code, message, data = fn(dm.params, dm.id)
+        return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+      else
+        return _M.fail_resp(dm.id, -32601, "Method not found")
+      end
+    else
+      if fn then
+        fn(dm.params)
+      end
+    end
   end
-  local fn = methods[dm.method]
-  if not fn then
-    return dm.id and _M.fail_resp(dm.id, -32601, "Method not found") or nil
-  end
-  if dm.id then
-    local result, code, message, data = fn(dm.params, dm.id)
-    return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
-  end
-  fn(dm.params)
 end
 
 function _M.handle(msg, methods, resp_cb)
@@ -117,9 +136,13 @@ function _M.handle(msg, methods, resp_cb)
   if #dm > 0 then
     local replies = {}
     for i, v in ipairs(dm) do
-      local r = handle_impl(v, methods, resp_cb)
-      if r then
-        table.insert(replies, r)
+      if type(v) == "table" then
+        local r = handle_impl(v, methods, resp_cb)
+        if r then
+          table.insert(replies, r)
+        end
+      else
+        table.insert(replies, _M.fail_resp(cjson.null, -32600, "Invalid Request"))
       end
     end
     return #replies > 0 and replies or nil
