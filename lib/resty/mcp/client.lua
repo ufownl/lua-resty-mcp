@@ -118,7 +118,7 @@ local function list_impl(self, category, timeout)
     if self.server[key] then
       local ok, err = mcp.utils.spin_until(function()
         return type(self.server[key]) == "table" or not self.server[key]
-      end, {timeout = timeout})
+      end, timeout)
       if not ok then
         return nil, err
       end

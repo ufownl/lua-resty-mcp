@@ -417,7 +417,7 @@ function _MT.__index.list_roots(self, timeout, rrid)
     if self.client.discovered_roots then
       local ok, err = mcp.utils.spin_until(function()
         return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
-      end, {timeout = timeout})
+      end, timeout)
       if not ok then
         return nil, err
       end

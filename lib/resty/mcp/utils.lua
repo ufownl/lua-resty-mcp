@@ -28,28 +28,27 @@ function _M.check_mcp_type(module, v)
   return type(v) == "table" and v._NAME == module._NAME and v or nil
 end
 
-function _M.spin_until(stop_cond, options)
+function _M.spin_until(stop_cond, timeout, options)
   if stop_cond() then
     return 0
   end
-  local timeout = options and tonumber(options.timeout) or 10
-  if timeout <= 0 then
+  local ttl = tonumber(timeout) or 10
+  if ttl <= 0 then
     return nil, "timeout"
   end
   local step = options and tonumber(options.step) or 0.001
   local ratio = options and tonumber(options.ratio) or 2
   local max_step = options and tonumber(options.max_step) or 0.5
-  local elapsed = 0
   while true do
     ngx.sleep(step)
-    elapsed = elapsed + step
+    ttl = ttl - step
     if stop_cond() then
-      return elapsed
+      return (tonumber(timeout) or 10) - ttl
     end
-    if elapsed >= timeout then
+    if ttl <= 0 then
       return nil, "timeout"
     end
-    step = math.min(math.max(0.001, step * ratio), timeout - elapsed, max_step)
+    step = math.min(math.max(0.001, step * ratio), ttl, max_step)
   end
 end
 

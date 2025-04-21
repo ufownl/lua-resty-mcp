@@ -11,35 +11,16 @@ local _M = {
 local cjson = require("cjson.safe")
 
 local function pop_sync(self, pop_impl, timeout)
-  local val, err = pop_impl()
-  if val then
-    return val
-  end
-  if err then
-    return nil, err
-  end
-  local ttl = tonumber(timeout) or 10
-  if ttl <= 0 then
-    return nil, "timeout"
-  end
-  local step = self.step
-  local ratio = self.ratio
-  local max_step = self.max_step
-  while true do
-    ngx.sleep(step)
-    ttl = ttl - step
-    local val, err = pop_impl()
-    if val then
-      return val
-    end
-    if err then
-      return nil, err
-    end
-    if ttl <= 0 then
-      return nil, "timeout"
-    end
-    step = math.min(math.max(0.001, step * ratio), ttl, max_step)
-  end
+  local val, err
+  local ok, spin_err = mcp.utils.spin_until(function()
+    val, err = pop_impl()
+    return val or err
+  end, timeout, {
+    step = self.step,
+    ratio = self.ratio,
+    max_step = self.max_step
+  })
+  return val, spin_err or err
 end
 
 local _MT = {
@@ -175,9 +156,9 @@ function _M.new(options)
   return setmetatable({
     shm_dict = shm_dict,
     ttl = ttl,
-    step = options and tonumber(options.step) or 0.001,
-    ratio = options and tonumber(options.ratio) or 2,
-    max_step = options and tonumber(options.max_step) or 0.5
+    step = options and tonumber(options.step),
+    ratio = options and tonumber(options.ratio),
+    max_step = options and tonumber(options.max_step)
   }, _MT)
 end
 
