@@ -1,8 +1,7 @@
 local mcp = {
   version = require("resty.mcp.version"),
   rpc = require("resty.mcp.protocol.rpc"),
-  validator = require("resty.mcp.protocol.validator"),
-  server = require("resty.mcp.server")
+  validator = require("resty.mcp.protocol.validator")
 }
 
 local _M = {
@@ -179,13 +178,14 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
   end
   local ok, err = ngx.timer.at(0, function(premature)
     options.session_id = session_id
-    local server, err = mcp.server.new(_M, options)
+    local mcp = require("resty.mcp")
+    local server, err = mcp.server(_M, options)
     if not server then
       ngx.log(ngx.ERR, err)
       message_bus:del_session(session_id)
       return
     end
-    server:run(custom_fn(server))
+    server:run(custom_fn(mcp, server))
   end)
   if not ok then
     ngx.log(ngx.ERR, err)

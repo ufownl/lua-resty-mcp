@@ -12,7 +12,7 @@ lua_shared_dict mcp_message_bus 64m;
 location = /mcp {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    mcp.transport.streamable_http.endpoint(function(server)
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
       return {
         capabilities = {
           prompts = false,
@@ -85,7 +85,7 @@ lua_shared_dict mcp_message_bus 64m;
 location = /mcp {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    mcp.transport.streamable_http.endpoint(function(server)
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
       return {
         capabilities = {
           prompts = false,
@@ -290,7 +290,7 @@ lua_shared_dict mcp_message_bus 64m;
 location = /mcp {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    mcp.transport.streamable_http.endpoint(function(server)
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
       local ok, err = server:register(mcp.tool("add", function(args)
         return args.a + args.b
       end, "Adds two numbers.", {
@@ -344,102 +344,99 @@ location = /mcp {
 
 location = /t {
   content_by_lua_block {
-    local cjson = require("cjson")
-    local protocol = require("resty.mcp.protocol")
-    local sse_parser = require("resty.mcp.protocol.sse.parser")
-    local init_req = protocol.request.initialize()
-    local list_tools = protocol.request.list("tools")
-    local call_tool = protocol.request.call_tool("enable_echo")
-    ngx.req.set_header("Accept", "application/json, text/event-stream")
-    ngx.req.set_header("Content-Type", "application/json")
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_POST,
-      body = cjson.encode(init_req.msg)
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      name = "MCP Tools",
+      version = "1.0_alpha",
+      endpoint_url = "http://127.0.0.1:1984/mcp"
     })
-    ngx.say(resp.status)
-    ngx.say(resp.header["Content-Type"])
-    local session_id = resp.header["Mcp-Session-Id"]
-    local resp_body = cjson.decode(resp.body)
-    local ok, err = init_req.validator(resp_body.result)
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
     if not ok then
       error(err)
     end
-    ngx.say(resp_body.result.serverInfo.name)
-    ngx.say(resp_body.result.serverInfo.version)
-    ngx.req.set_header("Mcp-Session-Id", session_id)
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_POST,
-      body = cjson.encode(protocol.notification.initialized())
-    })
-    ngx.say(resp.status)
-    local function parse(data, sse)
-      local l = 1
-      while l <= #data do
-        local r = string.find(data, "\n", l, true)
-        sse(string.sub(data, l, r and r - 1 or -1))
-        l = r + 1
-      end
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
     end
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_POST,
-      body = cjson.encode(list_tools.msg)
-    })
-    ngx.say(resp.status)
-    ngx.say(resp.header["Content-Type"])
-    parse(resp.body, sse_parser.new(function(event, data, id, retry)
-      local de, err = cjson.decode(data)
-      if not de then
-        error(err)
-      end
-      local ok, err = list_tools.validator(de.result)
-      if not ok then
-        error(err)
-      end
-      ngx.say(de.result.tools[1].name.." "..de.result.tools[1].description)
-      ngx.say(de.result.nextCursor)
-    end))
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_POST,
-      body = cjson.encode(call_tool.msg)
-    })
-    ngx.say(resp.status)
-    ngx.say(resp.header["Content-Type"])
-    parse(resp.body, sse_parser.new(function(event, data, id, retry)
-      local de, err = cjson.decode(data)
-      if not de then
-        error(err)
-      end
-      if de.method then
-        ngx.say(de.method)
-      else
-        local ok, err = call_tool.validator(de.result)
-        if not ok then
-          error(err)
-        end
-        ngx.say(type(de.result.content))
-      end
-    end))
-    local resp = ngx.location.capture("/mcp", {method = ngx.HTTP_DELETE})
-    ngx.say(resp.status)
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local res, err = client:call_tool("add", {a = 1, b = 2})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local _, err = client:call_tool("echo", {message = "Hello, world!"})
+    ngx.say(err)
+    local res, err = client:call_tool("enable_echo")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
+    end
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local res, err = client:call_tool("echo", {message = "Hello, world!"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:call_tool("enable_echo")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    client:shutdown()
   }
 }
 --- request
 GET /t
 --- error_code: 200
 --- response_body
-200
-application/json
-lua-resty-mcp
-1.0
-202
-200
-text/event-stream
-add Adds two numbers.
-idx=2
-200
-text/event-stream
-notifications/tools/list_changed
-table
-204
+add
+Adds two numbers.
+enable_echo
+Enables the echo tool.
+true
+nil
+text 3
+-32602 Unknown tool {"name":"echo"}
+nil
+false
+add
+Adds two numbers.
+enable_echo
+Enables the echo tool.
+echo
+Echoes back the input.
+true
+nil
+text MCP Tools v1.0_alpha say: Hello, world!
+true
+text tool (name: echo) had been registered
 --- no_error_log
 [error]
