@@ -4,3 +4,6 @@
 [submodule "deps/jsonschema"]
 	path = deps/jsonschema
 	url = https://github.com/api7/jsonschema.git
+[submodule "deps/lua-resty-http"]
+	path = deps/lua-resty-http
+	url = https://github.com/ledgetech/lua-resty-http.git
