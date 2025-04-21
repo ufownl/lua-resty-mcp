@@ -133,7 +133,7 @@ local function do_POST(req_body, message_bus, session_id)
   until #waiting_rids == 0
 end
 
-local function do_POST_no_session(req_body, message_bus, custom_fn, options)
+local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
   local reply = mcp.rpc.handle(req_body, setmetatable({}, {
     __index = function(_, key)
       if key ~= "initialize" then
@@ -266,7 +266,7 @@ function _M.endpoint(custom_fn, options)
     if session_id then
       do_POST(req_body, message_bus, session_id)
     else
-      do_POST_no_session(req_body, message_bus, custom_fn, options or {})
+      do_POST_init_phase(req_body, message_bus, custom_fn, options or {})
     end
   elseif req_method == "GET" then
     ngx.req.discard_body()
