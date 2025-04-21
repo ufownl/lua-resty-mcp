@@ -65,10 +65,13 @@ local function do_POST(req_body, message_bus, session_id)
       error(err)
     end
     ngx.header["Content-Type"] = "application/json"
+    ngx.header["Cache-Control"] = "no-store, no-transform"
     ngx.say(res_body)
     ngx.exit(ngx.OK)
   end
   ngx.header["Content-Type"] = "text/event-stream"
+  ngx.header["Cache-Control"] = "no-store, no-transform"
+  ngx.header["Connection"] = "keep-alive"
   if #reply > 0 then
     local pending_errs = {}
     for i, v in ipairs(reply) do
@@ -162,6 +165,7 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
       error(err)
     end
     ngx.header["Content-Type"] = "application/json"
+    ngx.header["Cache-Control"] = "no-store, no-transform"
     ngx.say(res_body)
     return
   end
