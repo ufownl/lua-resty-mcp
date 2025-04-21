@@ -8,6 +8,7 @@ local mcp = {
 local _M = {
   _NAME = "resty.mcp.transport.streamable_http",
   _VERSION = mcp.version.module,
+  client = require("resty.mcp.transport.streamable_http.client").new,
   server = require("resty.mcp.transport.streamable_http.server").new
 }
 
@@ -65,8 +66,9 @@ local function do_POST(req_body, message_bus, session_id)
       error(err)
     end
     ngx.header["Content-Type"] = "application/json"
+    ngx.header["Content-Length"] = #res_body
     ngx.header["Cache-Control"] = "no-store, no-transform"
-    ngx.say(res_body)
+    ngx.print(res_body)
     ngx.exit(ngx.OK)
   end
   ngx.header["Content-Type"] = "text/event-stream"
@@ -165,8 +167,9 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
       error(err)
     end
     ngx.header["Content-Type"] = "application/json"
+    ngx.header["Content-Length"] = #res_body
     ngx.header["Cache-Control"] = "no-store, no-transform"
-    ngx.say(res_body)
+    ngx.print(res_body)
     return
   end
   local session_id, err = message_bus:new_session()
@@ -213,8 +216,9 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
             init_process_error()
           end
           ngx.header["Content-Type"] = "application/json"
+          ngx.header["Content-Length"] = #msgs[1]
           ngx.header["Mcp-Session-Id"] = session_id
-          ngx.say(msgs[1])
+          ngx.print(msgs[1])
           ngx.exit(ngx.OK)
         end)
         init_process_error()

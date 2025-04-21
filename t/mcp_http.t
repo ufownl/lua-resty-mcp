@@ -128,9 +128,7 @@ location = /t {
       method = ngx.HTTP_GET,
     })
     ngx.say(resp.status)
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_DELETE,
-    })
+    local resp = ngx.location.capture("/mcp", {method = ngx.HTTP_DELETE})
     ngx.say(resp.status)
     local resp = ngx.location.capture("/mcp", {
       method = ngx.HTTP_POST,
