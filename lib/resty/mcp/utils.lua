@@ -12,10 +12,12 @@ local resty_random = require("resty.random")
 local resty_sha256 = require("resty.sha256")
 local ngx_base64 = require("ngx.base64")
 
+local hostname = os.getenv("HOSTNAME") or io.popen("uname -n"):read("*l")
 local id_counter = 0
 
 function _M.generate_id()
   local sha256 = resty_sha256.new()
+  sha256:update(hostname.."&")
   sha256:update(ngx.worker.pid().."&")
   sha256:update(ngx.time().."&")
   sha256:update(id_counter.."&")
