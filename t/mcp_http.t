@@ -124,9 +124,7 @@ location = /t {
       body = cjson.encode(call_tool.msg)
     })
     ngx.say(resp.status)
-    local resp = ngx.location.capture("/mcp", {
-      method = ngx.HTTP_GET,
-    })
+    local resp = ngx.location.capture("/mcp", {method = ngx.HTTP_GET})
     ngx.say(resp.status)
     local resp = ngx.location.capture("/mcp", {method = ngx.HTTP_DELETE})
     ngx.say(resp.status)
@@ -256,7 +254,7 @@ GET /t
 400
 404
 404
-405
+404
 404
 application/json
 -32700 Parse error

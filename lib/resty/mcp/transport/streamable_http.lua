@@ -234,8 +234,45 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
 end
 
 local function do_GET(message_bus, session_id)
-  -- TODO:
-  ngx.exit(ngx.HTTP_NOT_ALLOWED)
+  local mk, err = message_bus:check_session(session_id)
+  if not mk then
+    if err then
+      ngx.log(ngx.ERR, err)
+      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
+    ngx.exit(ngx.HTTP_NOT_FOUND)
+  end
+  ngx.send_headers()
+  local ok, err = ngx.flush(true)
+  if not ok then
+    ngx.log(ngx.ERR, err)
+    ngx.exit(ngx.ERROR)
+  end
+  while true do
+    local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
+    if msgs then
+      for i, msg in ipairs(msgs) do
+        local eid, err = message_bus:alloc_eid(session_id)
+        if not eid then
+          ngx.log(ngx.ERR, err)
+          ngx.exit(ngx.ERROR)
+        end
+        ngx.say(string.format("data:%s\nid:%u\n", msg, eid))
+        local ok, err = ngx.flush(true)
+        if not ok then
+          ngx.log(ngx.ERR, err)
+          ngx.exit(ngx.ERROR)
+        end
+      end
+    elseif err ~= "timeout" then
+      if err == "not found" then
+        ngx.exit(ngx.OK)
+      else
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.ERROR)
+      end
+    end
+  end
 end
 
 local function do_DELETE(message_bus, session_id)
@@ -287,6 +324,10 @@ function _M.endpoint(custom_fn, options)
     ngx.req.discard_body()
     if not session_id then
       ngx.exit(ngx.HTTP_BAD_REQUEST)
+    end
+    local accept = ngx.var.http_accept
+    if not accept or not string.find(accept, "text/event-stream", 1, true) then
+      ngx.exit(ngx.HTTP_NOT_ACCEPTABLE)
     end
     do_GET(message_bus, session_id)
   elseif req_method == "DELETE" then
