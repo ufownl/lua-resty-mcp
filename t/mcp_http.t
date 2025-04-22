@@ -599,3 +599,672 @@ true
 text prompt (name: mock_error) had been registered
 --- no_error_log
 [error]
+
+
+=== TEST 5: resources
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.resource("mock://static/text", "TextResource", function(uri)
+        return {
+          {text = "Hello, world!"}
+        }
+      end, "Static text resource.", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource("mock://static/blob", "BlobResource", function(uri)
+        return {
+          {blob = ngx.encode_base64("Hello, world!")}
+        }
+      end, "Static blob resource.", "application/octet-stream"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
+        if vars.id == "" then
+          return false
+        end
+        return true, {
+          {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
+        }
+      end, "Dynamic text resource.", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("mock://dynamic/blob/{id}", "DynamicBlob", function(uri, vars)
+        if vars.id == "" then
+          return false
+        end
+        return true, {
+          {blob = ngx.encode_base64(string.format("content of dynamic blob resource %s, id=%s", uri, vars.id))},
+        }
+      end, "Dynamic blob resource.", "application/octet-stream"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.tool("enable_hidden_resource", function(args, ctx)
+        local ok, err = ctx.session:register(mcp.resource("mock://static/hidden", "HiddenResource", function(uri)
+          return {
+            {blob = ngx.encode_base64("content of hidden resource"), mimeType = "application/octet-stream"}
+          }
+        end, "Hidden blob resource."))
+        if not ok then
+          return nil, err
+        end
+        return {}
+      end, "Enable hidden resource."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.tool("touch_resource", function(args, ctx)
+        local ok, err = ctx.session:resource_updated(args.uri)
+        if not ok then
+          return nil, err
+        end
+        return {}
+      end, "Trigger resource updated notification.", {
+        type = "object",
+        properties = {
+          uri = {
+            type = "string",
+            description = "URI of updated resource."
+          }
+        },
+        required = {"uri"}
+      }))
+
+      return {
+        capabilities = {
+          prompts = false,
+          completions = false,
+          logging = false
+        },
+        pagination = {
+          resources = 1
+        }
+      }
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    for i, uri in ipairs({"mock://static/text", "mock://static/blob", "mock://static/hidden"}) do
+      local res, err = client:read_resource(uri)
+      if res then
+        for j, v in ipairs(res.contents) do
+          ngx.say(v.uri)
+          ngx.say(tostring(v.mimeType))
+          ngx.say(tostring(v.text))
+          ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+        end
+      else
+        ngx.say(err)
+      end
+    end
+    local res, err = client:call_tool("enable_hidden_resource")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:read_resource("mock://static/hidden")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+      ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    for i, v in ipairs(templates) do
+      ngx.say(v.uriTemplate)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    for i, uri in ipairs({"mock://dynamic/text/abc", "mock://dynamic/blob/123", "mock://dynamic/blob/"}) do
+      local res, err = client:read_resource(uri)
+      if res then
+        for j, v in ipairs(res.contents) do
+          ngx.say(v.uri)
+          ngx.say(tostring(v.mimeType))
+          ngx.say(tostring(v.text))
+          ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+        end
+      else
+        ngx.say(err)
+      end
+    end
+    local res, err = client:call_tool("touch_resource", {uri = "mock://static/text"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local uris = {"mock://static/text", "mock://dynamic/text/123", "mock://unknown"}
+    for i, v in ipairs(uris) do
+      local ok, err = client:subscribe_resource(v, function(uri)
+        ngx.say(string.format("sub %d: %s", i, uri))
+      end)
+      if not ok then
+        ngx.say(err)
+      end
+    end
+    for i, uri in ipairs(uris) do
+      local res, err = client:call_tool("touch_resource", {uri = uri})
+      if not res then
+        error(err)
+      end
+      ngx.say(tostring(res.isError))
+      for i, v in ipairs(res.content) do
+        ngx.say(string.format("%s %s", v.type, v.text))
+      end
+    end
+    local ok, err = client:unsubscribe_resource(uris[1])
+    if not ok then
+      error(err)
+    end
+    for i, uri in ipairs(uris) do
+      local res, err = client:call_tool("touch_resource", {uri = uri})
+      if not res then
+        error(err)
+      end
+      ngx.say(tostring(res.isError))
+      for i, v in ipairs(res.content) do
+        ngx.say(string.format("%s %s", v.type, v.text))
+      end
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://static/text
+TextResource
+Static text resource.
+text/plain
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
+true
+mock://static/text
+text/plain
+Hello, world!
+nil
+mock://static/blob
+application/octet-stream
+nil
+Hello, world!
+-32002 Resource not found {"uri":"mock:\/\/static\/hidden"}
+nil
+mock://static/hidden
+application/octet-stream
+nil
+content of hidden resource
+false
+mock://static/text
+TextResource
+Static text resource.
+text/plain
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
+mock://static/hidden
+HiddenResource
+Hidden blob resource.
+nil
+true
+mock://dynamic/text/{id}
+DynamicText
+Dynamic text resource.
+text/plain
+mock://dynamic/blob/{id}
+DynamicBlob
+Dynamic blob resource.
+application/octet-stream
+mock://dynamic/text/abc
+text/plain
+content of dynamic text resource mock://dynamic/text/abc, id=abc
+nil
+mock://dynamic/blob/123
+application/octet-stream
+nil
+content of dynamic blob resource mock://dynamic/blob/123, id=123
+-32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
+nil
+-32002 Resource not found {"uri":"mock:\/\/unknown"}
+sub 1: mock://static/text
+nil
+sub 2: mock://dynamic/text/123
+nil
+nil
+nil
+sub 2: mock://dynamic/text/123
+nil
+nil
+--- no_error_log
+[error]
+
+
+=== TEST 6: roots
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+        local contents = {}
+        if ctx.session.client.capabilities.roots then
+          table.insert(contents, {uri = uri.."/roots", text = "true"})
+          if ctx.session.client.capabilities.roots.listChanged then
+            table.insert(contents, {uri = uri.."/roots/listChanged", text = "true"})
+          end
+        end
+        if ctx.session.client.capabilities.sampling then
+          table.insert(contents, {uri = uri.."/sampling", text = "true"})
+        end
+        return contents
+      end, "Capabilities of client."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
+        local roots, err = ctx.session:list_roots()
+        if not roots then
+          return nil, err
+        end
+        local contents = {}
+        for i, v in ipairs(roots) do
+          table.insert(contents, {uri = v.uri, text = v.name or ""})
+        end
+        return contents
+      end, "Discovered roots from client."))
+
+      return {
+        capabilities = {
+          prompts = false,
+          tools = false,
+          completions = false,
+          logging = false
+        },
+        event_handlers = {
+          ["roots/list_changed"] = function(params, ctx)
+            local ok, err = ctx.session:resource_updated("mock://discovered_roots")
+            if not ok then
+              error(err)
+            end
+          end
+        }
+      }
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp",
+      enable_get_sse = true
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize({
+      {path = "/path/to/foo/bar", name = "Foobar"},
+      {path = "/path/to/hello/world"}
+    })
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:read_resource("mock://discovered_roots")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.contents)
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local sema, err = require("ngx.semaphore").new()
+    if not sema then
+      error(err)
+    end
+    local ok, err = client:subscribe_resource("mock://discovered_roots", function(uri)
+      local res, err = client:read_resource("mock://discovered_roots")
+      if not res then
+        error(err)
+      end
+      ngx.say(#res.contents)
+      for i, v in ipairs(res.contents) do
+        ngx.say(v.uri)
+        ngx.say(v.text)
+      end
+      sema:post()
+    end)
+    if not ok then
+      ngx.say(err)
+    end
+    local ok, err = client:expose_roots()
+    if not ok then
+      error(err)
+    end
+    local ok, err = sema:wait(5)
+    if not ok then
+      error(err)
+    end
+    local ok, err = client:expose_roots({
+      {path = "/path/to/foo/bar"},
+      {path = "/path/to/hello/world", name = "Hello, world!"}
+    })
+    if not ok then
+      error(err)
+    end
+    local ok, err = sema:wait(5)
+    if not ok then
+      error(err)
+    end
+    ngx.say("END")
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+2
+file:///path/to/foo/bar
+Foobar
+file:///path/to/hello/world
+
+0
+2
+file:///path/to/foo/bar
+
+file:///path/to/hello/world
+Hello, world!
+END
+--- no_error_log
+[error]
+
+
+=== TEST 7: sampling (simple string)
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+        local contents = {}
+        if ctx.session.client.capabilities.roots then
+          table.insert(contents, {uri = uri.."/roots", text = "true"})
+          if ctx.session.client.capabilities.roots.listChanged then
+            table.insert(contents, {uri = uri.."/roots/listChanged", text = "true"})
+          end
+        end
+        if ctx.session.client.capabilities.sampling then
+          table.insert(contents, {uri = uri.."/sampling", text = "true"})
+        end
+        return contents
+      end, "Capabilities of client."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      return {
+        capabilities = {
+          tools = false,
+          completions = false,
+          logging = false
+        }
+      }
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params)
+      return "Hey there! What's up?"
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:get_prompt("simple_sampling")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s %s", v.role, v.content.type, v.content.text, tostring(v.model)))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+mock://client_capabilities/sampling
+true
+Sampling prompt from client without arguments.
+user text Hey, man! nil
+assistant text Hey there! What's up? unknown
+--- no_error_log
+[error]
+
+
+=== TEST 8: sampling (result structure)
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+        local contents = {}
+        if ctx.session.client.capabilities.roots then
+          table.insert(contents, {uri = uri.."/roots", text = "true"})
+          if ctx.session.client.capabilities.roots.listChanged then
+            table.insert(contents, {uri = uri.."/roots/listChanged", text = "true"})
+          end
+        end
+        if ctx.session.client.capabilities.sampling then
+          table.insert(contents, {uri = uri.."/sampling", text = "true"})
+        end
+        return contents
+      end, "Capabilities of client."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      return {
+        capabilities = {
+          tools = false,
+          completions = false,
+          logging = false
+        }
+      }
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params)
+      return {
+        content = {
+          type = "image",
+          data = "SGV5LCBtYW4h",
+          mimeType = "image/jpeg"
+        },
+        model = "mock"
+      }
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:read_resource("mock://client_capabilities")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res, err = client:get_prompt("simple_sampling")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s %s %s", v.role, v.content.type, v.content.text or v.content.data, tostring(v.content.mimeType), tostring(v.model)))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+mock://client_capabilities/sampling
+true
+Sampling prompt from client without arguments.
+user text Hey, man! nil nil
+assistant image SGV5LCBtYW4h image/jpeg mock
+--- no_error_log
+[error]

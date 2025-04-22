@@ -49,6 +49,81 @@ local function connect(self)
   return httpc
 end
 
+local function read_sse_stream(reader, sse_parser, stop_cond)
+  local buffer = ""
+  local cursor = 1
+  repeat
+    local chunk, err = reader()
+    if chunk then
+      buffer = buffer..chunk
+      repeat
+        local l, r, err = ngx.re.find(buffer, "(\r\n?)|\n", "o", {pos = cursor})
+        if err then
+          error(err)
+        end
+        if l then
+          sse_parser(string.sub(buffer, 1, l - 1))
+          buffer = string.sub(buffer, r + 1)
+          cursor = 1
+        else
+          cursor = #buffer + 1
+          break
+        end
+      until buffer == ""
+    elseif err then
+      if err ~= "timeout" then
+        return nil, err
+      end
+    else
+      break
+    end
+  until stop_cond and stop_cond()
+  return true
+end
+
+local function open_get_sse(self)
+  local httpc, err = connect(self)
+  if not httpc then
+    return nil, err
+  end
+  local res, err = httpc:request({
+    method = "GET",
+    path = self.endpoint.path,
+    query = self.endpoint.query,
+    headers = {
+      ["Authorization"] = self.endpoint.authorization,
+      ["Accept"] = "text/event-stream",
+      ["Mcp-Session-Id"] = self.session_id
+    }
+  })
+  if not res then
+    httpc:close()
+    return nil, err
+  end
+  if res.status ~= ngx.HTTP_OK then
+    httpc:close()
+    return nil, string.format("http status %d: %s", res.status, res.reason)
+  end
+  self.sse_counter = self.sse_counter + 1
+  ngx.thread.spawn(function()
+    local sse_id = self.sse_counter
+    local ok, err = read_sse_stream(res.body_reader, mcp.sse_parser.new(function(event, data, id, retry)
+      if self.pending_messages then
+        table.insert(self.pending_messages, data)
+      end
+    end), function()
+      return not self.pending_messages or sse_id < self.sse_counter
+    end)
+    if not ok then
+      ngx.log(ngx.ERR, "http: ", err)
+      httpc:close()
+      return
+    end
+    httpc:set_keepalive()
+  end)
+  return true
+end
+
 function _MT.__index.send(self, msg, options)
   if type(msg) ~= "table" then
     error("message MUST be a table.")
@@ -93,6 +168,13 @@ function _MT.__index.send(self, msg, options)
         return nil, err
       end
     until body
+    if options and options.get_sse and self.enable_get_sse then
+      local ok, err = open_get_sse(self)
+      if not ok then
+        httpc:close()
+        return nil, err
+      end
+    end
     httpc:set_keepalive()
     return true
   end
@@ -122,40 +204,17 @@ function _MT.__index.send(self, msg, options)
     end)
   elseif string.sub(content_type, 1, #accepted_content.sse) == accepted_content.sse then
     ngx.thread.spawn(function()
-      local sse = mcp.sse_parser.new(function(event, data, id, retry)
+      local ok, err = read_sse_stream(res.body_reader, mcp.sse_parser.new(function(event, data, id, retry)
         if self.pending_messages then
           table.insert(self.pending_messages, data)
         end
+      end), function()
+        return not self.pending_messages
       end)
-      local buffer = ""
-      local cursor = 1
-      while true do
-        local chunk, err = res.body_reader()
-        if chunk then
-          buffer = buffer..chunk
-          repeat
-            local l, r, err = ngx.re.find(buffer, "(\r\n?)|\n", "o", {pos = cursor})
-            if err then
-              error(err)
-            end
-            if l then
-              sse(string.sub(buffer, 1, l - 1))
-              buffer = string.sub(buffer, r + 1)
-              cursor = 1
-            else
-              cursor = #buffer + 1
-              break
-            end
-          until buffer == ""
-        elseif err then
-          if err ~= "timeout" then
-            ngx.log(ngx.ERR, "http: ", err)
-            httpc:close()
-            return
-          end
-        else
-          break
-        end
+      if not ok then
+        ngx.log(ngx.ERR, "http: ", err)
+        httpc:close()
+        return
       end
       httpc:set_keepalive()
     end)
@@ -231,6 +290,8 @@ function _M.new(options)
     read_timeout = tonumber(options.read_timeout),
     spin_opts = options.spin_opts,
     http_opts = options.http_opts,
+    enable_get_sse = options.enable_get_sse,
+    sse_counter = 0,
     pending_messages = {}
   }, _MT)
 end

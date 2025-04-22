@@ -176,7 +176,7 @@ function _MT.__index.initialize(self, roots, sampling_cb, timeout)
     info = res.serverInfo,
     instructions = res.instructions
   }
-  local ok, err = mcp.session.send_notification(self, "initialized", {})
+  local ok, err = mcp.session.send_notification(self, "initialized", {}, {get_sse = true})
   if not ok then
     self.conn:close()
     return nil, err
