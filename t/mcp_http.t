@@ -440,3 +440,164 @@ true
 text tool (name: echo) had been registered
 --- no_error_log
 [error]
+
+
+=== TEST 4: prompts
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.prompt("simple_prompt", function(args)
+        return "This is a simple prompt without arguments."
+      end, "A prompt without arguments."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("complex_prompt", function(args)
+        return {
+          {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
+          {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
+        }
+      end, "A prompt with arguments.", {
+        temperature = {description = "Temperature setting.", required = true},
+        style = {description = "Output style."}
+      }))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.tool("enable_mock_error", function(args, ctx)
+        local ok, err = ctx.session:register(mcp.prompt("mock_error", function(args)
+          return nil, "mock error"
+        end, "Mock error message."))
+        if not ok then
+          return nil, err
+        end
+        return {}
+      end, "Enable mock error prompt."))
+      if not ok then
+        error(err)
+      end
+
+      return {
+        capabilities = {
+          resources = false,
+          completions = false,
+          logging = false
+        },
+        pagination = {
+          prompts = 1
+        }
+      }
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local res, err = client:get_prompt("simple_prompt")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
+    end
+    local res, err = client:get_prompt("complex_prompt", {
+      temperature = "0.4",
+      style = "json"
+    })
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
+    end
+    local _, err = client:get_prompt("mock_error")
+    ngx.say(err)
+    local res, err = client:call_tool("enable_mock_error")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local _, err = client:get_prompt("mock_error")
+    ngx.say(err)
+    local res, err = client:call_tool("enable_mock_error")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+simple_prompt
+A prompt without arguments.
+complex_prompt
+A prompt with arguments.
+true
+A prompt without arguments.
+user text This is a simple prompt without arguments.
+A prompt with arguments.
+user text This is a complex prompt with arguments: temperature=0.4, style=json
+assistant text Assistant reply: temperature=0.4, style=json
+-32602 Invalid prompt name {"name":"mock_error"}
+nil
+false
+simple_prompt
+A prompt without arguments.
+complex_prompt
+A prompt with arguments.
+mock_error
+Mock error message.
+true
+-32603 Internal errors {"errmsg":"mock error"}
+true
+text prompt (name: mock_error) had been registered
+--- no_error_log
+[error]
