@@ -261,6 +261,13 @@ function _M.endpoint(custom_fn, options)
   local session_id = ngx.var.http_mcp_session_id
   local req_method = ngx.req.get_method()
   if req_method == "POST" then
+    local accept = ngx.var.http_accept
+    if not accept or
+       not string.find(accept, "application/json", 1, true) or
+       not string.find(accept, "text/event-stream", 1, true) then
+      ngx.req.discard_body()
+      ngx.exit(ngx.HTTP_NOT_ACCEPTABLE)
+    end
     ngx.req.read_body()
     local req_body = ngx.req.get_body_data()
     if not req_body then
