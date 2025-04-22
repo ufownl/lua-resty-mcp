@@ -42,6 +42,7 @@ local function main_loop(self)
       if running_tasks then
         local tid = mcp.utils.generate_id()
         running_tasks[tid] = ngx.thread.spawn(function()
+          coroutine.yield()
           self.bg_tasks.count = self.bg_tasks.count + 1
           handle_message(self, msg)
           self.bg_tasks.count = self.bg_tasks.count - 1
@@ -61,12 +62,8 @@ local function main_loop(self)
     end
   end
   if running_tasks then
-    local tasks = {}
     for k, v in pairs(running_tasks) do
-      table.insert(tasks, v)
-    end
-    if #tasks > 0 then
-      local ok, err = ngx.thread.wait(unpack(tasks))
+      local ok, err = ngx.thread.wait(v)
       if not ok then
         ngx.log(ngx.ERR, "ngx thread: ", err)
       end
