@@ -142,10 +142,6 @@ function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
   return pop_sync(self, pop_impl, timeout)
 end
 
-function _MT.__index.alloc_eid(self, sid)
-  return self.shm_dict:incr("sess_mk#"..sid, 1)
-end
-
 function _MT.__index.cache_event(self, sid, stream, data)
   if type(sid) ~= "string" then
     error("session ID MUST be a string")

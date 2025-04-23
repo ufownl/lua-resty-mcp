@@ -1,5 +1,6 @@
 local mcp = {
   version = require("resty.mcp.version"),
+  utils = require("resty.mcp.utils"),
   rpc = require("resty.mcp.protocol.rpc"),
   validator = require("resty.mcp.protocol.validator")
 }
@@ -13,7 +14,20 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-local function do_POST(req_body, message_bus, session_id)
+local function deliver_event(data, stream_id)
+  if stream_id then
+    local eid, err = message_bus:cache_event(session_id, stream_id, data)
+    if not eid then
+      return nil, err
+    end
+    ngx.say(string.format("data:%s\nid:%u\n", data, eid))
+  else
+    ngx.say(string.format("data:%s\n", data))
+  end
+  return ngx.flush(true)
+end
+
+local function do_POST(req_body, message_bus, session_id, options)
   local ntf_prefix = "notifications/"
   local received_rids = {}
   local pending_msgs = {}
@@ -73,6 +87,7 @@ local function do_POST(req_body, message_bus, session_id)
   ngx.header["Content-Type"] = "text/event-stream"
   ngx.header["Cache-Control"] = "no-store, no-transform"
   ngx.header["Connection"] = "keep-alive"
+  local stream_id = options.enable_resumability and mcp.utils.generate_id()
   if #reply > 0 then
     local pending_errs = {}
     for i, v in ipairs(reply) do
@@ -85,16 +100,14 @@ local function do_POST(req_body, message_bus, session_id)
       if not data then
         error(err)
       end
-      local eid, err = message_bus:alloc_eid(session_id)
-      if not eid then
-        ngx.log(ngx.ERR, err)
-        ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
-      end
-      ngx.say(string.format("data:%s\nid:%u\n", data, eid))
-      local ok, err = ngx.flush(true)
+      local ok, err = deliver_event(data, stream_id)
       if not ok then
         ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.ERROR)
+        if ngx.headers_sent then
+          ngx.exit(ngx.ERROR)
+        else
+          ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+        end
       end
     end
   end
@@ -110,20 +123,14 @@ local function do_POST(req_body, message_bus, session_id)
             end
           end
         end)
-        local eid, err = message_bus:alloc_eid(session_id)
-        if not eid then
+        local ok, err = deliver_event(msg, stream_id)
+        if not ok then
           ngx.log(ngx.ERR, err)
           if ngx.headers_sent then
             ngx.exit(ngx.ERROR)
           else
             ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
           end
-        end
-        ngx.say(string.format("data:%s\nid:%u\n", msg, eid))
-        local ok, err = ngx.flush(true)
-        if not ok then
-          ngx.log(ngx.ERR, err)
-          ngx.exit(ngx.ERROR)
         end
       end
     elseif err ~= "timeout" then
@@ -233,7 +240,7 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
   end
 end
 
-local function do_GET(message_bus, session_id)
+local function do_GET(message_bus, session_id, options)
   local mk, err = message_bus:check_session(session_id)
   if not mk then
     if err then
@@ -251,20 +258,40 @@ local function do_GET(message_bus, session_id)
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.ERROR)
   end
-  while true do
-    local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
-    if msgs then
-      for i, msg in ipairs(msgs) do
-        local eid, err = message_bus:alloc_eid(session_id)
-        if not eid then
-          ngx.log(ngx.ERR, err)
-          ngx.exit(ngx.ERROR)
+  local stream_id
+  if options.enable_resumability then
+    local last_event = tonumber(ngx.var.http_last_event_id)
+    if last_event then
+      local events, err = message_bus:replay_events(session_id, last_event)
+      if not events then
+        ngx.log(ngx.ERR, err)
+        ngx.exit(ngx.ERROR)
+      end
+      if #events > 0 then
+        for i, v in ipairs(events) do
+          ngx.say(string.format("data:%s\nid:%u\n", v.data, v.id))
         end
-        ngx.say(string.format("data:%s\nid:%u\n", msg, eid))
         local ok, err = ngx.flush(true)
         if not ok then
           ngx.log(ngx.ERR, err)
           ngx.exit(ngx.ERROR)
+        end
+      end
+    end
+    stream_id = mcp.utils.generate_id()
+  end
+  while true do
+    local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
+    if msgs then
+      for i, msg in ipairs(msgs) do
+        local ok, err = deliver_event(msg, stream_id)
+        if not ok then
+          ngx.log(ngx.ERR, err)
+          if ngx.headers_sent then
+            ngx.exit(ngx.ERROR)
+          else
+            ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+          end
         end
       end
     elseif err ~= "timeout" then
@@ -319,7 +346,7 @@ function _M.endpoint(custom_fn, options)
       end
     end
     if session_id then
-      do_POST(req_body, message_bus, session_id)
+      do_POST(req_body, message_bus, session_id, options or {})
     else
       do_POST_init_phase(req_body, message_bus, custom_fn, options or {})
     end
@@ -332,7 +359,7 @@ function _M.endpoint(custom_fn, options)
     if not accept or not string.find(accept, "text/event-stream", 1, true) then
       ngx.exit(ngx.HTTP_NOT_ACCEPTABLE)
     end
-    do_GET(message_bus, session_id)
+    do_GET(message_bus, session_id, options or {})
   elseif req_method == "DELETE" then
     ngx.req.discard_body()
     if not session_id then
