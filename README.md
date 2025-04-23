@@ -12,6 +12,7 @@ In development.
 * [Quickstart](#quickstart)
 * [Server APIs](#server-apis)
   * [mcp.server](#mcpserver)
+  * [mcp.transport.streamable_http.endpoint](#mcptransportstreamable_httpendpoint)
   * [server:run](#serverrun)
   * [server:register](#serverregister)
   * [server:unregister\_\*](#serverunregister_)
@@ -38,9 +39,9 @@ In development.
 
 ## Features
 
-- [ ] Transports
+- [x] Transports
   - [x] stdio
-  - [ ] Streamable HTTP
+  - [x] Streamable HTTP
 - [ ] Protocols
   - [x] Lifecycle
   - [x] Prompts
@@ -110,7 +111,7 @@ server:run()
 
 `syntax: server, err = mcp.server(transport[, options])`
 
-Create an MCP server session with the specific transport (currently only `mcp.transport.stdio` is available) and options.
+Create an MCP server session with the specific transport (currently only `mcp.transport.stdio` is available here) and options.
 
 A successful call returns an MCP server session. Otherwise, it returns `nil` and a string describing the error.
 
@@ -125,6 +126,67 @@ Available options:
   -- You can also put your other options here and access them via `options` field of the session instance
 }
 ```
+
+### mcp.transport.streamable_http.endpoint
+
+`syntax: mcp.transport.streamable_http.endpoint(custom_fn[, options])`
+
+Create an MCP Streamable HTTP endpoint.
+
+> [!NOTE]
+> This method should only be called from `content_by_lua*` directives.
+
+The 1st argument of this method `custom_fn`, will be called when the clients initiate the initialization phase; the reference to `resty.mcp` module and the instance of the server session will be passed into this callback. You should configure the contexts for the server and launch the server session in this callback. It could be defined as follows:
+
+```lua
+function custom_fn(mcp, server)
+  local ok, err = server:register(mcp.tool("echo", function(args)
+    return "Tool echo: "..args.message
+  end, "Echo a message as a tool", {
+    type = "object",
+    properties = {
+      message = {type = "string"}
+    },
+    required = {"message"}
+  }))
+  if not ok then
+    error(err)
+  end
+  server:run()
+end
+```
+
+The optional 2nd argument of this method `options`, should be a dict-like Lua table that contains the configuration options of the endpoint and server session. It includes the following optional fields:
+
+```lua
+{
+  -- Configure the message bus of this endpoint
+  message_bus = {
+    -- Type of the message bus, currently only "builtin" is available
+    -- It's implemented using the shared memory zone of OpenResty
+    type = "builtin",
+
+    -- Options for "builtin" message bus
+    shm_zone = "mcp_message_bus",  -- name of the shared memory zone
+    mark_ttl = 10,  -- TTL of the session mark (seconds)
+    cache_ttl = 90,  -- TTL of the cached events (seconds)
+
+    -- Options for spin waiting
+    step = 0.001,
+    ratio = 2,
+    max_step = 0.5
+  },
+
+  -- Whether to enable the resumability and redelivery mechanism
+  enable_resumability = false,
+
+  -- Other options are the same as `mcp.server` API
+  ...
+}
+```
+
+> [!TIP]
+> It is recommended to use different shared memory zones for different endpoints.
 
 ### server:run
 
@@ -530,7 +592,7 @@ client:shutdown()
 
 `syntax: client, err = mcp.client(transport, options)`
 
-Create an MCP client session with the specific transport (currently only `mcp.transport.stdio` is available) and options.
+Create an MCP client session with the specific transport (`mcp.transport.stdio` or `mcp.transport.streamable_http`) and options.
 
 A successful call returns an MCP client session. Otherwise, it returns `nil` and a string describing the error.
 
@@ -543,6 +605,7 @@ Available options:
   version = "1.0",  -- Version of this session (optional)
 
   -- Options for stdio transport
+
   -- Command and arguments for starting server (required)
   command = "ngx -y @modelcontextprotocol/server-everything" or {"npx", "-y", "@modelcontextprotocol/server-everything"},
 
@@ -565,12 +628,43 @@ Available options:
 
     -- Wait timeout threshold, in milliseconds
     -- Default: 10000, 0 for never timeout
-    wait_timeout = 10000,
-  }
+    wait_timeout = 10000
+  },
+
+  -- Options for Streamable HTTP transport
+
+  -- URL of the MCP endpoint (required)
+  endpoint_url = "http://127.0.0.1/mcp",
+
+  -- Content of the HTTP Authorization header (optional)
+  endpoint_auth = "Bearer TOKEN",
+
+  -- Read timeout threshold, in seconds
+  -- Default: 10
+  read_timeout = 10,
+
+  -- Whether to enable the standalone GET SSE stream
+  -- Default: false
+  enable_get_sse = false,
+
+  -- Options for HTTP connections
+  http_opts = {
+    ...
+  },
+
+  -- Options for spin waiting
+  spin_opts = {
+    step = 0.001,
+    ratio = 2,
+    max_step = 0.5
+  },
 
   -- You can also put your other options here and access them via `options` field of the session instance
 }
 ```
+
+> [!NOTE]
+> Available options for HTTP connections can be viewed [here](https://github.com/ledgetech/lua-resty-http?tab=readme-ov-file#connect). Note that `scheme`, `host`, and `port` will be parsed according to `endpoint_url` automatically, so setting them in `http_opts` will be ignored.
 
 ### client:initialize
 
