@@ -13,7 +13,7 @@ location = /mcp {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     mcp.transport.streamable_http.endpoint(function(mcp, server)
-      return {
+      server:run({
         capabilities = {
           prompts = false,
           resources = false,
@@ -22,7 +22,7 @@ location = /mcp {
           logging = false
         },
         instructions = "Hello, MCP!"
-      }
+      })
     end, {
       name = "MCP Handshake Streamable HTTP",
       version = "1.0_alpha"
@@ -86,7 +86,7 @@ location = /mcp {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     mcp.transport.streamable_http.endpoint(function(mcp, server)
-      return {
+      server:run({
         capabilities = {
           prompts = false,
           resources = false,
@@ -94,7 +94,7 @@ location = /mcp {
           completions = false,
           logging = false
         }
-      }
+      })
     end)
   }
 }
@@ -325,7 +325,7 @@ location = /mcp {
         error(err)
       end
 
-      return {
+      server:run({
         capabilities = {
           prompts = false,
           resources = false,
@@ -335,7 +335,7 @@ location = /mcp {
         pagination = {
           tools = 1
         }
-      }
+      })
     end)
   }
 }
@@ -482,7 +482,7 @@ location = /mcp {
         error(err)
       end
 
-      return {
+      server:run({
         capabilities = {
           resources = false,
           completions = false,
@@ -491,7 +491,7 @@ location = /mcp {
         pagination = {
           prompts = 1
         }
-      }
+      })
     end)
   }
 }
@@ -684,7 +684,7 @@ location = /mcp {
         required = {"uri"}
       }))
 
-      return {
+      server:run({
         capabilities = {
           prompts = false,
           completions = false,
@@ -693,7 +693,7 @@ location = /mcp {
         pagination = {
           resources = 1
         }
-      }
+      })
     end)
   }
 }
@@ -943,7 +943,7 @@ location = /mcp {
         return contents
       end, "Discovered roots from client."))
 
-      return {
+      server:run({
         capabilities = {
           prompts = false,
           tools = false,
@@ -958,7 +958,7 @@ location = /mcp {
             end
           end
         }
-      }
+      })
     end)
   }
 }
@@ -1101,13 +1101,13 @@ location = /mcp {
         return messages
       end, "Sampling prompt from client without arguments."))
 
-      return {
+      server:run({
         capabilities = {
           tools = false,
           completions = false,
           logging = false
         }
-      }
+      })
     end)
   }
 }
@@ -1201,13 +1201,13 @@ location = /mcp {
         return messages
       end, "Sampling prompt from client without arguments."))
 
-      return {
+      server:run({
         capabilities = {
           tools = false,
           completions = false,
           logging = false
         }
-      }
+      })
     end)
   }
 }

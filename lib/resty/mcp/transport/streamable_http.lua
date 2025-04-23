@@ -192,7 +192,10 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
       message_bus:del_session(session_id)
       return
     end
-    server:run(custom_fn(mcp, server))
+    custom_fn(mcp, server)
+    if not server.main_loop then
+      error("Forgot to launch server?")
+    end
   end)
   if not ok then
     ngx.log(ngx.ERR, err)
