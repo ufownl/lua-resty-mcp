@@ -31,7 +31,7 @@ local _MT = {
 
 function _MT.__index.new_session(self)
   local sid = mcp.utils.generate_id()
-  local ok, err = self.shm_dict:safe_add("sess_mk#"..sid, 0, self.ttl)
+  local ok, err = self.shm_dict:safe_add("sess_mk#"..sid, 0, self.mark_ttl)
   if not ok then
     return nil, err
   end
@@ -44,10 +44,13 @@ function _MT.__index.del_session(self, sid)
   end
   self.shm_dict:delete("sess_mk#"..sid)
   self.shm_dict:delete("sess_mq#"..sid)
-  local prefix = string.format("chan_mq#%s@", sid)
+  local pattern = string.format("^(chan_mq|sess_ce)#%s@", sid)
   for i, k in ipairs(self.shm_dict:get_keys(0)) do
-    if string.sub(k, 1, #prefix) == prefix then
+    local l, r, err = ngx.re.find(k, pattern)
+    if l == 1 then
       self.shm_dict:delete(k)
+    elseif err then
+      error(err)
     end
   end
 end
@@ -82,7 +85,7 @@ function _MT.__index.pop_smsg(self, sid, timeout)
     error("session ID MUST be a string")
   end
   local function pop_impl()
-    local ok, err = self.shm_dict:expire("sess_mk#"..sid, self.ttl)
+    local ok, err = self.shm_dict:expire("sess_mk#"..sid, self.mark_ttl)
     if not ok then
       return nil, err
     end
@@ -143,19 +146,100 @@ function _MT.__index.alloc_eid(self, sid)
   return self.shm_dict:incr("sess_mk#"..sid, 1)
 end
 
+function _MT.__index.cache_event(self, sid, stream, data)
+  if type(sid) ~= "string" then
+    error("session ID MUST be a string")
+  end
+  if type(stream) ~= "string" then
+    error("stream ID MUST be a string")
+  end
+  if type(data) ~= "string" then
+    error("data of event MUST be a string")
+  end
+  local eid, err = self.shm_dict:incr("sess_mk#"..sid, 1)
+  if not eid then
+    return nil, err
+  end
+  local key = string.format("sess_ce#%s@%u", sid, eid)
+  local val = string.format("%s\n%s", stream, data)
+  local ok, err = self.shm_dict:safe_add(key, val, self.cache_ttl)
+  if not ok then
+    return nil, err
+  end
+  return eid
+end
+
+function _MT.__index.replay_events(self, sid, last_event)
+  if type(sid) ~= "string" then
+    error("session ID MUST be a string")
+  end
+  if not tonumber(last_event) then
+    error("last event ID MUST be set")
+  end
+  local val, err = self.shm_dict:get("sess_mk#"..sid)
+  if not val then
+    return nil, err or "not found"
+  end
+  local events = {}
+  local prefix = string.format("sess_ce#%s@", sid)
+  local evt, err = self.shm_dict:get(prefix..last_event)
+  if not evt then
+    if err then
+      return nil, err
+    end
+    return events
+  end
+  local n = string.find(evt, "\n", 1, true)
+  if not n then
+    return events
+  end
+  local stream = string.sub(evt, 1, n - 1)
+  for i, k in ipairs(self.shm_dict:get_keys(0)) do
+    local l, r = string.find(k, prefix, 1, true)
+    if l == 1 then
+      local eid = tonumber(string.sub(k, r + 1))
+      if eid and eid > tonumber(last_event) then
+        local evt, err = self.shm_dict:get(k)
+        if evt then
+          local n = string.find(evt, "\n", 1, true)
+          if n then
+            if string.sub(evt, 1, n - 1) == stream then
+              table.insert(events, {
+                data = string.sub(evt, n + 1),
+                id = eid
+              })
+            end
+          end
+        elseif err then
+          return nil, err
+        end
+      end
+    end
+  end
+  table.sort(events, function(a, b)
+    return a.id < b.id
+  end)
+  return events
+end
+
 function _M.new(options)
   local shm_zone = options and options.shm_zone or "mcp_message_bus"
   local shm_dict = ngx.shared[shm_zone]
   if not shm_dict then
     error(string.format("shm-zone named %s MUST be defined by `lua_shared_dict` directive", shm_zone))
   end
-  local ttl = options and tonumber(options.ttl) or 10
-  if ttl <= 0 then
-    error("TTL MUST be a positive number")
+  local mark_ttl = options and tonumber(options.mark_ttl) or 10
+  if mark_ttl <= 0 then
+    error("session mark TTL MUST be a positive number")
+  end
+  local cache_ttl = options and tonumber(options.cache_ttl) or 90
+  if cache_ttl <= 0 then
+    error("cache TTL MUST be a positive number")
   end
   return setmetatable({
     shm_dict = shm_dict,
-    ttl = ttl,
+    mark_ttl = mark_ttl,
+    cache_ttl = cache_ttl,
     step = options and tonumber(options.step),
     ratio = options and tonumber(options.ratio),
     max_step = options and tonumber(options.max_step)
