@@ -49,7 +49,7 @@ local function connect(self)
   return httpc
 end
 
-local function read_sse_stream(reader, sse_parser, stop_cond)
+local function read_sse_stream(reader, sse_parser, stop_cond, timeout_cb)
   local buffer = ""
   local cursor = 1
   repeat
@@ -74,6 +74,9 @@ local function read_sse_stream(reader, sse_parser, stop_cond)
       if err ~= "timeout" then
         return nil, err
       end
+      if timeout_cb then
+        timeout_cb()
+      end
     else
       break
     end
@@ -81,7 +84,7 @@ local function read_sse_stream(reader, sse_parser, stop_cond)
   return true
 end
 
-local function open_get_sse(self)
+local function open_get_sse(self, last_event)
   local httpc, err = connect(self)
   if not httpc then
     return nil, err
@@ -93,7 +96,8 @@ local function open_get_sse(self)
     headers = {
       ["Authorization"] = self.endpoint.authorization,
       ["Accept"] = "text/event-stream",
-      ["Mcp-Session-Id"] = self.session_id
+      ["Mcp-Session-Id"] = self.session_id,
+      ["Last-Event-ID"] = last_event
     }
   })
   if not res then
@@ -107,16 +111,25 @@ local function open_get_sse(self)
   self.sse_counter = self.sse_counter + 1
   ngx.thread.spawn(function()
     local sse_id = self.sse_counter
-    local ok, err = read_sse_stream(res.body_reader, mcp.sse_parser.new(function(event, data, id, retry)
+    local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
       if self.pending_messages then
         table.insert(self.pending_messages, data)
       end
-    end), function()
-      return not self.pending_messages or sse_id < self.sse_counter
+    end)
+    local ok, err = read_sse_stream(res.body_reader, sse_parser, function()
+      return not self.pending_messages or not last_event and sse_id < self.sse_counter
+    end, function()
+      last_event = nil
     end)
     if not ok then
       ngx.log(ngx.ERR, "http: ", err)
       httpc:close()
+      if sse_parser.last_event then
+        local ok, err = open_get_sse(self, sse_parser.last_event)
+        if not ok then
+          ngx.log(ngx.ERR, "http: ", err)
+        end
+      end
       return
     end
     httpc:set_keepalive()
@@ -204,16 +217,23 @@ function _MT.__index.send(self, msg, options)
     end)
   elseif string.sub(content_type, 1, #accepted_content.sse) == accepted_content.sse then
     ngx.thread.spawn(function()
-      local ok, err = read_sse_stream(res.body_reader, mcp.sse_parser.new(function(event, data, id, retry)
+      local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
         if self.pending_messages then
           table.insert(self.pending_messages, data)
         end
-      end), function()
+      end)
+      local ok, err = read_sse_stream(res.body_reader, sse_parser, function()
         return not self.pending_messages
       end)
       if not ok then
         ngx.log(ngx.ERR, "http: ", err)
         httpc:close()
+        if sse_parser.last_event then
+          local ok, err = open_get_sse(self, sse_parser.last_event)
+          if not ok then
+            ngx.log(ngx.ERR, "http: ", err)
+          end
+        end
         return
       end
       httpc:set_keepalive()
