@@ -12,7 +12,7 @@ In development.
 * [Quickstart](#quickstart)
 * [Server APIs](#server-apis)
   * [mcp.server](#mcpserver)
-  * [mcp.transport.streamable_http.endpoint](#mcptransportstreamable_httpendpoint)
+  * [mcp.transport.streamable\_http.endpoint](#mcptransportstreamable_httpendpoint)
   * [server:run](#serverrun)
   * [server:register](#serverregister)
   * [server:unregister\_\*](#serverunregister_)
@@ -127,7 +127,7 @@ Available options:
 }
 ```
 
-### mcp.transport.streamable_http.endpoint
+### mcp.transport.streamable\_http.endpoint
 
 `syntax: mcp.transport.streamable_http.endpoint(custom_fn[, options])`
 
@@ -187,6 +187,46 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 
 > [!TIP]
 > It is recommended to use different shared memory zones for different endpoints.
+
+A simple echo demo server configuration:
+
+```lua
+worker_processes auto;
+
+events {
+}
+
+http {
+  lua_shared_dict mcp_message_bus 64m;
+
+  server {
+    listen 80;
+
+    location = /mcp {
+      content_by_lua_block {
+        require("resty.mcp").transport.streamable_http.endpoint(function(mcp, server)
+          local ok, err = server:register(mcp.tool("echo", function(args)
+            return "Tool echo: "..args.message
+          end, "Echo a message as a tool", {
+            type = "object",
+            properties = {
+              message = {type = "string"}
+            },
+            required = {"message"}
+          }))
+          if not ok then
+            error(err)
+          end
+          server:run()
+        end)
+      }
+    }
+  }
+}
+```
+
+> [!IMPORTANT]
+> Endpoint callbacks use a different request context than outside the callback, so **DO NOT** access variables outside the callback through upvalues of the closure, which will result in undefined behavior.
 
 ### server:run
 
