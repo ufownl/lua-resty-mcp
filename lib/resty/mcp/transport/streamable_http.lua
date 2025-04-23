@@ -14,7 +14,7 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-local function deliver_event(data, stream_id)
+local function deliver_event(message_bus, session_id, data, stream_id)
   if stream_id then
     local eid, err = message_bus:cache_event(session_id, stream_id, data)
     if not eid then
@@ -100,7 +100,7 @@ local function do_POST(req_body, message_bus, session_id, options)
       if not data then
         error(err)
       end
-      local ok, err = deliver_event(data, stream_id)
+      local ok, err = deliver_event(message_bus, session_id, data, stream_id)
       if not ok then
         ngx.log(ngx.ERR, err)
         if ngx.headers_sent then
@@ -123,7 +123,7 @@ local function do_POST(req_body, message_bus, session_id, options)
             end
           end
         end)
-        local ok, err = deliver_event(msg, stream_id)
+        local ok, err = deliver_event(message_bus, session_id, msg, stream_id)
         if not ok then
           ngx.log(ngx.ERR, err)
           if ngx.headers_sent then
@@ -284,7 +284,7 @@ local function do_GET(message_bus, session_id, options)
     local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
     if msgs then
       for i, msg in ipairs(msgs) do
-        local ok, err = deliver_event(msg, stream_id)
+        local ok, err = deliver_event(message_bus, session_id, msg, stream_id)
         if not ok then
           ngx.log(ngx.ERR, err)
           if ngx.headers_sent then
