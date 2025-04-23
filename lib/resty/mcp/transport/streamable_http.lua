@@ -14,9 +14,9 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-local function deliver_event(message_bus, session_id, data, stream_id)
-  if stream_id then
-    local eid, err = message_bus:cache_event(session_id, stream_id, data)
+local function deliver_event(message_bus, session_id, data, stream)
+  if stream then
+    local eid, err = message_bus:cache_event(session_id, stream, data)
     if not eid then
       return nil, err
     end
@@ -87,7 +87,7 @@ local function do_POST(req_body, message_bus, session_id, options)
   ngx.header["Content-Type"] = "text/event-stream"
   ngx.header["Cache-Control"] = "no-store, no-transform"
   ngx.header["Connection"] = "keep-alive"
-  local stream_id = options.enable_resumability and mcp.utils.generate_id()
+  local stream = options.enable_resumability and "P:"..mcp.utils.generate_id()
   if #reply > 0 then
     local pending_errs = {}
     for i, v in ipairs(reply) do
@@ -100,7 +100,7 @@ local function do_POST(req_body, message_bus, session_id, options)
       if not data then
         error(err)
       end
-      local ok, err = deliver_event(message_bus, session_id, data, stream_id)
+      local ok, err = deliver_event(message_bus, session_id, data, stream)
       if not ok then
         ngx.log(ngx.ERR, err)
         if ngx.headers_sent then
@@ -123,7 +123,7 @@ local function do_POST(req_body, message_bus, session_id, options)
             end
           end
         end)
-        local ok, err = deliver_event(message_bus, session_id, msg, stream_id)
+        local ok, err = deliver_event(message_bus, session_id, msg, stream)
         if not ok then
           ngx.log(ngx.ERR, err)
           if ngx.headers_sent then
@@ -258,7 +258,7 @@ local function do_GET(message_bus, session_id, options)
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.ERROR)
   end
-  local stream_id
+  local stream
   if options.enable_resumability then
     local last_event = tonumber(ngx.var.http_last_event_id)
     if last_event then
@@ -277,14 +277,19 @@ local function do_GET(message_bus, session_id, options)
           ngx.exit(ngx.ERROR)
         end
       end
+      stream = err
+      if not stream or string.sub(stream, 1, 2) ~= "G:" then
+        ngx.exit(ngx.OK)
+      end
+    else
+      stream = "G:"..mcp.utils.generate_id()
     end
-    stream_id = mcp.utils.generate_id()
   end
   while true do
     local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
     if msgs then
       for i, msg in ipairs(msgs) do
-        local ok, err = deliver_event(message_bus, session_id, msg, stream_id)
+        local ok, err = deliver_event(message_bus, session_id, msg, stream)
         if not ok then
           ngx.log(ngx.ERR, err)
           if ngx.headers_sent then

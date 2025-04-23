@@ -215,7 +215,7 @@ function _MT.__index.replay_events(self, sid, last_event)
   table.sort(events, function(a, b)
     return a.id < b.id
   end)
-  return events
+  return events, stream
 end
 
 function _M.new(options)

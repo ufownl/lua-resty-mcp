@@ -49,6 +49,33 @@ local function connect(self)
   return httpc
 end
 
+local function initiate_get(self, last_event)
+  local httpc, err = connect(self)
+  if not httpc then
+    return nil, err
+  end
+  local res, err = httpc:request({
+    method = "GET",
+    path = self.endpoint.path,
+    query = self.endpoint.query,
+    headers = {
+      ["Authorization"] = self.endpoint.authorization,
+      ["Accept"] = "text/event-stream",
+      ["Mcp-Session-Id"] = self.session_id,
+      ["Last-Event-ID"] = last_event
+    }
+  })
+  if not res then
+    httpc:close()
+    return nil, err
+  end
+  if res.status ~= ngx.HTTP_OK then
+    httpc:close()
+    return nil, string.format("http status %d: %s", res.status, res.reason)
+  end
+  return httpc, res
+end
+
 local function read_sse_stream(reader, sse_parser, stop_cond, timeout_cb)
   local buffer = ""
   local cursor = 1
@@ -85,28 +112,9 @@ local function read_sse_stream(reader, sse_parser, stop_cond, timeout_cb)
 end
 
 local function open_get_sse(self, last_event)
-  local httpc, err = connect(self)
+  local httpc, res = initiate_get(self, last_event)
   if not httpc then
-    return nil, err
-  end
-  local res, err = httpc:request({
-    method = "GET",
-    path = self.endpoint.path,
-    query = self.endpoint.query,
-    headers = {
-      ["Authorization"] = self.endpoint.authorization,
-      ["Accept"] = "text/event-stream",
-      ["Mcp-Session-Id"] = self.session_id,
-      ["Last-Event-ID"] = last_event
-    }
-  })
-  if not res then
-    httpc:close()
-    return nil, err
-  end
-  if res.status ~= ngx.HTTP_OK then
-    httpc:close()
-    return nil, string.format("http status %d: %s", res.status, res.reason)
+    return nil, res
   end
   self.sse_counter = self.sse_counter + 1
   ngx.thread.spawn(function()
@@ -116,6 +124,7 @@ local function open_get_sse(self, last_event)
         table.insert(self.pending_messages, data)
       end
     end)
+    sse_parser.last_event = last_event
     local ok, err = read_sse_stream(res.body_reader, sse_parser, function()
       return not self.pending_messages or not last_event and sse_id < self.sse_counter
     end, function()
@@ -134,6 +143,28 @@ local function open_get_sse(self, last_event)
     end
     httpc:set_keepalive()
   end)
+  return true
+end
+
+local function resume_post_sse(self, last_event)
+  local httpc, res = initiate_get(self, last_event)
+  if not httpc then
+    return nil, res
+  end
+  local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
+    if self.pending_messages then
+      table.insert(self.pending_messages, data)
+    end
+  end)
+  sse_parser.last_event = last_event
+  local ok, err = read_sse_stream(res.body_reader, sse_parser, function()
+    return not self.pending_messages
+  end)
+  if not ok then
+    httpc:close()
+    return resume_post_sse(self, sse_parser.last_event)
+  end
+  httpc:set_keepalive()
   return true
 end
 
@@ -229,7 +260,7 @@ function _MT.__index.send(self, msg, options)
         ngx.log(ngx.ERR, "http: ", err)
         httpc:close()
         if sse_parser.last_event then
-          local ok, err = open_get_sse(self, sse_parser.last_event)
+          local ok, err = resume_post_sse(self, sse_parser.last_event)
           if not ok then
             ngx.log(ngx.ERR, "http: ", err)
           end
