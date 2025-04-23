@@ -242,6 +242,9 @@ local function do_GET(message_bus, session_id)
     end
     ngx.exit(ngx.HTTP_NOT_FOUND)
   end
+  ngx.header["Content-Type"] = "text/event-stream"
+  ngx.header["Cache-Control"] = "no-store, no-transform"
+  ngx.header["Connection"] = "keep-alive"
   ngx.send_headers()
   local ok, err = ngx.flush(true)
   if not ok then
