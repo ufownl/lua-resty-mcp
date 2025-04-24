@@ -86,7 +86,7 @@ function _M.new(pattern, name, cb, desc, mime, annos)
   end
   local template, err = mcp.utils.uri_template(pattern)
   if not template then
-    return nil, err
+    error(err)
   end
   return setmetatable({
     uri_template = template,
