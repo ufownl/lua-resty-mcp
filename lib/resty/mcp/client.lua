@@ -10,6 +10,27 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local function push_progress(self, progress_token, rid)
+  return function(progress, total, message)
+    if type(progress) ~= "number" then
+      error("progress MUST be a number")
+    end
+    if total and type(total) ~= "number" then
+      error("total MUST be a number")
+    end
+    if message and type(message) ~= "string" then
+      error("message MUST be a string")
+    end
+    if not self.processing_requests[rid] then
+      return nil, "cancelled"
+    end
+    if not progress_token then
+      return true
+    end
+    return mcp.session.send_notification(self, "progress", {progress_token, progress, total, message})
+  end
+end
+
 local function get_list(self, category, timeout, field_name)
   local list = {}
   local cursor
@@ -44,7 +65,23 @@ local function define_methods(self)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
       end
-      local result, code, message, data = self.sampling_callback(params)
+      local progress_token = type(params._meta) == "table" and params._meta.progressToken
+      if progress_token and type(progress_token) ~= "string" and (type(progress_token) ~= "number" or progress_token % 1 ~= 0) then
+        progress_token = nil
+      end
+      self.processing_requests[rid] = true
+      local result, code, message, data = self.sampling_callback(params, {
+        session = self,
+        _meta = params._meta,
+        push_progress = push_progress(self, progress_token, rid),
+        cancelled = function()
+          return not self.processing_requests[rid]
+        end
+      })
+      if not self.processing_requests[rid] then
+        return
+      end
+      self.processing_requests[rid] = nil
       if not result then
         return nil, code, message, data
       end
@@ -205,7 +242,7 @@ function _MT.__index.list_prompts(self, timeout)
   return list_impl(self, "prompts", timeout)
 end
 
-function _MT.__index.get_prompt(self, name, args, timeout)
+function _MT.__index.get_prompt(self, name, args, timeout, progress_cb)
   if type(name) ~= "string" then
     error("prompt name MUST be a string.")
   end
@@ -215,7 +252,8 @@ function _MT.__index.get_prompt(self, name, args, timeout)
   if not self.server.capabilities.prompts then
     return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout))
+  local req_opts = progress_cb and {progress_callback = progress_cb} or nil
+  local res, err = mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout), req_opts)
   if not res then
     return nil, err
   end
@@ -233,14 +271,15 @@ function _MT.__index.list_resource_templates(self, timeout)
   return get_list(self, "resources/templates", timeout, "resourceTemplates")
 end
 
-function _MT.__index.read_resource(self, uri, timeout)
+function _MT.__index.read_resource(self, uri, timeout, progress_cb)
   if type(uri) ~= "string" then
     error("resource uri MUST be a string.")
   end
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout))
+  local req_opts = progress_cb and {progress_callback = progress_cb} or nil
+  local res, err = mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout), req_opts)
   if not res then
     return nil, err
   end
@@ -299,7 +338,7 @@ function _MT.__index.list_tools(self, timeout)
   return list_impl(self, "tools", timeout)
 end
 
-function _MT.__index.call_tool(self, name, args, timeout)
+function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
   if type(name) ~= "string" then
     error("tool name MUST be a string.")
   end
@@ -309,7 +348,8 @@ function _MT.__index.call_tool(self, name, args, timeout)
   if not self.server.capabilities.tools then
     return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout))
+  local req_opts = progress_cb and {progress_callback = progress_cb} or nil
+  local res, err = mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), req_opts)
   if not res then
     return nil, err
   end

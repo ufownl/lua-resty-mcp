@@ -15,7 +15,7 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local function wrapper(server, rid)
+local function session(server, rid)
   local function rrid()
     return {related_request = rid}
   end
@@ -38,8 +38,8 @@ local function wrapper(server, rid)
     list_roots = function(_, timeout)
       return server:list_roots(timeout, rrid)
     end,
-    create_message = function(_, messages, max_tokens, options, timeout)
-      return server:create_message(messages, max_tokens, options, timeout, rrid)
+    create_message = function(_, messages, max_tokens, options, timeout, progress_cb)
+      return server:create_message(messages, max_tokens, options, timeout, progress_cb, rrid)
     end
   }, {
     __index = function(self, key)
@@ -49,6 +49,27 @@ local function wrapper(server, rid)
       server[key] = val
     end
   })
+end
+
+local function push_progress(self, progress_token, rid)
+  return function(progress, total, message)
+    if type(progress) ~= "number" then
+      error("progress MUST be a number")
+    end
+    if total and type(total) ~= "number" then
+      error("total MUST be a number")
+    end
+    if message and type(message) ~= "string" then
+      error("message MUST be a string")
+    end
+    if not self.processing_requests[rid] then
+      return nil, "cancelled"
+    end
+    if not progress_token then
+      return true
+    end
+    return mcp.session.send_notification(self, "progress", {progress_token, progress, total, message}, {related_request = rid})
+  end
 end
 
 local function paginate(cursor, page_size, total_size)
@@ -118,10 +139,24 @@ local function define_methods(self, event_handlers)
       if not prompt then
         return nil, -32602, "Invalid prompt name", {name = params.name}
       end
-      return prompt:get(params.arguments, {
-        session = wrapper(self, rid),
-        _meta = params._meta
+      local progress_token = type(params._meta) == "table" and params._meta.progressToken
+      if progress_token and type(progress_token) ~= "string" and (type(progress_token) ~= "number" or progress_token % 1 ~= 0) then
+        progress_token = nil
+      end
+      self.processing_requests[rid] = true
+      local result, code, message, data = prompt:get(params.arguments, {
+        session = session(self, rid),
+        _meta = params._meta,
+        push_progress = push_progress(self, progress_token, rid),
+        cancelled = function()
+          return not self.processing_requests[rid]
+        end
       })
+      if not self.processing_requests[rid] then
+        return
+      end
+      self.processing_requests[rid] = nil
+      return result, code, message, data
     end or nil,
     ["resources/templates/list"] = self.capabilities.resources and function(params, rid)
       if not rid then
@@ -157,29 +192,43 @@ local function define_methods(self, event_handlers)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
       end
-      local resource = self.available_resources and self.available_resources.dict[params.uri]
-      if resource then
-        return resource:read({
-          session = wrapper(self, rid),
-          _meta = params._meta
-        })
-      end
-      if self.available_resource_templates then
-        local session = wrapper(self, rid)
-        for i, resource_template in ipairs(self.available_resource_templates) do
-          local result, code, message, data = resource_template:read(params.uri, {
-            session = session,
-            _meta = params._meta
-          })
-          if result then
-            return result
+      local function read_impl()
+        local progress_token = type(params._meta) == "table" and params._meta.progressToken
+        if progress_token and type(progress_token) ~= "string" and (type(progress_token) ~= "number" or progress_token % 1 ~= 0) then
+          progress_token = nil
+        end
+        local ctx = {
+          session = session(self, rid),
+          _meta = params._meta,
+          push_progress = push_progress(self, progress_token, rid),
+          cancelled = function()
+            return not self.processing_requests[rid]
           end
-          if code ~= -32002 then
-            return nil, code, message, data
+        }
+        local resource = self.available_resources and self.available_resources.dict[params.uri]
+        if resource then
+          return resource:read(ctx)
+        end
+        if self.available_resource_templates then
+          for i, resource_template in ipairs(self.available_resource_templates) do
+            local result, code, message, data = resource_template:read(params.uri, ctx)
+            if result then
+              return result
+            end
+            if code ~= -32002 then
+              return nil, code, message, data
+            end
           end
         end
+        return nil, -32002, "Resource not found", {uri = params.uri}
       end
-      return nil, -32002, "Resource not found", {uri = params.uri}
+      self.processing_requests[rid] = true
+      local result, code, message, data = read_impl()
+      if not self.processing_requests[rid] then
+        return
+      end
+      self.processing_requests[rid] = nil
+      return result, code, message, data
     end or nil,
     ["resources/subscribe"] = self.capabilities.resources and function(params, rid)
       if not rid then
@@ -240,10 +289,24 @@ local function define_methods(self, event_handlers)
       if not tool then
         return nil, -32602, "Unknown tool", {name = params.name}
       end
-      return tool(params.arguments, {
-        session = wrapper(self, rid),
-        _meta = params._meta
+      local progress_token = type(params._meta) == "table" and params._meta.progressToken
+      if progress_token and type(progress_token) ~= "string" and (type(progress_token) ~= "number" or progress_token % 1 ~= 0) then
+        progress_token = nil
+      end
+      self.processing_requests[rid] = true
+      local result, code, message, data = tool(params.arguments, {
+        session = session(self, rid),
+        _meta = params._meta,
+        push_progress = push_progress(self, progress_token, rid),
+        cancelled = function()
+          return not self.processing_requests[rid]
+        end
       })
+      if not self.processing_requests[rid] then
+        return
+      end
+      self.processing_requests[rid] = nil
+      return result, code, message, data
     end or nil
   }
   local validator = {
@@ -434,14 +497,21 @@ function _MT.__index.list_roots(self, timeout, rrid)
   return self.client.discovered_roots
 end
 
-function _MT.__index.create_message(self, messages, max_tokens, options, timeout, rrid)
+function _MT.__index.create_message(self, messages, max_tokens, options, timeout, progress_cb, rrid)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), rrid and rrid() or nil)
+  local req_opts
+  if rrid then
+    req_opts = rrid()
+    req_opts.progress_callback = progress_cb
+  elseif progress_cb then
+    req_opts = {progress_callback = progress_cb}
+  end
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), req_opts)
 end
 
 function _MT.__index.run(self, options)

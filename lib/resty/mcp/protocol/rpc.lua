@@ -107,7 +107,13 @@ local function handle_impl(dm, methods, resp_cb)
     if dm.id then
       if fn then
         local result, code, message, data = fn(dm.params, dm.id)
-        return result ~= nil and _M.succ_resp(dm.id, result) or _M.fail_resp(dm.id, code, message, data)
+        if result ~= nil then
+          return _M.succ_resp(dm.id, result)
+        elseif code and message then
+          return _M.fail_resp(dm.id, code, message, data)
+        else
+          return _M.fail_resp(dm.id, 0, "Request cancelled")
+        end
       else
         return _M.fail_resp(dm.id, -32601, "Method not found")
       end

@@ -172,6 +172,9 @@ function _MT.__index.send(self, msg, options)
   if type(msg) ~= "table" then
     error("message MUST be a table.")
   end
+  if msg.error and msg.error.code >= 0 then
+    return true
+  end
   if not self.pending_messages then
     return nil, "closed"
   end

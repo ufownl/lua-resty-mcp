@@ -1268,3 +1268,437 @@ user text Hey, man! nil nil
 assistant image SGV5LCBtYW4h image/jpeg mock
 --- no_error_log
 [error]
+
+
+=== TEST 9: progress
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.prompt("echo", function(args, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "prompt")
+          if not ok then
+            return
+          end
+        end
+        return "Please process this message: "..args.message
+      end, "Create an echo prompt", {message = {required = true}}))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "resource")
+          if not ok then
+            return
+          end
+        end
+        return "Resource echo: static"
+      end, "Echo a static message as a resource", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "resource_template")
+          if not ok then
+            return
+          end
+        end
+        return true, "Resource echo: "..ngx.unescape_uri(vars.message)
+      end, "Echo a message as a resource", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.tool("echo", function(args, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "tool")
+          if not ok then
+            return
+          end
+        end
+        return "Tool echo: "..args.message
+      end, "Echo a message as a tool", {
+        type = "object",
+        properties = {
+          message = {type = "string"}
+        },
+        required = {"message"}
+      }))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128, nil, 180, function(progress, total, message)
+          table.insert(messages, {
+            role = "assistant",
+            content = {
+              type = "text",
+              text = string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message))
+            }
+          })
+          return true
+        end)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      local ok, err = server:register(mcp.prompt("cancel_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128, nil, 180, function(progress, total, message)
+          table.insert(messages, {
+            role = "assistant",
+            content = {
+              type = "text",
+              text = string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message))
+            }
+          })
+          return nil, "test cancellation"
+        end)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      server:run()
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params, ctx)
+      for i, v in ipairs({0.25, 0.5, 1}) do
+        local ok, err = ctx.push_progress(v, 1, "sampling")
+        if not ok then
+          error(err)
+        end
+      end
+      return "Hey there! What's up?"
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:get_prompt("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return true
+    end)
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
+    end
+    local res, err = client:read_resource("echo://static", 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return true
+    end)
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+    end
+    local res, err = client:read_resource("echo://foobar", 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return true
+    end)
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+    end
+    local res, err = client:call_tool("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return true
+    end)
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:get_prompt("simple_sampling")
+    if not res then
+      error(err)
+    end
+    ngx.say(res.description)
+    for i, v in ipairs(res.messages) do
+      ngx.say(string.format("%s %s %s %s %s", v.role, v.content.type, v.content.text or v.content.data, tostring(v.content.mimeType), tostring(v.model)))
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+progress=0.25, total=1, message=prompt
+progress=0.5, total=1, message=prompt
+progress=1, total=1, message=prompt
+Create an echo prompt
+user text Please process this message: Hello, MCP!
+progress=0.25, total=1, message=resource
+progress=0.5, total=1, message=resource
+progress=1, total=1, message=resource
+echo://static
+text/plain
+Resource echo: static
+progress=0.25, total=1, message=resource_template
+progress=0.5, total=1, message=resource_template
+progress=1, total=1, message=resource_template
+echo://foobar
+text/plain
+Resource echo: foobar
+progress=0.25, total=1, message=tool
+progress=0.5, total=1, message=tool
+progress=1, total=1, message=tool
+nil
+text Tool echo: Hello, MCP!
+Sampling prompt from client without arguments.
+user text Hey, man! nil nil
+assistant text progress=0.25, total=1, message=sampling nil nil
+assistant text progress=0.5, total=1, message=sampling nil nil
+assistant text progress=1, total=1, message=sampling nil nil
+assistant text Hey there! What's up? nil unknown
+--- no_error_log
+[error]
+
+
+=== TEST 10: cancellation
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local utils = require("resty.mcp.utils")
+
+      local ok, err = server:register(mcp.prompt("echo", function(args, ctx)
+        local ok, err = ctx.push_progress(0.25, 1, "prompt")
+        if not ok then
+          error(err)
+        end
+        local ok, err = utils.spin_until(function()
+          return ctx.cancelled()
+        end, 1)
+        if ok then
+          return
+        end
+        error(err)
+        return "Please process this message: "..args.message
+      end, "Create an echo prompt", {message = {required = true}}))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
+        local ok, err = ctx.push_progress(0.25, 1, "resource")
+        if not ok then
+          error(err)
+        end
+        local ok, err = utils.spin_until(function()
+          return ctx.cancelled()
+        end, 1)
+        if ok then
+          return
+        end
+        error(err)
+        return "Resource echo: static"
+      end, "Echo a static message as a resource", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
+        local ok, err = ctx.push_progress(0.25, 1, "resource_template")
+        if not ok then
+          error(err)
+        end
+        local ok, err = utils.spin_until(function()
+          return ctx.cancelled()
+        end, 1)
+        if ok then
+          return
+        end
+        error(err)
+        return true, "Resource echo: "..ngx.unescape_uri(vars.message)
+      end, "Echo a message as a resource", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.tool("echo", function(args, ctx)
+        local ok, err = ctx.push_progress(0.25, 1, "tool")
+        if not ok then
+          error(err)
+        end
+        local ok, err = utils.spin_until(function()
+          return ctx.cancelled()
+        end, 1)
+        if ok then
+          return
+        end
+        error(err)
+        return "Tool echo: "..args.message
+      end, "Echo a message as a tool", {
+        type = "object",
+        properties = {
+          message = {type = "string"}
+        },
+        required = {"message"}
+      }))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128, nil, 180, function(progress, total, message)
+          table.insert(messages, {
+            role = "assistant",
+            content = {
+              type = "text",
+              text = string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message))
+            }
+          })
+          return true
+        end)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      local ok, err = server:register(mcp.prompt("cancel_sampling", function(args, ctx)
+        local messages =  {
+          {role = "user", content = {type = "text", text = "Hey, man!"}}
+        }
+        local res, err = ctx.session:create_message(messages, 128, nil, 180, function(progress, total, message)
+          table.insert(messages, {
+            role = "assistant",
+            content = {
+              type = "text",
+              text = string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message))
+            }
+          })
+          return nil, "test cancellation"
+        end)
+        if not res then
+          return nil, err
+        end
+        table.insert(messages, res)
+        return messages
+      end, "Sampling prompt from client without arguments."))
+
+      server:run()
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local utils = require("resty.mcp.utils")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp",
+      enable_get_sse = true
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize(nil, function(params, ctx)
+      local ok, err = ctx.push_progress(0.25, 1, "sampling")
+      if not ok then
+        error(err)
+      end
+      local ok, err = utils.spin_until(function()
+        return ctx.cancelled()
+      end, 1)
+      if ok then
+        return
+      end
+      error(err)
+      return "Hey there! What's up?"
+    end)
+    if not ok then
+      error(err)
+    end
+    local res, err = client:get_prompt("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return nil, "test cancellation"
+    end)
+    ngx.say(tostring(err))
+    local res, err = client:read_resource("echo://static", 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return nil, "test cancellation"
+    end)
+    ngx.say(tostring(err))
+    local res, err = client:read_resource("echo://foobar", 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return nil, "test cancellation"
+    end)
+    ngx.say(tostring(err))
+    local res, err = client:call_tool("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+      ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
+      return nil, "test cancellation"
+    end)
+    ngx.say(tostring(err))
+    local res, err = client:get_prompt("cancel_sampling")
+    ngx.say(tostring(err))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+progress=0.25, total=1, message=prompt
+-1 Request cancelled {"reason":"test cancellation"}
+progress=0.25, total=1, message=resource
+-1 Request cancelled {"reason":"test cancellation"}
+progress=0.25, total=1, message=resource_template
+-1 Request cancelled {"reason":"test cancellation"}
+progress=0.25, total=1, message=tool
+-1 Request cancelled {"reason":"test cancellation"}
+-32603 Internal errors {"errmsg":"-1 Request cancelled {\"reason\":\"test cancellation\"}"}
+--- no_error_log
+[error]

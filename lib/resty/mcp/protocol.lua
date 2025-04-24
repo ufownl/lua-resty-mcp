@@ -114,6 +114,22 @@ function _M.notification.resource_updated(uri)
   return mcp.rpc.notification("notifications/resources/updated", {uri = uri})
 end
 
+function _M.notification.progress(progress_token, progress, total, message)
+  return mcp.rpc.notification("notifications/progress", {
+    progressToken = progress_token,
+    progress = progress,
+    total = total,
+    message = message
+  })
+end
+
+function _M.notification.cancelled(rid, reason)
+  return mcp.rpc.notification("notifications/cancelled", {
+    requestId = rid,
+    reason = reason
+  })
+end
+
 function _M.result.initialize(capabilities, name, version, instructions)
   return {
     protocolVersion = mcp.version.protocol,

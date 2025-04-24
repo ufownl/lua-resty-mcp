@@ -115,21 +115,45 @@ local function do_POST(req_body, message_bus, session_id, options)
     local msgs, err = message_bus:pop_cmsgs(session_id, waiting_rids)
     if msgs then
       for i, msg in ipairs(msgs) do
-        mcp.rpc.handle(msg, {}, function(rid)
+        local event_msgs = {}
+        mcp.rpc.handle(msg, setmetatable({}, {
+          __index = function(_, key)
+            if string.sub(key, 1, #ntf_prefix) == ntf_prefix then
+              return function(params)
+                table.insert(event_msgs, mcp.rpc.notification(key, params))
+              end
+            end
+            return function(params, rid)
+              table.insert(event_msgs, mcp.rpc.request(key, params, rid))
+              return true
+            end
+          end
+        }), function(rid, result, errobj)
           for j, v in ipairs(waiting_rids) do
             if v == rid then
               table.remove(waiting_rids, j)
               break
             end
           end
+          if result ~= nil then
+            table.insert(event_msgs, mcp.rpc.succ_resp(rid, result))
+          elseif errobj.code < 0 then
+            table.insert(event_msgs, mcp.rpc.fail_resp(rid, errobj.code, errobj.message, errobj.data))
+          end
         end)
-        local ok, err = deliver_event(message_bus, session_id, msg, stream)
-        if not ok then
-          ngx.log(ngx.ERR, err)
-          if ngx.headers_sent then
-            ngx.exit(ngx.ERROR)
-          else
-            ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+        if #event_msgs > 0 then
+          local data, err = cjson.encode(#event_msgs > 1 and event_msgs or event_msgs[1])
+          if not data then
+            error(err)
+          end
+          local ok, err = deliver_event(message_bus, session_id, data, stream)
+          if not ok then
+            ngx.log(ngx.ERR, err)
+            if ngx.headers_sent then
+              ngx.exit(ngx.ERROR)
+            else
+              ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+            end
           end
         end
       end

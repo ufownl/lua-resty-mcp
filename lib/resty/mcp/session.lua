@@ -2,6 +2,7 @@ local mcp = {
   version = require("resty.mcp.version"),
   utils = require("resty.mcp.utils"),
   rpc = require("resty.mcp.protocol.rpc"),
+  validator = require("resty.mcp.protocol.validator"),
   protocol = require("resty.mcp.protocol")
 }
 
@@ -93,6 +94,9 @@ local function request_async(self, req, cb, options)
     return nil, err
   end
   self.pending_requests[req.msg.id] = function(result, errobj)
+    if options and options.progress_token then
+      self.monitoring_progress[options.progress_token] = nil
+    end
     local res, err = return_result(result, errobj, req.validator)
     cb(res, err)
   end
@@ -106,6 +110,9 @@ local function request_sync_blocking(self, req, options)
   end
   local result, errobj
   self.pending_requests[req.msg.id] = function(res, err)
+    if options and options.progress_token then
+      self.monitoring_progress[options.progress_token] = nil
+    end
     result = res
     errobj = err
   end
@@ -134,6 +141,9 @@ local function request_sync_nonblocking(self, req, timeout, options)
   end
   local result, errobj
   self.pending_requests[req.msg.id] = function(res, err)
+    if options and options.progress_token then
+      self.monitoring_progress[options.progress_token] = nil
+    end
     result = res
     errobj = err
     sema:post()
@@ -163,11 +173,49 @@ function _M.new(conn, options, mt)
     conn = conn,
     options = type(options) == "table" and options or {},
     pending_requests = {},
+    processing_requests = {},
+    monitoring_progress = {},
     bg_tasks = bg_tasks
   }, mt or {__index = _M})
 end
 
 function _M.initialize(self, methods)
+  methods["notifications/progress"] = function(params)
+    local ok, err = mcp.validator.ProgressNotification(params)
+    if not ok then
+      ngx.log(ngx.ERR, err)
+      return
+    end
+    local monitor = self.monitoring_progress[params.progressToken]
+    if not monitor then
+      return
+    end
+    local ok, reason = monitor.callback(params.progress, params.total, params.message)
+    if ok then
+      return
+    end
+    if reason ~= nil and type(reason) ~= "string" then
+      error("reason MUST be a string")
+    end
+    local ok, err = _M.send_notification(self, "cancelled", {monitor.rid, reason})
+    if not ok then
+      ngx.log(ngx.ERR, err)
+      return
+    end
+    local cb = self.pending_requests[monitor.rid]
+    if cb then
+      self.pending_requests[monitor.rid] = nil
+      cb(nil, {code = -1, message = "Request cancelled", data = reason and {reason = reason}})
+    end
+  end
+  methods["notifications/cancelled"] = function(params)
+    local ok, err = mcp.validator.CancelledNotification(params)
+    if not ok then
+      ngx.log(ngx.ERR, err)
+      return
+    end
+    self.processing_requests[params.requestId] = nil
+  end
   self.methods = methods
   self.main_loop = ngx.thread.spawn(main_loop, self)
 end
@@ -200,6 +248,23 @@ function _M.send_request(self, name, args, cb_or_to, options)
     error("invalid request format")
   end
   local req = mcp.protocol.request[name](unpack(args))
+  if options and options.progress_callback then
+    options.progress_token = mcp.utils.generate_id()
+    self.monitoring_progress[options.progress_token] = {
+      rid = req.msg.id,
+      callback = options.progress_callback
+    }
+    local req_params = req.msg.params
+    if req_params then
+      if req_params._meta then
+        req_params._meta.progressToken = options.progress_token
+      else
+        req_params._meta = {progressToken = options.progress_token}
+      end
+    else
+      req.msg.params = {_meta = {progressToken = options.progress_token}}
+    end
+  end
   if cb_or_to and not tonumber(cb_or_to) then
     return request_async(self, req, cb_or_to, options)
   elseif self.conn.blocking_io then
