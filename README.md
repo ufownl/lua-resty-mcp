@@ -310,6 +310,7 @@ Create a prompt or prompt template.
 
 ```lua
 function callback(args, ctx)
+  local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
   if error_occurred then
@@ -345,6 +346,7 @@ Create a resource.
 
 ```lua
 function callback(uri, ctx)
+  local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
   if error_occurred then
@@ -382,6 +384,7 @@ Create a resource template.
 ```lua
 function callback(uri, vars, ctx)
   -- `vars` is a table that holds variables extracted from the URI according to the template pattern
+  local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
   if resource_not_found then
@@ -410,6 +413,7 @@ Create a tool.
 
 ```lua
 function callback(args, ctx)
+  local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
   if error_occurred then
@@ -461,6 +465,10 @@ The 5th argument `annos`, is optional additional tool information. It should be 
 
 > [!NOTE]
 > All of the above properties are **hints**. They are not guaranteed to provide a faithful description of tool behavior (including descriptive properties like `title`).
+
+> [!IMPORTANT]
+> 1. When you need to call server methods from callbacks (event handlers and context component callbacks), you **MUST** call them via the `ctx.session` field instead of via the server instance outside of the callback using closure upvalues. Because `ctx.session` is a wrapper of the server instance that contains the context required by the backend components, calling the server methods via the server instance outside of the callback will result in undefined behavior.
+> 2. The fields in `ctx` argument of callbacks (event handlers and context component callbacks) are **ONLY** available **before** the callback returns; accessing them after the callback returns results in undefined behavior.
 
 ### server:unregister\_\*
 
