@@ -1637,7 +1637,6 @@ location = /mcp {
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local utils = require("resty.mcp.utils")
     local client, err = mcp.client(mcp.transport.streamable_http, {
       endpoint_url = "http://127.0.0.1:1984/mcp",
       enable_get_sse = true
@@ -1645,18 +1644,17 @@ location = /t {
     if not client then
       error(err)
     end
+    local cancelled = false
     local ok, err = client:initialize(nil, function(params, ctx)
-      local ok, err = ctx.push_progress(0.25, 1, "sampling")
-      if not ok then
-        error(err)
+      local progress = 0
+      while true do
+        local ok, err = ctx.push_progress(progress, nil, "sampling")
+        if not ok then
+          cancelled = ctx.cancelled()
+          return
+        end
+        progress = progress + 0.001
       end
-      local ok, err = utils.spin_until(function()
-        return ctx.cancelled()
-      end, 1)
-      if ok then
-        return
-      end
-      error(err)
       return "Hey there! What's up?"
     end)
     if not ok then
@@ -1684,6 +1682,11 @@ location = /t {
     ngx.say(tostring(err))
     local res, err = client:get_prompt("cancel_sampling")
     ngx.say(tostring(err))
+    local ok, err = client:wait_background_tasks()
+    if not ok then
+      error(err)
+    end
+    ngx.say(tostring(cancelled))
     client:shutdown()
   }
 }
@@ -1700,5 +1703,6 @@ progress=0.25, total=1, message=resource_template
 progress=0.25, total=1, message=tool
 -1 Request cancelled {"reason":"test cancellation"}
 -32603 Internal errors {"errmsg":"-1 Request cancelled {\"reason\":\"test cancellation\"}"}
+true
 --- no_error_log
 [error]
