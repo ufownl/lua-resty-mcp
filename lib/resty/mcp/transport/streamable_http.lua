@@ -257,12 +257,12 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
         end)
         init_process_error()
       end
-    elseif err ~= "timeout" then
+    else
       ngx.log(ngx.ERR, err)
       if err ~= "not found" then
         message_bus:del_session(session_id)
       end
-      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+      ngx.exit(err == "timeout" and ngx.HTTP_SERVICE_UNAVAILABLE or ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
   end
 end
@@ -326,13 +326,11 @@ local function do_GET(message_bus, session_id, options)
           end
         end
       end
-    elseif err ~= "timeout" then
-      if err == "not found" then
-        ngx.exit(ngx.OK)
-      else
-        ngx.log(ngx.ERR, err)
-        ngx.exit(ngx.ERROR)
-      end
+    elseif err == "not found" then
+      ngx.exit(ngx.OK)
+    else
+      ngx.log(ngx.ERR, err)
+      ngx.exit(ngx.ERROR)
     end
   end
 end

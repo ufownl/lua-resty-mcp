@@ -133,11 +133,9 @@ local function open_get_sse(self, last_event)
     if not ok then
       ngx.log(ngx.ERR, "http: ", err)
       httpc:close()
-      if sse_parser.last_event then
-        local ok, err = open_get_sse(self, sse_parser.last_event)
-        if not ok then
-          ngx.log(ngx.ERR, "http: ", err)
-        end
+      local ok, err = open_get_sse(self, sse_parser.last_event)
+      if not ok then
+        ngx.log(ngx.ERR, "http: ", err)
       end
       return
     end
