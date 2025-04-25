@@ -19,11 +19,13 @@ In development.
   * [server:resource\_updated](#serverresource_updated)
   * [server:list\_roots](#serverlist_roots)
   * [server:create\_messages](#servercreate_message)
+  * [server:wait\_background\_tasks](#serverwait_background_tasks)
   * [server:shutdown](#servershutdown)
 * [Writing MCP Clients](#writing-mcp-clients)
 * [Client APIs](#client-apis)
   * [mcp.client](#mcpclient)
   * [client:initialize](#clientinitialize)
+  * [client:wait\_background\_tasks](#clientwait_background_tasks)
   * [client:shutdown](#clientshutdown)
   * [client:expose\_roots](#clientexpose_roots)
   * [client:list\_prompts](#clientlist_prompts)
@@ -51,11 +53,11 @@ In development.
   - [x] Sampling
   - [ ] Utilities
     - [x] Pagination
+    - [x] Progress
+    - [x] Cancellation
     - [ ] Ping
     - [ ] Logging
-    - [ ] Progress
     - [ ] Completion
-    - [ ] Cancellation
 
 ## Quickstart
 
@@ -512,7 +514,7 @@ The returned `roots` may have the following structure:
 
 ### server:create\_message
 
-`syntax: res, err = server:create_message(messages, max_tokens[, options[, timeout]])`
+`syntax: res, err = server:create_message(messages, max_tokens[, options[, timeout[, progress_cb]]])`
 
 Request to sample an LLM via the client.
 
@@ -575,7 +577,24 @@ The 3rd argument of this method `options`, should be a dict-like Lua table that 
 > [!NOTE]
 > All of the above properties are **hints**.
 
-The returned message is similar to the list elements passed in the `messages` argument, but has an additional `model` field containing the name of the model that generated the message, and an optional `stopReason` field containing the reason why sampling stopped, if known.
+The 5th argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
+
+```lua
+function progress_cb(progress, total, message)
+  -- If you want to cancel this request, return a conditional false value and an optional string describing the reason
+  -- Otherwise, return `true` to continue with the request
+end
+```
+
+The returned message of this method is similar to the list elements passed in the `messages` argument, but has an additional `model` field containing the name of the model that generated the message, and an optional `stopReason` field containing the reason why sampling stopped, if known.
+
+### server:wait\_background\_tasks
+
+`syntax: ok, err = server:wait_background_tasks([timeout])`
+
+Wait on the background tasks of the server session.
+
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
 
 ### server:shutdown
 
@@ -775,6 +794,14 @@ The callback's argument `params` may have the following structure:
 }
 ```
 
+### client:wait\_background\_tasks
+
+`syntax: ok, err = client:wait_background_tasks([timeout])`
+
+Wait on the background tasks of the client session.
+
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+
 ### client:shutdown
 
 `syntax: client:shutdown()`
@@ -824,11 +851,20 @@ The returned `prompts` may have the following structure:
 
 ### client:get\_prompt
 
-`syntax: res, err = client:get_prompt(name, args[, timeout])`
+`syntax: res, err = client:get_prompt(name, args[, timeout[, progress_cb]])`
 
 Get a specific prompt from the MCP server.
 
 A successful call returns a dict-like Lua table that contains the content of the prompt. Otherwise, it returns `nil` and a string describing the error.
+
+The 4th argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
+
+```lua
+function progress_cb(progress, total, message)
+  -- If you want to cancel this request, return a conditional false value and an optional string describing the reason
+  -- Otherwise, return `true` to continue with the request
+end
+```
 
 The content of the prompt may have the following structure:
 
@@ -894,11 +930,20 @@ The returned `templates` may have the following structure:
 
 ### client:read\_resource
 
-`syntax: res, err = client:read_resource(uri[, timeout])`
+`syntax: res, err = client:read_resource(uri[, timeout[, progress_cb]])`
 
 Read a specific resource from the MCP server.
 
 A successful call returns a dict-like Lua table that contains the content of the resource. Otherwise, it returns `nil` and a string describing the error.
+
+The 3rd argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
+
+```lua
+function progress_cb(progress, total, message)
+  -- If you want to cancel this request, return a conditional false value and an optional string describing the reason
+  -- Otherwise, return `true` to continue with the request
+end
+```
 
 The content of the resource may have the following structure:
 
@@ -971,11 +1016,20 @@ The returned `tools` may have the following structure:
 
 ### client:call\_tool
 
-`syntax: res, err = client:call_tool(name, args[, timeout])`
+`syntax: res, err = client:call_tool(name, args[, timeout[, progress_cb]])`
 
 Call a specific tool in the MCP server.
 
 A successful call returns a dict-like Lua table that contains the result of the tool call. Otherwise, it returns `nil` and a string describing the error.
+
+The 4th argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
+
+```lua
+function progress_cb(progress, total, message)
+  -- If you want to cancel this request, return a conditional false value and an optional string describing the reason
+  -- Otherwise, return `true` to continue with the request
+end
+```
 
 The result of the tool calling may have the following structure:
 
