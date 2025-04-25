@@ -19,7 +19,7 @@ local function handle_message(self, msg)
   local reply = mcp.rpc.handle(msg, self.methods, function(rid, result, errobj)
     local cb = self.pending_requests[rid]
     if not cb then
-      ngx.log(ngx.ERR, "response: request id mismatch")
+      ngx.log(ngx.WARN, "response: request id mismatch")
       return
     end
     self.pending_requests[rid] = nil

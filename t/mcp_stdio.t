@@ -939,3 +939,5 @@ progress=0.25, total=1, message=resource_template
 progress=0.25, total=1, message=tool
 -1 Request cancelled {"reason":"test cancellation"}
 -32603 Internal errors {"errmsg":"-1 Request cancelled {\"reason\":\"test cancellation\"}"}
+--- no_error_log
+[error]
