@@ -37,6 +37,8 @@ In development.
   * [client:unsubscribe\_resource](#clientunsubscribe_resource)
   * [client:list\_tools](#clientlist_tools)
   * [client:call\_tool](#clientcall_tool)
+* [Known Issues](#known-issues)
+  * [Cancel request on server that uses stdio transport](#cancel-request-on-server-that-uses-stdio-transport)
 * [License](#license)
 
 ## Features
@@ -1049,6 +1051,12 @@ The result of the tool calling may have the following structure:
   }
 }
 ```
+
+## Known Issues
+
+### Cancel request on server that uses stdio transport
+
+It is currently not possible to cancel requests on servers that use stdio transport. This is because the server module of the stdio transport is implemented using the Lua I/O library, and the APIs in it are all blocking. Therefore, it is not possible to yield the execution of the current request handler and handle the cancellation notification.
 
 ## License
 
