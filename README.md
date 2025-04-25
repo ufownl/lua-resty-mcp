@@ -317,6 +317,17 @@ function callback(args, ctx)
   local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
+  local ok, err = ctx.push_progress(0.1, 1, "getting prompt")
+  -- The 3 arguments stand for "progress", "total", and "message"
+  -- "progress" is required and the other 2 are optional
+  if not ok then
+    if err == "cancelled" then
+      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+      return
+    end
+    error(err)
+  end
+  -- Continue interacting with the current session or other services
   if error_occurred then
     return nil, "an error occured"
   end
@@ -353,6 +364,17 @@ function callback(uri, ctx)
   local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
+  local ok, err = ctx.push_progress(0.1, 1, "reading resource")
+  -- The 3 arguments stand for "progress", "total", and "message"
+  -- "progress" is required and the other 2 are optional
+  if not ok then
+    if err == "cancelled" then
+      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+      return
+    end
+    error(err)
+  end
+  -- Continue interacting with the current session or other services
   if error_occurred then
     return nil, "an error occured"
   end
@@ -391,6 +413,17 @@ function callback(uri, vars, ctx)
   local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
+  local ok, err = ctx.push_progress(0.1, 1, "reading resource")
+  -- The 3 arguments stand for "progress", "total", and "message"
+  -- "progress" is required and the other 2 are optional
+  if not ok then
+    if err == "cancelled" then
+      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+      return
+    end
+    error(err)
+  end
+  -- Continue interacting with the current session or other services
   if resource_not_found then
     return false
   end
@@ -420,6 +453,17 @@ function callback(args, ctx)
   local meta_field = ctx._meta  -- `_meta` field of current request
   local current_session = ctx.session
   -- Interact with the current session or other services
+  local ok, err = ctx.push_progress(0.1, 1, "calling tool")
+  -- The 3 arguments stand for "progress", "total", and "message"
+  -- "progress" is required and the other 2 are optional
+  if not ok then
+    if err == "cancelled" then
+      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+      return
+    end
+    error(err)
+  end
+  -- Continue interacting with the current session or other services
   if error_occurred then
     return nil, "an error occured" or {
       -- multi-content error information
@@ -756,7 +800,20 @@ A successful call returns `true`. Otherwise, it returns `nil` and a string descr
 `sampling_callback` will be called when the MCP server requests sampling LLM, and it could be defined as follows:
 
 ```lua
-function sampling_callback(params)
+function sampling_callback(params, ctx)
+  local current_session = ctx.session
+  -- Interact with the current session or other services
+  local ok, err = ctx.push_progress(0.1, 1, "sampling")
+  -- The 3 arguments stand for "progress", "total", and "message"
+  -- "progress" is required and the other 2 are optional
+  if not ok then
+    if err == "cancelled" then
+      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+      return
+    end
+    error(err)
+  end
+  -- Continue interacting with the current session or other services
   if error_occurred then
     return nil, -1, "an error occured", opt_extra_err_info
   end
