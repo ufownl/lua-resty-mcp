@@ -253,11 +253,7 @@ function _MT.__index.get_prompt(self, name, args, timeout, progress_cb)
     return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
   end
   local req_opts = progress_cb and {progress_callback = progress_cb} or nil
-  local res, err = mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout), req_opts)
-  if not res then
-    return nil, err
-  end
-  return res
+  return mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout), req_opts)
 end
 
 function _MT.__index.list_resources(self, timeout)
@@ -279,11 +275,7 @@ function _MT.__index.read_resource(self, uri, timeout, progress_cb)
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
   local req_opts = progress_cb and {progress_callback = progress_cb} or nil
-  local res, err = mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout), req_opts)
-  if not res then
-    return nil, err
-  end
-  return res
+  return mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout), req_opts)
 end
 
 function _MT.__index.subscribe_resource(self, uri, cb, timeout)
@@ -349,11 +341,7 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
     return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
   end
   local req_opts = progress_cb and {progress_callback = progress_cb} or nil
-  local res, err = mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), req_opts)
-  if not res then
-    return nil, err
-  end
-  return res
+  return mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), req_opts)
 end
 
 function _M.new(transport, options)
