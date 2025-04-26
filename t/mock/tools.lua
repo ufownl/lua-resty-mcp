@@ -41,6 +41,14 @@ if not ok then
   error(err)
 end
 
+local ok, err = server:register(mcp.tool("disable_echo", function(args, ctx)
+  local ok, err = ctx.session:unregister_tool("echo")
+  if not ok then
+    return nil, err
+  end
+  return {}
+end, "Disables the echo tool."))
+
 server:run({
   capabilities = {
     prompts = false,

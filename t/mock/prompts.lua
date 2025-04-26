@@ -38,6 +38,14 @@ if not ok then
   error(err)
 end
 
+local ok, err = server:register(mcp.tool("disable_mock_error", function(args, ctx)
+  local ok, err = ctx.session:unregister_prompt("mock_error")
+  if not ok then
+    return nil, err
+  end
+  return {}
+end))
+
 server:run({
   capabilities = {
     resources = false,

@@ -186,6 +186,25 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local res, err = client:call_tool("disable_echo")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_tools == tools))
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
     client:shutdown()
   }
 }
@@ -197,6 +216,8 @@ add
 Adds two numbers.
 enable_echo
 Enables the echo tool.
+disable_echo
+Disables the echo tool.
 true
 nil
 text 3
@@ -207,6 +228,8 @@ add
 Adds two numbers.
 enable_echo
 Enables the echo tool.
+disable_echo
+Disables the echo tool.
 echo
 Echoes back the input.
 true
@@ -214,6 +237,16 @@ nil
 text MCP Tools v1.0_alpha say: Hello, world!
 true
 text tool (name: echo) had been registered
+true
+nil
+false
+true
+add
+Adds two numbers.
+enable_echo
+Enables the echo tool.
+disable_echo
+Disables the echo tool.
 --- no_error_log
 [error]
 
@@ -293,6 +326,25 @@ location = /t {
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local res, err = client:call_tool("disable_mock_error")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_prompts == prompts))
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      ngx.say(v.description)
+    end
     client:shutdown()
   }
 }
@@ -323,6 +375,14 @@ true
 -32603 Internal errors {"errmsg":"mock error"}
 true
 text prompt (name: mock_error) had been registered
+true
+nil
+false
+true
+simple_prompt
+A prompt without arguments.
+complex_prompt
+A prompt with arguments.
 --- no_error_log
 [error]
 
@@ -402,6 +462,7 @@ location = /t {
     if not templates then
       error(err)
     end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
       ngx.say(v.name)
@@ -420,6 +481,38 @@ location = /t {
       else
         ngx.say(err)
       end
+    end
+    local res, err = client:read_resource("mock://dynamic/hidden/foobar")
+    ngx.say(err)
+    local res, err = client:call_tool("enable_hidden_template")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    local res, err = client:read_resource("mock://dynamic/hidden/foobar")
+    if not res then
+      error(err)
+    end
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(tostring(v.mimeType))
+      ngx.say(tostring(v.text))
+      ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
+    end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
+    for i, v in ipairs(templates) do
+      ngx.say(v.uriTemplate)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
     end
     local res, err = client:call_tool("touch_resource", {uri = "mock://static/text"})
     if not res then
@@ -461,6 +554,52 @@ location = /t {
       for j, v in ipairs(res.content) do
         ngx.say(string.format("%s %s", v.type, v.text))
       end
+    end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
+    local res, err = client:call_tool("disable_hidden_template")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_resource_templates == templates))
+    for i, v in ipairs(templates) do
+      ngx.say(v.uriTemplate)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
+    end
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local res, err = client:call_tool("disable_hidden_resource")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    for i, v in ipairs(res.content) do
+      ngx.say(string.format("%s %s", v.type, v.text))
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    ngx.say(tostring(client.server.discovered_resources == resources))
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      ngx.say(v.name)
+      ngx.say(tostring(v.description))
+      ngx.say(tostring(v.mimeType))
     end
     client:shutdown()
   }
@@ -506,6 +645,7 @@ HiddenResource
 Hidden blob resource.
 nil
 true
+true
 mock://dynamic/text/{id}
 DynamicText
 Dynamic text resource.
@@ -523,6 +663,26 @@ application/octet-stream
 nil
 content of dynamic blob resource mock://dynamic/blob/123, id=123
 -32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
+-32002 Resource not found {"uri":"mock:\/\/dynamic\/hidden\/foobar"}
+nil
+mock://dynamic/hidden/foobar
+text/plain
+content of dynamic hidden resource mock://dynamic/hidden/foobar, id=foobar
+nil
+false
+true
+mock://dynamic/text/{id}
+DynamicText
+Dynamic text resource.
+text/plain
+mock://dynamic/blob/{id}
+DynamicBlob
+Dynamic blob resource.
+application/octet-stream
+mock://dynamic/hidden/{id}
+DynamicHidden
+Dynamic hidden resource.
+text/plain
 nil
 -32002 Resource not found {"uri":"mock:\/\/unknown"}
 sub 1: mock://static/text
@@ -534,6 +694,30 @@ nil
 sub 2: mock://dynamic/text/123
 nil
 nil
+true
+nil
+false
+true
+mock://dynamic/text/{id}
+DynamicText
+Dynamic text resource.
+text/plain
+mock://dynamic/blob/{id}
+DynamicBlob
+Dynamic blob resource.
+application/octet-stream
+true
+nil
+false
+true
+mock://static/text
+TextResource
+Static text resource.
+text/plain
+mock://static/blob
+BlobResource
+Static blob resource.
+application/octet-stream
 --- no_error_log
 [error]
 

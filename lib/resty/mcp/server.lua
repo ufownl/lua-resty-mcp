@@ -29,6 +29,9 @@ local function session(server, rid)
     unregister_resource = function(_, uri)
       return server:unregister_resource(uri, rrid)
     end,
+    unregister_resource_template = function(_, pattern)
+      return server:unregister_resource_template(pattern, rrid)
+    end,
     resource_updated = function(_, uri)
       return server:resource_updated(uri, rrid)
     end,
@@ -372,7 +375,7 @@ local function register_impl(self, component, category, key_field, rrid)
   return list_changed(self, category, rrid)
 end
 
-local function register_resource_template(self, resource_template)
+local function register_resource_template(self, resource_template, rrid)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if resource_template.uri_template.pattern == v.uri_template.pattern then
@@ -383,7 +386,7 @@ local function register_resource_template(self, resource_template)
   else
     self.available_resource_templates = {resource_template}
   end
-  return true
+  return list_changed(self, "resources", rrid)
 end
 
 local function unregister_impl(self, key, category, key_field, rrid)
@@ -417,7 +420,7 @@ function _MT.__index.register(self, component, rrid)
     return register_impl(self, component, "resources", "uri", rrid)
   end
   if mcp.resource_template.check(component) then
-    return register_resource_template(self, component)
+    return register_resource_template(self, component, rrid)
   end
   if mcp.tool.check(component) then
     return register_impl(self, component, "tools", "name", rrid)
@@ -433,12 +436,12 @@ function _MT.__index.unregister_resource(self, uri, rrid)
   return unregister_impl(self, uri, "resources", "uri", rrid)
 end
 
-function _MT.__index.unregister_resource_template(self, pattern)
+function _MT.__index.unregister_resource_template(self, pattern, rrid)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if pattern == v.uri_template.pattern then
         table.remove(self.available_resource_templates, i)
-        return true
+        return list_changed(self, "resources", rrid)
       end
     end
   end

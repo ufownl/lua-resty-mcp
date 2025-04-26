@@ -62,6 +62,38 @@ if not ok then
   error(err)
 end
 
+local ok, err = server:register(mcp.tool("disable_hidden_resource", function(args, ctx)
+  local ok, err = ctx.session:unregister_resource("mock://static/hidden")
+  if not ok then
+    return nil, err
+  end
+  return {}
+end, "Disable hidden resource."))
+
+local ok, err = server:register(mcp.tool("enable_hidden_template", function(args, ctx)
+  local ok, err = ctx.session:register(mcp.resource_template("mock://dynamic/hidden/{id}", "DynamicHidden", function(uri, vars)
+    if vars.id == "" then
+      return false
+    end
+    return true, string.format("content of dynamic hidden resource %s, id=%s", uri, vars.id)
+  end, "Dynamic hidden resource.", "text/plain"))
+  if not ok then
+    return nil, err
+  end
+  return {}
+end))
+if not ok then
+  error(err)
+end
+
+local ok, err = server:register(mcp.tool("disable_hidden_template", function(args, ctx)
+  local ok, err = ctx.session:unregister_resource_template("mock://dynamic/hidden/{id}")
+  if not ok then
+    return nil, err
+  end
+  return {}
+end))
+
 local ok, err = server:register(mcp.tool("touch_resource", function(args, ctx)
   local ok, err = ctx.session:resource_updated(args.uri)
   if not ok then

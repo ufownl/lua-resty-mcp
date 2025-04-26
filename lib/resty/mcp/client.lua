@@ -121,22 +121,28 @@ local function define_methods(self)
       self.subscribed_resources[params.uri](params.uri)
     end
   }
-  for i, v in ipairs({"prompts", "resources", "tools"}) do
-    methods[string.format("notifications/%s/list_changed", v)] = function(params)
-      local cap = self.server.capabilities[v]
+  local categories = {
+    prompts = {"discovered_prompts"},
+    resources = {"discovered_resources", "discovered_resource_templates"},
+    tools = {"discovered_tools"}
+  }
+  for k, v in pairs(categories) do
+    methods[string.format("notifications/%s/list_changed", k)] = function(params)
+      local cap = self.server.capabilities[k]
       if not cap or not cap.listChanged then
         return
       end
-      local key = "discovered_"..v
-      if self.server[key] then
-        local ok, err = mcp.utils.spin_until(function()
-          return type(self.server[key]) == "table" or not self.server[key]
-        end)
-        if not ok then
-          ngx.log(ngx.ERR, err)
-          return
+      for i, key in ipairs(v) do
+        if self.server[key] then
+          local ok, err = mcp.utils.spin_until(function()
+            return type(self.server[key]) == "table" or not self.server[key]
+          end)
+          if not ok then
+            ngx.log(ngx.ERR, err)
+            return
+          end
+          self.server[key] = nil
         end
-        self.server[key] = nil
       end
     end
   end
@@ -264,7 +270,28 @@ function _MT.__index.list_resource_templates(self, timeout)
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
-  return get_list(self, "resources/templates", timeout, "resourceTemplates")
+  if not self.server.capabilities.resources.listChanged then
+    return get_list(self, "resources/templates", timeout, "resourceTemplates")
+  end
+  repeat
+    if self.server.discovered_resource_templates then
+      local ok, err = mcp.utils.spin_until(function()
+        return type(self.server.discovered_resource_templates) == "table" or not self.server.discovered_resource_templates
+      end, timeout)
+      if not ok then
+        return nil, err
+      end
+    else
+      self.server.discovered_resource_templates = true
+      local list, err = get_list(self, "resources/templates", timeout, "resourceTemplates")
+      if not list then
+        self.server.discovered_resource_templates = nil
+        return nil, err
+      end
+      self.server.discovered_resource_templates = list
+    end
+  until self.server.discovered_resource_templates
+  return self.server.discovered_resource_templates
 end
 
 function _MT.__index.read_resource(self, uri, timeout, progress_cb)
