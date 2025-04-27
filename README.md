@@ -1040,7 +1040,9 @@ A successful call returns `true`. Otherwise, it returns `nil` and a string descr
 `callback` will be called when the MCP server triggers `notifications/resources/updated`, and it could be defined as follows:
 
 ```lua
-function updated_callback(uri)
+function updated_callback(uri, ctx)
+  local current_session = ctx.session
+  -- Interact with the current session or other services
   -- Read this resource from the MCP server to get the latest content
 end
 ```

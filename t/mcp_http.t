@@ -1233,8 +1233,8 @@ location = /t {
     if not sema then
       error(err)
     end
-    local ok, err = client:subscribe_resource("mock://discovered_roots", function(uri)
-      local res, err = client:read_resource("mock://discovered_roots")
+    local ok, err = client:subscribe_resource("mock://discovered_roots", function(uri, ctx)
+      local res, err = ctx.session:read_resource("mock://discovered_roots")
       if not res then
         error(err)
       end

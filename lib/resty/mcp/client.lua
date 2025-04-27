@@ -118,7 +118,7 @@ local function define_methods(self)
          not self.subscribed_resources or not self.subscribed_resources[params.uri] then
         return
       end
-      self.subscribed_resources[params.uri](params.uri)
+      self.subscribed_resources[params.uri](params.uri, {session = self})
     end
   }
   local categories = {
