@@ -359,7 +359,13 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize()
+    local ok, err = client:initialize({
+      event_handlers = {
+        ["tools/list_changed"] = function()
+          ngx.say("tools/list_changed")
+        end
+      }
+    })
     if not ok then
       error(err)
     end
@@ -452,6 +458,7 @@ true
 nil
 text 3
 -32602 Unknown tool {"name":"echo"}
+tools/list_changed
 nil
 false
 add
@@ -468,6 +475,7 @@ text MCP Tools v1.0_alpha say: Hello, world!
 true
 text tool (name: echo) had been registered
 true
+tools/list_changed
 nil
 false
 true
@@ -554,7 +562,13 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize()
+    local ok, err = client:initialize({
+      event_handlers = {
+        ["prompts/list_changed"] = function()
+          ngx.say("prompts/list_changed")
+        end
+      }
+    })
     if not ok then
       error(err)
     end
@@ -653,6 +667,7 @@ A prompt with arguments.
 user text This is a complex prompt with arguments: temperature=0.4, style=json
 assistant text Assistant reply: temperature=0.4, style=json
 -32602 Invalid prompt name {"name":"mock_error"}
+prompts/list_changed
 nil
 false
 simple_prompt
@@ -666,6 +681,7 @@ true
 true
 text prompt (name: mock_error) had been registered
 true
+prompts/list_changed
 nil
 false
 true
@@ -815,7 +831,13 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize()
+    local ok, err = client:initialize({
+      event_handlers = {
+        ["resources/list_changed"] = function()
+          ngx.say("resources/list_changed")
+        end
+      }
+    })
     if not ok then
       error(err)
     end
@@ -1041,6 +1063,7 @@ application/octet-stream
 nil
 Hello, world!
 -32002 Resource not found {"uri":"mock:\/\/static\/hidden"}
+resources/list_changed
 nil
 mock://static/hidden
 application/octet-stream
@@ -1079,6 +1102,7 @@ nil
 content of dynamic blob resource mock://dynamic/blob/123, id=123
 -32002 Resource not found {"uri":"mock:\/\/dynamic\/blob\/"}
 -32002 Resource not found {"uri":"mock:\/\/dynamic\/hidden\/foobar"}
+resources/list_changed
 nil
 mock://dynamic/hidden/foobar
 text/plain
@@ -1110,6 +1134,7 @@ sub 2: mock://dynamic/text/123
 nil
 nil
 true
+resources/list_changed
 nil
 false
 true
@@ -1122,6 +1147,7 @@ DynamicBlob
 Dynamic blob resource.
 application/octet-stream
 true
+resources/list_changed
 nil
 false
 true

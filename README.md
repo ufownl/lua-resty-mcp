@@ -838,7 +838,25 @@ Available options:
       model = "gemma3-4b",
       stopReason = "endTurn"
     }
-  end
+  end,
+
+  event_handlers = {
+    ["prompts/list_changed"] = function(params, ctx)
+      -- Will be called after `prompts/list_changed` notification (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
+    end,
+    ["resources/list_changed"] = function(params, ctx)
+      -- Will be called after `resources/list_changed` notification (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
+    end,
+    ["tools/list_changed"] = function(params, ctx)
+      -- Will be called after `tools/list_changed` notification (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
+    end
+  }
 }
 ```
 

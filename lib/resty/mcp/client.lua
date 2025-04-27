@@ -144,6 +144,10 @@ local function define_methods(self)
           self.server[key] = nil
         end
       end
+      local handler = self.event_handlers and self.event_handlers[k.."/list_changed"]
+      if handler then
+        handler(params, {session = self})
+      end
     end
   end
   return methods
@@ -219,6 +223,7 @@ function _MT.__index.initialize(self, options, timeout)
     info = res.serverInfo,
     instructions = res.instructions
   }
+  self.event_handlers = options and options.event_handlers
   local ok, err = mcp.session.send_notification(self, "initialized", {}, {get_sse = true})
   if not ok then
     self.conn:close()
