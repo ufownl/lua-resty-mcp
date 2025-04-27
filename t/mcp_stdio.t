@@ -1161,3 +1161,156 @@ progress=0.25, total=1, message=tool
 -32603 Internal errors {"errmsg":"-1 Request cancelled {\"reason\":\"test cancellation\"}"}
 --- no_error_log
 [error]
+
+
+=== TEST 12: batch replacement APIs
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "/usr/local/openresty/bin/resty -I lib t/mock/batch_replace.lua 2>> error.log"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize({
+      event_handlers = {
+        ["prompts/list_changed"] = function()
+          ngx.say("prompts/list_changed")
+        end,
+        ["resources/list_changed"] = function()
+          ngx.say("resources/list_changed")
+        end,
+        ["tools/list_changed"] = function()
+          ngx.say("tools/list_changed")
+        end
+      }
+    })
+    if not ok then
+      error(err)
+    end
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    ngx.say(#prompts)
+    local res, err = client:call_tool("batch_prompts")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local prompts, err = client:list_prompts()
+    if not prompts then
+      error(err)
+    end
+    for i, v in ipairs(prompts) do
+      ngx.say(v.name)
+      local res, err = client:get_prompt(v.name)
+      if not res then
+        error(err)
+      end
+      ngx.say(res.messages[1].content.text)
+    end
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    ngx.say(#resources)
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    ngx.say(#templates)
+    local res, err = client:call_tool("batch_resources")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local resources, err = client:list_resources()
+    if not resources then
+      error(err)
+    end
+    for i, v in ipairs(resources) do
+      ngx.say(v.uri)
+      local res, err = client:read_resource(v.uri)
+      if not res then
+        error(err)
+      end
+      ngx.say(res.contents[1].text)
+    end
+    local templates, err = client:list_resource_templates()
+    if not templates then
+      error(err)
+    end
+    for i, v in ipairs(templates) do
+      ngx.say(v.uriTemplate)
+      local res, err = client:read_resource(string.format("mock://batch/dynamic_%d/foobar", i))
+      if not res then
+        error(err)
+      end
+      ngx.say(res.contents[1].text)
+    end
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
+    end
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+    end
+    local res, err = client:call_tool("batch_tools")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local tools, err = client:list_tools()
+    if not tools then
+      error(err)
+    end
+    for i, v in ipairs(tools) do
+      ngx.say(v.name)
+      local res, err = client:call_tool(v.name)
+      if not res then
+        error(err)
+      end
+      ngx.say(res.content[1].text)
+    end
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+0
+prompts/list_changed
+nil
+batch_prompt_1
+content of batch_prompt_1
+batch_prompt_2
+content of batch_prompt_2
+0
+0
+resources/list_changed
+nil
+mock://batch/static_1
+batch_static_1
+mock://batch/static_2
+batch_static_2
+mock://batch/dynamic_1/{id}
+batch_dynamic_1: foobar
+mock://batch/dynamic_2/{id}
+batch_dynamic_2: foobar
+batch_prompts
+batch_resources
+batch_tools
+tools/list_changed
+nil
+batch_tool_1
+result of batch_tool_1
+batch_tool_2
+result of batch_tool_2
+--- no_error_log
+[error]

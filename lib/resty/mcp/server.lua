@@ -38,6 +38,15 @@ local function session(server, rid)
     unregister_tool = function(_, name)
       return server:unregister_tool(name, rrid)
     end,
+    replace_prompts = function(_, prompts)
+      return server:replace_prompts(prompts, rrid)
+    end,
+    replace_resources = function(_, resources, templates)
+      return server:replace_resources(resources, templates, rrid)
+    end,
+    replace_tools = function(_, tools)
+      return server:replace_tools(tools, rrid)
+    end,
     list_roots = function(_, timeout)
       return server:list_roots(timeout, rrid)
     end,
@@ -379,7 +388,7 @@ local function list_changed(self, category, rrid)
   return true
 end
 
-local function register_impl(self, component, category, key_field, rrid)
+local function register_impl(self, component, category, key_field)
   local prop = self["available_"..category]
   if prop then
     if prop.dict[component[key_field]] then
@@ -393,10 +402,10 @@ local function register_impl(self, component, category, key_field, rrid)
       dict = {[component[key_field]] = component}
     }
   end
-  return list_changed(self, category, rrid)
+  return true
 end
 
-local function register_resource_template(self, resource_template, rrid)
+local function register_resource_template(self, resource_template)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if resource_template.uri_template.pattern == v.uri_template.pattern then
@@ -407,10 +416,10 @@ local function register_resource_template(self, resource_template, rrid)
   else
     self.available_resource_templates = {resource_template}
   end
-  return list_changed(self, "resources", rrid)
+  return true
 end
 
-local function unregister_impl(self, key, category, key_field, rrid)
+local function unregister_impl(self, key, category, key_field)
   local prop = self["available_"..category]
   local component = prop and prop.dict[key]
   if not component then
@@ -423,7 +432,7 @@ local function unregister_impl(self, key, category, key_field, rrid)
       break
     end
   end
-  return list_changed(self, category, rrid)
+  return true
 end
 
 local _MT = {
@@ -435,26 +444,50 @@ local _MT = {
 
 function _MT.__index.register(self, component, rrid)
   if mcp.prompt.check(component) then
-    return register_impl(self, component, "prompts", "name", rrid)
+    local ok, err = register_impl(self, component, "prompts", "name")
+    if not ok then
+      return nil, err
+    end
+    return list_changed(self, "prompts", rrid)
   end
   if mcp.resource.check(component) then
-    return register_impl(self, component, "resources", "uri", rrid)
+    local ok, err = register_impl(self, component, "resources", "uri")
+    if not ok then
+      return nil, err
+    end
+    return list_changed(self, "resources", rrid)
   end
   if mcp.resource_template.check(component) then
-    return register_resource_template(self, component, rrid)
+    local ok, err = register_resource_template(self, component)
+    if not ok then
+      return nil, err
+    end
+    return list_changed(self, "resources", rrid)
   end
   if mcp.tool.check(component) then
-    return register_impl(self, component, "tools", "name", rrid)
+    local ok, err = register_impl(self, component, "tools", "name")
+    if not ok then
+      return nil, err
+    end
+    return list_changed(self, "tools", rrid)
   end
   error("unsupported component")
 end
 
 function _MT.__index.unregister_prompt(self, name, rrid)
-  return unregister_impl(self, name, "prompts", "name", rrid)
+  local ok, err = unregister_impl(self, name, "prompts", "name")
+  if not ok then
+    return nil, err
+  end
+  return list_changed(self, "prompts", rrid)
 end
 
 function _MT.__index.unregister_resource(self, uri, rrid)
-  return unregister_impl(self, uri, "resources", "uri", rrid)
+  local ok, err = unregister_impl(self, uri, "resources", "uri")
+  if not ok then
+    return nil, err
+  end
+  return list_changed(self, "resources", rrid)
 end
 
 function _MT.__index.unregister_resource_template(self, pattern, rrid)
@@ -483,7 +516,78 @@ function _MT.__index.resource_updated(self, uri, rrid)
 end
 
 function _MT.__index.unregister_tool(self, name, rrid)
-  return unregister_impl(self, name, "tools", "name", rrid)
+  local ok, err = unregister_impl(self, name, "tools", "name")
+  if not ok then
+    return nil, err
+  end
+  return list_changed(self, "tools", rrid)
+end
+
+function _MT.__index.replace_prompts(self, prompts, rrid)
+  if type(prompts) ~= "table" then
+    error("prompts MUST be a array-like table")
+  end
+  local original_prompts = self.available_prompts
+  self.available_prompts = nil
+  for i, v in ipairs(prompts) do
+    if mcp.prompt.check(v) then
+      local ok, err = register_impl(self, v, "prompts", "name")
+      if not ok then
+        self.available_prompts = original_prompts
+        return nil, err
+      end
+    end
+  end
+  return list_changed(self, "prompts", rrid)
+end
+
+function _MT.__index.replace_resources(self, resources, templates, rrid)
+  local original_resources = self.available_resources
+  if type(resources) == "table" then
+    self.available_resources = nil
+    for i, v in ipairs(resources) do
+      if mcp.resource.check(v) then
+        local ok, err = register_impl(self, v, "resources", "uri")
+        if not ok then
+          self.available_resources = original_resources
+          return nil, err
+        end
+      end
+    end
+  end
+  local original_templates = self.available_resource_templates
+  if type(templates) == "table" then
+    self.available_resource_templates = nil
+    for i, v in ipairs(templates) do
+      if mcp.resource_template.check(v) then
+        local ok, err = register_resource_template(self, v)
+        if not ok then
+          self.available_resources = original_resources
+          self.available_resource_templates = original_templates
+          return nil, err
+        end
+      end
+    end
+  end
+  return list_changed(self, "resources", rrid)
+end
+
+function _MT.__index.replace_tools(self, tools, rrid)
+  if type(tools) ~= "table" then
+    error("tools MUST be a array-like table")
+  end
+  local original_tools = self.available_tools
+  self.available_tools = nil
+  for i, v in ipairs(tools) do
+    if mcp.tool.check(v) then
+      local ok, err = register_impl(self, v, "tools", "name")
+      if not ok then
+        self.available_tools = original_tools
+        return nil, err
+      end
+    end
+  end
+  return list_changed(self, "tools", rrid)
 end
 
 function _MT.__index.list_roots(self, timeout, rrid)

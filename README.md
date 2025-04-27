@@ -17,6 +17,7 @@ In development.
   * [server:register](#serverregister)
   * [server:unregister\_\*](#serverunregister_)
   * [server:resource\_updated](#serverresource_updated)
+  * [server:replace\_\*](#serverreplace_)
   * [server:list\_roots](#serverlist_roots)
   * [server:create\_messages](#servercreate_message)
   * [server:wait\_background\_tasks](#serverwait_background_tasks)
@@ -530,13 +531,13 @@ The 5th argument `annos`, is optional additional tool information. It should be 
 
 ### server:unregister\_\*
 
-`syntax: ok, err = unregister_prompt(name)`
+`syntax: ok, err = server:unregister_prompt(name)`
 
-`syntax: ok, err = unregister_resource(uri)`
+`syntax: ok, err = server:unregister_resource(uri)`
 
-`syntax: ok, err = unregister_resource_template(pattern)`
+`syntax: ok, err = server:unregister_resource_template(pattern)`
 
-`syntax: ok, err = unregister_tool(name)`
+`syntax: ok, err = server:unregister_tool(name)`
 
 Unregister the corresponding component.
 
@@ -547,6 +548,18 @@ A successful call returns `true`. Otherwise, it returns `nil` and a string descr
 `syntax: ok, err = server:resource_updated(uri)`
 
 Trigger the resource updated event.
+
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+
+### server:replace\_\*
+
+`syntax: ok, err = server:replace_prompts(prompts)`
+
+`syntax: ok, err = server:replace_resources(resources, templates)`
+
+`syntax: ok, err = server:replace_tools(tools)`
+
+Replace the corresponding components.
 
 A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
 
