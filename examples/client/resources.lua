@@ -7,9 +7,11 @@ local client, err = mcp.client(mcp.transport.stdio, {
 if not client then
   error(err)
 end
-local ok, err = client:initialize(nil, function(params)
-  return "Mock sampling message!"
-end)
+local ok, err = client:initialize({
+  sampling_callback = function(params)
+    return "Mock sampling message!"
+  end
+})
 if not ok then
   error(err)
 end

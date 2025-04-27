@@ -201,13 +201,13 @@ local _MT = {
   }
 }
 
-function _MT.__index.initialize(self, roots, sampling_cb, timeout)
-  if type(roots) == "table" and #roots > 0 then
-    expose_roots_impl(self, roots)
+function _MT.__index.initialize(self, options, timeout)
+  if options and type(options.roots) == "table" and #options.roots > 0 then
+    expose_roots_impl(self, options.roots)
   end
-  self.sampling_callback = sampling_cb
+  self.sampling_callback = options and options.sampling_callback
   mcp.session.initialize(self, define_methods(self))
-  local capabilities = {roots = true, sampling = sampling_cb}
+  local capabilities = {roots = true, sampling = self.sampling_callback}
   local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
   if not res then
     self.conn:close()

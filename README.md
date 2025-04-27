@@ -673,11 +673,14 @@ local client, err = mcp.client(mcp.transport.stdio, {
 
 -- Initialize this session with roots (optional) and sampling callback (optional)
 local ok, err = client:initialize({
-  {path = "/path/to/project", name = "Project"}  -- Expose a directory named `Project` to server
-}, function(params)
-  -- Sampling callback
-  return "Mock sampling text."
-end)
+  roots = {
+    {path = "/path/to/project", name = "Project"}  -- Expose a directory named `Project` to server
+  },
+  sampling_callback = function(params)
+    -- Sampling callback
+    return "Mock sampling text."
+  end
+})
 
 -- Discover available prompts
 local prompts, err = client:list_prompts()
@@ -791,55 +794,55 @@ Available options:
 
 ### client:initialize
 
-`syntax: ok, err = client:initialize([roots[, sampling_callback[, timeout]]])`
+`syntax: ok, err = client:initialize([options[, timeout]])`
 
 Initialize the client session.
 
 A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
 
-`roots` is a list of directories that will be exposed to the server. Its structure is as follows:
+Available options:
 
 ```lua
 {
-  {path = "/path/to/first", name = "First Directory"},
-  {path = "/path/to/second"},
-  ...
+  -- List of directories that will be exposed to the server
+  roots = {
+    {path = "/path/to/first", name = "First Directory"},
+    {path = "/path/to/second"},
+    ...
+  },
+
+  -- This callback will be called when the MCP server requests sampling LLM
+  sampling_callback = function(params, ctx)
+    local current_session = ctx.session
+    -- Interact with the current session or other services
+    local ok, err = ctx.push_progress(0.1, 1, "sampling")
+    -- The 3 arguments stand for "progress", "total", and "message"
+    -- "progress" is required and the other 2 are optional
+    if not ok then
+      if err == "cancelled" then
+        -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+        return
+      end
+      error(err)
+    end
+    -- Continue interacting with the current session or other services
+    if error_occurred then
+      return nil, -1, "an error occured", opt_extra_err_info
+    end
+    return "Mock sampling text." or {
+      role = "assistant",
+      content = {
+        type = "text",
+        text = "Mock sampling text."
+      },
+      model = "gemma3-4b",
+      stopReason = "endTurn"
+    }
+  end
 }
 ```
 
-`sampling_callback` will be called when the MCP server requests sampling LLM, and it could be defined as follows:
-
-```lua
-function sampling_callback(params, ctx)
-  local current_session = ctx.session
-  -- Interact with the current session or other services
-  local ok, err = ctx.push_progress(0.1, 1, "sampling")
-  -- The 3 arguments stand for "progress", "total", and "message"
-  -- "progress" is required and the other 2 are optional
-  if not ok then
-    if err == "cancelled" then
-      -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
-      return
-    end
-    error(err)
-  end
-  -- Continue interacting with the current session or other services
-  if error_occurred then
-    return nil, -1, "an error occured", opt_extra_err_info
-  end
-  return "Mock sampling text." or {
-    role = "assistant",
-    content = {
-      type = "text",
-      text = "Mock sampling text."
-    },
-    model = "gemma3-4b",
-    stopReason = "endTurn"
-  }
-end
-```
-
-The callback's argument `params` may have the following structure:
+The sampling callback's argument `params` may have the following structure:
 
 ```lua
 {

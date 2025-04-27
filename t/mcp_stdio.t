@@ -736,8 +736,10 @@ location = /t {
       error(err)
     end
     local ok, err = client:initialize({
-      {path = "/path/to/foo/bar", name = "Foobar"},
-      {path = "/path/to/hello/world"}
+      roots = {
+        {path = "/path/to/foo/bar", name = "Foobar"},
+        {path = "/path/to/hello/world"}
+      }
     })
     if not ok then
       error(err)
@@ -838,9 +840,11 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize(nil, function(params)
-      return "Hey there! What's up?"
-    end)
+    local ok, err = client:initialize({
+      sampling_callback = function(params)
+        return "Hey there! What's up?"
+      end
+    })
     if not ok then
       error(err)
     end
@@ -893,16 +897,18 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize(nil, function(params)
-      return {
-        content = {
-          type = "image",
-          data = "SGV5LCBtYW4h",
-          mimeType = "image/jpeg"
-        },
-        model = "mock"
-      }
-    end)
+    local ok, err = client:initialize({
+      sampling_callback = function(params)
+        return {
+          content = {
+            type = "image",
+            data = "SGV5LCBtYW4h",
+            mimeType = "image/jpeg"
+          },
+          model = "mock"
+        }
+      end
+    })
     if not ok then
       error(err)
     end
@@ -955,15 +961,17 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize(nil, function(params, ctx)
-      for i, v in ipairs({0.25, 0.5, 1}) do
-        local ok, err = ctx.push_progress(v, 1, "sampling")
-        if not ok then
-          return
+    local ok, err = client:initialize({
+      sampling_callback = function(params, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "sampling")
+          if not ok then
+            return
+          end
         end
+        return "Hey there! What's up?"
       end
-      return "Hey there! What's up?"
-    end)
+    })
     if not ok then
       error(err)
     end
@@ -1073,15 +1081,17 @@ location = /t {
     if not client then
       error(err)
     end
-    local ok, err = client:initialize(nil, function(params, ctx)
-      for i, v in ipairs({0.25, 0.5, 1}) do
-        local ok, err = ctx.push_progress(v, 1, "sampling")
-        if not ok then
-          return
+    local ok, err = client:initialize({
+      sampling_callback = function(params, ctx)
+        for i, v in ipairs({0.25, 0.5, 1}) do
+          local ok, err = ctx.push_progress(v, 1, "sampling")
+          if not ok then
+            return
+          end
         end
+        return "Hey there! What's up?"
       end
-      return "Hey there! What's up?"
-    end)
+    })
     if not ok then
       error(err)
     end
