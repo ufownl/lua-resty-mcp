@@ -87,7 +87,7 @@ local function paginate(cursor, page_size, total_size)
   return i, math.min(i + page_size - 1, total_size)
 end
 
-local function define_methods(self, event_handlers)
+local function define_methods(self)
   local methods = {
     initialize = function(params, rid)
       if not rid then
@@ -106,7 +106,7 @@ local function define_methods(self, event_handlers)
     end,
     ["notifications/initialized"] = function(params)
       self.initialized = true
-      local handler = event_handlers and event_handlers.initialized
+      local handler = self.event_handlers and self.event_handlers.initialized
       if handler then
         handler(params, {session = self})
       end
@@ -125,7 +125,7 @@ local function define_methods(self, event_handlers)
         end
         self.client.discovered_roots = nil
       end
-      local handler = event_handlers and event_handlers["roots/list_changed"]
+      local handler = self.event_handlers and self.event_handlers["roots/list_changed"]
       if handler then
         handler(params, {session = self})
       end
@@ -241,7 +241,15 @@ local function define_methods(self, event_handlers)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
       end
+      local handler = self.event_handlers and self.event_handlers["resources/subscribe"]
+      local ctx = handler and {
+        session = session(self, rid),
+        _meta = params._meta
+      }
       if self.subscribed_resources and self.subscribed_resources[params.uri] then
+        if handler then
+          handler(params, ctx)
+        end
         return {}
       end
       local resource = self.available_resources and self.available_resources.dict[params.uri]
@@ -250,6 +258,9 @@ local function define_methods(self, event_handlers)
           self.subscribed_resources[params.uri] = true
         else
           self.subscribed_resources = {[params.uri] = true}
+        end
+        if handler then
+          handler(params, ctx)
         end
         return {}
       end
@@ -260,6 +271,9 @@ local function define_methods(self, event_handlers)
               self.subscribed_resources[params.uri] = true
             else
               self.subscribed_resources = {[params.uri] = true}
+            end
+            if handler then
+              handler(params, ctx)
             end
             return {}
           end
@@ -277,6 +291,13 @@ local function define_methods(self, event_handlers)
       end
       if self.subscribed_resources then
         self.subscribed_resources[params.uri] = nil
+      end
+      local handler = self.event_handlers and self.event_handlers["resources/unsubscribe"]
+      if handler then
+        handler(params, {
+          session = session(self, rid),
+          _meta = params._meta
+        })
       end
       return {}
     end or nil,
@@ -558,8 +579,9 @@ function _MT.__index.run(self, options)
     if type(options.instructions) == "string" then
       self.instructions = options.instructions
     end
+    self.event_handlers = options.event_handlers
   end
-  mcp.session.initialize(self, define_methods(self, options and options.event_handlers))
+  mcp.session.initialize(self, define_methods(self))
 end
 
 function _MT.__index.shutdown(self)

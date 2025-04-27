@@ -281,6 +281,16 @@ Available options:
       -- Will be called after `roots/list_changed` notification (optional)
       local current_session = ctx.session
       -- Interact with the current session or other services
+    end,
+    ["resources/subscribe"] = function(params, ctx)
+      -- Will be called after successfully subscribing to a resource (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
+    end,
+    ["resources/unsubscribe"] = function(params, ctx)
+      -- Will be called after successfully unsubscribing to a resource (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
     end
   }
 }
