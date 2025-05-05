@@ -689,7 +689,7 @@ function _MT.__index.log(self, level, data, logger, rrid)
   else
     ngx.log(llv, encoded_data)
   end
-  if self.initialized and self.capabilities.logging and self.log_level and llv <= self.log_level then
+  if self.capabilities.logging and self.log_level and llv <= self.log_level then
     return mcp.session.send_notification(self, "message", {level, data, logger}, rrid and rrid() or nil)
   end
   return true
