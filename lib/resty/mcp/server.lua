@@ -15,6 +15,8 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local cjson = require("cjson.safe")
+
 local function session(server, rid)
   local function rrid()
     return {related_request = rid}
@@ -52,6 +54,9 @@ local function session(server, rid)
     end,
     create_message = function(_, messages, max_tokens, options, timeout, progress_cb)
       return server:create_message(messages, max_tokens, options, timeout, progress_cb, rrid)
+    end,
+    log = function(_, level, data, logger)
+      return server:log(level, data, logger, rrid)
     end
   }, {
     __index = function(self, key)
@@ -95,6 +100,17 @@ local function paginate(cursor, page_size, total_size)
   end
   return i, math.min(i + page_size - 1, total_size)
 end
+
+local available_log_level = {
+  emergency = ngx.EMERG,
+  alert = ngx.ALERT,
+  critical = ngx.CRIT,
+  error = ngx.ERR,
+  warning = ngx.WARN,
+  notice = ngx.NOTICE,
+  info = ngx.INFO,
+  debug = ngx.DEBUG
+}
 
 local function define_methods(self)
   local methods = {
@@ -340,6 +356,17 @@ local function define_methods(self)
       end
       self.processing_requests[rid] = nil
       return result, code, message, data
+    end or nil,
+    ["logging/setLevel"] = self.capabilities.logging and function(params, rid)
+      if not rid then
+        return
+      end
+      local ok, err = mcp.validator.SetLevelRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      self.log_level = available_log_level[params.level]
+      return {}
     end or nil
   }
   local validator = {
@@ -642,8 +669,35 @@ function _MT.__index.create_message(self, messages, max_tokens, options, timeout
   return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), req_opts)
 end
 
+function _MT.__index.log(self, level, data, logger, rrid)
+  local llv = available_log_level[level]
+  if not llv then
+    return nil, "invalid log level"
+  end
+  if data == nil then
+    return nil, "data of log message MUST be set"
+  end
+  local encoded_data, err = cjson.encode(data)
+  if not encoded_data then
+    return nil, err
+  end
+  if logger and type(logger) ~= "string" then
+    return nil, "logger of log message MUST be a string"
+  end
+  if logger then
+    ngx.log(llv, string.format("%s: %s", logger, encoded_data))
+  else
+    ngx.log(llv, encoded_data)
+  end
+  if self.initialized and self.capabilities.logging and self.log_level and llv <= self.log_level then
+    return mcp.session.send_notification(self, "message", {level, data, logger}, rrid and rrid() or nil)
+  end
+  return true
+end
+
 function _MT.__index.run(self, options)
   self.capabilities = {
+    logging = {},
     prompts = {
       listChanged = true
     },

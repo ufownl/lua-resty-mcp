@@ -86,6 +86,15 @@ function _M.request.call_tool(name, args)
   }
 end
 
+function _M.request.set_log_level(level)
+  return {
+    msg = mcp.rpc.request("logging/setLevel", {level = level}),
+    validator = function(res)
+      return true
+    end
+  }
+end
+
 function _M.request.create_message(messages, max_tokens, options)
   return {
     msg = mcp.rpc.request("sampling/createMessage", {
@@ -127,6 +136,14 @@ function _M.notification.cancelled(rid, reason)
   return mcp.rpc.notification("notifications/cancelled", {
     requestId = rid,
     reason = reason
+  })
+end
+
+function _M.notification.message(level, data, logger)
+  return mcp.rpc.notification("notifications/message", {
+    level = level,
+    data = data,
+    logger = logger
   })
 end
 

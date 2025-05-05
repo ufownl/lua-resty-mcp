@@ -119,6 +119,17 @@ local function define_methods(self)
         return
       end
       self.subscribed_resources[params.uri](params.uri, {session = self})
+    end,
+    ["notifications/message"] = function(params)
+      local ok, err = mcp.validator.LoggingMessageNotification(params)
+      if not ok then
+        ngx.log(ngx.ERR, err)
+        return
+      end
+      local handler = self.event_handlers and self.event_handlers.message
+      if handler then
+        handler(params, {session = self})
+      end
     end
   }
   local categories = {
@@ -374,6 +385,16 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
   end
   local req_opts = progress_cb and {progress_callback = progress_cb} or nil
   return mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), req_opts)
+end
+
+function _MT.__index.set_log_level(self, level, timeout)
+  if type(level) ~= "string" then
+    error("log level MUST be a string.")
+  end
+  if not self.server.capabilities.logging then
+    return nil, string.format("%s v%s has no logging capability", self.server.info.name, self.server.info.version)
+  end
+  return mcp.session.send_request(self, "set_log_level", {level}, tonumber(timeout))
 end
 
 function _M.new(transport, options)

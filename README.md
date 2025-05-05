@@ -20,6 +20,7 @@ In development.
   * [server:replace\_\*](#serverreplace_)
   * [server:list\_roots](#serverlist_roots)
   * [server:create\_messages](#servercreate_message)
+  * [server:log](#serverlog)
   * [server:wait\_background\_tasks](#serverwait_background_tasks)
   * [server:shutdown](#servershutdown)
 * [Writing MCP Clients](#writing-mcp-clients)
@@ -38,6 +39,7 @@ In development.
   * [client:unsubscribe\_resource](#clientunsubscribe_resource)
   * [client:list\_tools](#clientlist_tools)
   * [client:call\_tool](#clientcall_tool)
+  * [client:set\_log\_level](#clientset_log_level)
 * [Known Issues](#known-issues)
   * [Cancel request on server that uses stdio transport](#cancel-request-on-server-that-uses-stdio-transport)
 * [License](#license)
@@ -58,8 +60,8 @@ In development.
     - [x] Pagination
     - [x] Progress
     - [x] Cancellation
+    - [x] Logging
     - [ ] Ping
-    - [ ] Logging
     - [ ] Completion
 
 ## Quickstart
@@ -657,6 +659,18 @@ end
 
 The returned message of this method is similar to the list elements passed in the `messages` argument, but has an additional `model` field containing the name of the model that generated the message, and an optional `stopReason` field containing the reason why sampling stopped, if known.
 
+### server:log
+
+`syntax: ok, err = server:log(level, data[, logger])`
+
+Send a log message to the client.
+
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+
+Available log levels: `"debug"`, `"info"`, `"notice"`, `"warning"`, `"error"`, `"critical"`, `"alert"`, `"emergency"`.
+
+The 2nd argument `data` could be any JSON serializable type, and the optional `logger` should be the name of the logger issuing this message.
+
 ### server:wait\_background\_tasks
 
 `syntax: ok, err = server:wait_background_tasks([timeout])`
@@ -866,6 +880,11 @@ Available options:
     end,
     ["tools/list_changed"] = function(params, ctx)
       -- Will be called after `tools/list_changed` notification (optional)
+      local current_session = ctx.session
+      -- Interact with the current session or other services
+    end,
+    message = function(params, ctx)
+      -- Will be called when a log message notification is received (optional)
       local current_session = ctx.session
       -- Interact with the current session or other services
     end
@@ -1154,6 +1173,16 @@ The result of the tool calling may have the following structure:
   }
 }
 ```
+
+### client:set\_log\_level
+
+`syntax: res, err = client:set_log_level(level[, timeout])`
+
+Configure the minimum log level.
+
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
+
+Available log levels: `"debug"`, `"info"`, `"notice"`, `"warning"`, `"error"`, `"critical"`, `"alert"`, `"emergency"`.
 
 ## Known Issues
 

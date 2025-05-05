@@ -96,6 +96,8 @@ location = /t {
     ngx.say(err)
     local _, err = client:call_tool("foobar")
     ngx.say(err)
+    local _, err = client:set_log_level("warning")
+    ngx.say(err)
     client:shutdown()
   }
 }
@@ -110,6 +112,7 @@ MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no tools capability
 MCP Handshake v1.0_alpha has no tools capability
+MCP Handshake v1.0_alpha has no logging capability
 --- no_error_log
 [error]
 
@@ -1312,5 +1315,69 @@ batch_tool_1
 result of batch_tool_1
 batch_tool_2
 result of batch_tool_2
+--- no_error_log
+[error]
+
+
+=== TEST 13: logging
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "/usr/local/openresty/bin/resty -I lib t/mock/logging.lua 2>> error.log"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize({
+      event_handlers = {
+        message = function(params)
+          ngx.say(string.format("[%s] %s %s", params.level, params.data, tostring(params.logger)))
+        end
+      }
+    })
+    if not ok then
+      error(err)
+    end
+    local res, err = client:call_tool("log_echo", {level = "error", data = "Foobar"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local res, err = client:set_log_level("warning")
+    if not res then
+      error(err)
+    end
+    local res, err = client:call_tool("log_echo", {level = "error", data = "Foobar"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local res, err = client:call_tool("log_echo", {level = "warning", data = "Hello, MCP!", logger = "mock"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    local res, err = client:call_tool("log_echo", {level = "notice", data = "Hello, MCP!", logger = "mock"})
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+nil
+[error] Foobar nil
+nil
+[warning] Hello, MCP! mock
+nil
+nil
 --- no_error_log
 [error]
