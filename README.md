@@ -321,7 +321,7 @@ Available context components:
 
 #### mcp.prompt
 
-`syntax: component = mcp.prompt(name, callback[, desc[, args]])
+`syntax: component = mcp.prompt(name, callback[, desc[, args]])`
 
 Create a prompt or prompt template.
 
