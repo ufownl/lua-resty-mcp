@@ -397,6 +397,10 @@ function _MT.__index.set_log_level(self, level, timeout)
   return mcp.session.send_request(self, "set_log_level", {level}, tonumber(timeout))
 end
 
+function _MT.__index.ping(self, timeout)
+  return mcp.session.send_request(self, "ping", {}, tonumber(timeout))
+end
+
 function _M.new(transport, options)
   local conn, err = transport.client(options)
   if not conn then

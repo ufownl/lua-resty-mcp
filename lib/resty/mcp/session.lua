@@ -216,6 +216,16 @@ function _M.initialize(self, methods)
     end
     self.processing_requests[params.requestId] = nil
   end
+  methods.ping = function(params, rid)
+    if not rid then
+      return
+    end
+    local ok, err = mcp.validator.PingRequest(params)
+    if not ok then
+      return nil, -32602, "Invalid params", {errmsg = err}
+    end
+    return {}
+  end
   self.methods = methods
   self.main_loop = ngx.thread.spawn(main_loop, self)
 end

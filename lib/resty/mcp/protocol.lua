@@ -95,6 +95,15 @@ function _M.request.set_log_level(level)
   }
 end
 
+function _M.request.ping()
+  return {
+    msg = mcp.rpc.request("ping"),
+    validator = function(res)
+      return true
+    end
+  }
+end
+
 function _M.request.create_message(messages, max_tokens, options)
   return {
     msg = mcp.rpc.request("sampling/createMessage", {

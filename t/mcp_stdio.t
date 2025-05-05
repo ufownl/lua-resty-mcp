@@ -1381,3 +1381,41 @@ nil
 nil
 --- no_error_log
 [error]
+
+
+=== TEST 14: ping
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "/usr/local/openresty/bin/resty -I lib t/mock/ping.lua 2>> error.log"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local ok, err = client:ping()
+    if not ok then
+      error(err)
+    end
+    local res, err = client:call_tool("ping")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+nil
+--- no_error_log
+[error]

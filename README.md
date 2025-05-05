@@ -671,6 +671,14 @@ Available log levels: `"debug"`, `"info"`, `"notice"`, `"warning"`, `"error"`, `
 
 The 2nd argument `data` could be any JSON serializable type, and the optional `logger` should be the name of the logger issuing this message.
 
+### server:ping
+
+`syntax: ok, err = server:ping([timeout])`
+
+Send a `ping` request to the client.
+
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
+
 ### server:wait\_background\_tasks
 
 `syntax: ok, err = server:wait_background_tasks([timeout])`
@@ -1183,6 +1191,14 @@ Configure the minimum log level.
 A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
 
 Available log levels: `"debug"`, `"info"`, `"notice"`, `"warning"`, `"error"`, `"critical"`, `"alert"`, `"emergency"`.
+
+### client:ping
+
+`syntax: ok, err = client:ping([timeout])`
+
+Send a `ping` request to the server.
+
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
 
 ## Known Issues
 

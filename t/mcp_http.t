@@ -2293,3 +2293,69 @@ nil
 [warning] Hello, MCP! mock
 nil
 nil
+
+
+=== TEST 13: ping
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.tool("ping", function(args, ctx)
+        local ok, err = ctx.session:ping()
+        if not ok then
+          return nil, err
+        end
+        return {}
+      end, "Send a ping request."))
+      if not ok then
+        error(err)
+      end
+
+      server:run({
+        capabilities = {
+          logging = false,
+          prompts = false,
+          resources = false,
+          completions = false
+        }
+      })
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local ok, err = client:ping()
+    if not ok then
+      error(err)
+    end
+    local res, err = client:call_tool("ping")
+    if not res then
+      error(err)
+    end
+    ngx.say(tostring(res.isError))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+nil
+--- no_error_log
+[error]

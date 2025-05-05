@@ -57,6 +57,9 @@ local function session(server, rid)
     end,
     log = function(_, level, data, logger)
       return server:log(level, data, logger, rrid)
+    end,
+    ping = function(_, timeout)
+      return server:ping(timeout, rrid)
     end
   }, {
     __index = function(self, key)
@@ -693,6 +696,10 @@ function _MT.__index.log(self, level, data, logger, rrid)
     return mcp.session.send_notification(self, "message", {level, data, logger}, rrid and rrid() or nil)
   end
   return true
+end
+
+function _MT.__index.ping(self, timeout, rrid)
+  return mcp.session.send_request(self, "ping", {}, tonumber(timeout), rrid and rrid() or nil)
 end
 
 function _MT.__index.run(self, options)
