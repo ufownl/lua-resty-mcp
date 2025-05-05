@@ -21,6 +21,7 @@ In development.
   * [server:list\_roots](#serverlist_roots)
   * [server:create\_messages](#servercreate_message)
   * [server:log](#serverlog)
+  * [server:ping](#serverping)
   * [server:wait\_background\_tasks](#serverwait_background_tasks)
   * [server:shutdown](#servershutdown)
 * [Writing MCP Clients](#writing-mcp-clients)
@@ -40,6 +41,7 @@ In development.
   * [client:list\_tools](#clientlist_tools)
   * [client:call\_tool](#clientcall_tool)
   * [client:set\_log\_level](#clientset_log_level)
+  * [client:ping](#clientping)
 * [Known Issues](#known-issues)
   * [Cancel request on server that uses stdio transport](#cancel-request-on-server-that-uses-stdio-transport)
 * [License](#license)
@@ -61,7 +63,7 @@ In development.
     - [x] Progress
     - [x] Cancellation
     - [x] Logging
-    - [ ] Ping
+    - [x] Ping
     - [ ] Completion
 
 ## Quickstart
