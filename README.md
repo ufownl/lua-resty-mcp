@@ -40,6 +40,8 @@ In development.
   * [client:unsubscribe\_resource](#clientunsubscribe_resource)
   * [client:list\_tools](#clientlist_tools)
   * [client:call\_tool](#clientcall_tool)
+  * [client:prompt\_complete](#clientprompt_complete)
+  * [client:resource\_complete](#clientresource_complete)
   * [client:set\_log\_level](#clientset_log_level)
   * [client:ping](#clientping)
 * [Known Issues](#known-issues)
@@ -51,20 +53,20 @@ In development.
 - [x] Transports
   - [x] stdio
   - [x] Streamable HTTP
-- [ ] Protocols
+- [x] Protocols
   - [x] Lifecycle
   - [x] Prompts
   - [x] Resources
   - [x] Tools
   - [x] Roots
   - [x] Sampling
-  - [ ] Utilities
+  - [x] Utilities
     - [x] Pagination
     - [x] Progress
     - [x] Cancellation
+    - [x] Completion
     - [x] Logging
     - [x] Ping
-    - [ ] Completion
 
 ## Quickstart
 
@@ -251,6 +253,8 @@ Available options:
   -- Explicitly set the field to `false` to disable the corresponding capability
   -- (optional)
   capabilities = {
+    completions = {},
+    logging = {},
     prompts = {
       listChanged = true
     },
@@ -323,6 +327,8 @@ Available context components:
 
 `syntax: component = mcp.prompt(name, callback[, desc[, args]])`
 
+`syntax: component = mcp.prompt(name, callback[, desc[, args]]):complete(callbacks)`
+
 Create a prompt or prompt template.
 
 `callback` will be called when a client requests to get this prompt, and it could be defined as follows:
@@ -362,6 +368,18 @@ The 4th argument of this method `args`, is used to declare the expected argument
     description = "What is this argument.",
     required = true
   },
+  ...
+}
+```
+
+The argument of `complete` method, `callbacks` should be a dict-like Lua table that contains the completion callbacks of corresponding prompt arguments. The keys of the items in this table should match the argument names declared in `args`. This table and the callbacks within it could be defined as follows:
+
+```lua
+{
+  arg_name = function(value)
+    -- Query the suggested values based on `value`
+    return values, total, has_more  -- All of these are optional
+  end,
   ...
 }
 ```
@@ -418,6 +436,8 @@ The 6th argument of this method `annos`, is optional annotations for the client.
 
 `syntax: component = mcp.resource_template(pattern, name, callback[, desc[, mime[, annos]]])`
 
+`syntax: component = mcp.resource_template(pattern, name, callback[, desc[, mime[, annos]]]):complete(callbacks)`
+
 Create a resource template.
 
 `callback` will be called when a client requests to read a resource that matches this template, and it could be defined as follows:
@@ -453,7 +473,9 @@ function callback(uri, vars, ctx)
 end
 ```
 
-The argument `annos` is the same as in `mcp.resource`.
+The argument `annos` is the same as in [mcp.resource](#mcpresource).
+
+The argument of `complete` method, `callbacks` should be a dict-like Lua table that contains the completion callbacks of corresponding resource template arguments. The keys of the items in this table should match the argument names defined in the URI pattern of this resource template. The structure of the table and the definition of the callbacks in it are the same as in [mcp.prompt](#mcpprompt).
 
 #### mcp.tool
 
@@ -1169,20 +1191,51 @@ The result of the tool calling may have the following structure:
 
 ```lua
 {
-  jsonrpc = "2.0",
-  id = 2,
-  result = {
-    content = {
-      {
-        type = "text",
-        text = "Current weather in New York:\nTemperature: 72°F\nConditions: Partly cloudy"
-      },
-      ...
+  content = {
+    {
+      type = "text",
+      text = "Current weather in New York:\nTemperature: 72°F\nConditions: Partly cloudy"
     },
-    isError = false
+    ...
+  },
+  isError = false
+}
+```
+
+### client:prompt\_complete
+
+`syntax: res, err = client:prompt_complete(name, arg_name, arg_value)`
+
+Request to complete an argument of a prompt.
+
+A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error.
+
+The result of the argument completion may have the following structure:
+
+```lua
+{
+  completion = {
+    -- Returned suggested values of this argument (max 100 items)
+    values = {...},
+
+    -- Number of total suggested values of this argument (optional)
+    total = 123,
+
+    -- Indicates whether there are more suggested values (optional)
+    hasMore = true
   }
 }
 ```
+
+### client:resource\_complete
+
+`syntax: res, err = client:resource_complete(uri, arg_name, arg_value)`
+
+Request to complete an argument of a resource template.
+
+A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error.
+
+The 1st argument `uri` should be the URI pattern of the resource template, and the structure of the result is the same as in [client:prompt\_complete](#clientprompt_complete).
 
 ### client:set\_log\_level
 

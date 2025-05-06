@@ -50,7 +50,8 @@ function _MT.__index.read(self, uri, ctx)
       v.uri = v.uri or uri
       v.mimeType = v.mimeType or self.mime
     end
-    local ok, err = mcp.validator.ReadResourceResult({contents = contents})
+    local result = {contents = setmetatable(contents, cjson.array_mt)}
+    local ok, err = mcp.validator.ReadResourceResult(result)
     if not ok then
       error(err)
     end
@@ -59,13 +60,24 @@ function _MT.__index.read(self, uri, ctx)
         error("resource MIME type mismatch")
       end
     end
-    return {contents = setmetatable(contents, cjson.array_mt)}
+    return result
   end
   return {
     contents = {
       {uri = uri, mimeType = self.mime, text = tostring(contents)}
     }
   }
+end
+
+function _MT.__index.complete(self, cbs)
+  if not cbs then
+    error("completion callbacks of resource template MUST be set.")
+  end
+  self.completion_callbacks = {}
+  for i, v in ipairs(self.uri_template.variables) do
+    self.completion_callbacks[v] = cbs[v]
+  end
+  return self
 end
 
 function _M.new(pattern, name, cb, desc, mime, annos)

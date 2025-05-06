@@ -81,16 +81,15 @@ function _MT.__index.get(self, args, ctx)
     return nil, -32603, "Internal errors", {errmsg = err}
   end
   if type(messages) == "table" then
-    local ok, err = mcp.validator.GetPromptResult({
-      messages = messages
-    })
-    if not ok then
-      error(err)
-    end
-    return {
+    local result = {
       description = self.description,
       messages = setmetatable(messages, cjson.array_mt)
     }
+    local ok, err = mcp.validator.GetPromptResult(result)
+    if not ok then
+      error(err)
+    end
+    return result
   end
   return {
     description = self.description,
@@ -98,6 +97,17 @@ function _MT.__index.get(self, args, ctx)
       {role = "user", content = {type = "text", text = tostring(messages)}}
     }
   }
+end
+
+function _MT.__index.complete(self, cbs)
+  if not cbs then
+    error("completion callbacks of prompt MUST be set.")
+  end
+  self.completion_callbacks = {}
+  for k, v in pairs(self.expected_args) do
+    self.completion_callbacks[k] = cbs[k]
+  end
+  return self
 end
 
 function _M.new(name, cb, desc, args)

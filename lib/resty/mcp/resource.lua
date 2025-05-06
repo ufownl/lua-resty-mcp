@@ -39,7 +39,8 @@ function _MT.__index.read(self, ctx)
       v.uri = v.uri or self.uri
       v.mimeType = v.mimeType or self.mime
     end
-    local ok, err = mcp.validator.ReadResourceResult({contents = contents})
+    local result = {contents = setmetatable(contents, cjson.array_mt)}
+    local ok, err = mcp.validator.ReadResourceResult(result)
     if not ok then
       error(err)
     end
@@ -48,7 +49,7 @@ function _MT.__index.read(self, ctx)
         error("resource MIME type mismatch")
       end
     end
-    return {contents = setmetatable(contents, cjson.array_mt)}
+    return result
   end
   return {
     contents = {

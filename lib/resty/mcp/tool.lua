@@ -40,17 +40,15 @@ function _MT.__call(self, args, ctx)
     is_error = true
   end
   if type(content) == "table" then
-    local ok, err = mcp.validator.CallToolResult({
-      content = content,
-      isError = is_error
-    })
-    if not ok then
-      error(err)
-    end
-    return {
+    local result = {
       content = setmetatable(content, cjson.array_mt),
       isError = is_error
     }
+    local ok, err = mcp.validator.CallToolResult(result)
+    if not ok then
+      error(err)
+    end
+    return result
   end
   return {
     content = {

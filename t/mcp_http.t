@@ -2359,3 +2359,179 @@ GET /t
 nil
 --- no_error_log
 [error]
+
+
+=== TEST 14: completion
+--- http_config
+lua_package_path 'lib/?.lua;;';
+lua_shared_dict mcp_message_bus 64m;
+--- config
+location = /mcp {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    mcp.transport.streamable_http.endpoint(function(mcp, server)
+      local ok, err = server:register(mcp.prompt("simple_prompt", function(args)
+        return "This is a simple prompt without arguments."
+      end, "A prompt without arguments."))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.prompt("complex_prompt", function(args)
+        return {
+          {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
+          {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
+        }
+      end, "A prompt with arguments.", {
+        temperature = {description = "Temperature setting.", required = true},
+        style = {description = "Output style."}
+      }):complete({
+        style = function(value)
+          local available_values = {"a01", "a02"}
+          for i = 0, 99 do
+            table.insert(available_values, string.format("b%02d", i))
+          end
+          local values = {}
+          for i, v in ipairs(available_values) do
+            if string.find(v, value, 1, true) then
+              table.insert(values, v)
+            end
+          end
+          return values, #values
+        end
+      }))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("mock://no_completion/text/{id}", "NoCompletion", function(uri, vars)
+        if vars.id == "" then
+          return false
+        end
+        return true, {
+          {text = string.format("content of no_completion text resource %s, id=%s", uri, vars.id)},
+        }
+      end, "No completion text resource.", "text/plain"))
+      if not ok then
+        error(err)
+      end
+
+      local ok, err = server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
+        if vars.id == "" then
+          return false
+        end
+        return true, {
+          {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
+        }
+      end, "Dynamic text resource.", "text/plain"):complete({
+        id = function(value)
+          local available_values = {"a01", "a02"}
+          for i = 0, 99 do
+            table.insert(available_values, string.format("b%02d", i))
+          end
+          local values = {}
+          for i, v in ipairs(available_values) do
+            if string.find(v, value, 1, true) then
+              table.insert(values, v)
+            end
+          end
+          return values, nil, #values > 2
+        end
+      }))
+      if not ok then
+        error(err)
+      end
+
+      server:run({
+        capabilities = {
+          logging = false,
+          tools = false
+        }
+      })
+    end)
+  }
+}
+
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.streamable_http, {
+      endpoint_url = "http://127.0.0.1:1984/mcp"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local res, err = client:prompt_complete("simple_prompt", "foo", "bar")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "temperature", "0")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "style", "")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "style", "a")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://no_completion/text/{id}", "id", "")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "a")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+0
+nil
+nil
+0
+nil
+nil
+100
+102
+true
+2
+2
+false
+0
+nil
+nil
+100
+nil
+true
+2
+nil
+nil
+--- no_error_log
+[error]

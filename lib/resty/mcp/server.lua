@@ -104,6 +104,37 @@ local function paginate(cursor, page_size, total_size)
   return i, math.min(i + page_size - 1, total_size)
 end
 
+local function complete(cbs, name, value)
+  local cb = cbs and cbs[name]
+  if not cb then
+    return {
+      completion = {
+        values = setmetatable({}, cjson.array_mt)
+      }
+    }
+  end
+  local values, total, has_more = cb(value)
+  if values then
+    while #values > 100 do
+      table.remove(values)
+    end
+  else
+    values = {}
+  end
+  local result = {
+    completion = {
+      values = setmetatable(values, cjson.array_mt),
+      total = tonumber(total),
+      hasMore = has_more and true or tonumber(total) and tonumber(total) > #values
+    }
+  }
+  local ok, err = mcp.validator.CompleteResult(result)
+  if not ok then
+    error(err)
+  end
+  return result
+end
+
 local available_log_level = {
   emergency = ngx.EMERG,
   alert = ngx.ALERT,
@@ -359,6 +390,33 @@ local function define_methods(self)
       end
       self.processing_requests[rid] = nil
       return result, code, message, data
+    end or nil,
+    ["completion/complete"] = self.capabilities.completions and function(params, rid)
+      if not rid then
+        return
+      end
+      local ok, err = mcp.validator.CompleteRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      if params.ref.type == "ref/prompt" then
+        local prompt = self.available_prompts and self.available_prompts.dict[params.ref.name]
+        if not prompt then
+          return nil, -32602, "Invalid prompt name", {name = params.ref.name}
+        end
+        return complete(prompt.completion_callbacks, params.argument.name, params.argument.value)
+      elseif params.ref.type == "ref/resource" then
+        if self.available_resource_templates then
+          for i, resource_template in ipairs(self.available_resource_templates) do
+            if resource_template.uri_template.pattern == params.ref.uri then
+              return complete(resource_template.completion_callbacks, params.argument.name, params.argument.value)
+            end
+          end
+        end
+        return nil, -32002, "Resource not found", {uri = params.uri}
+      else
+        return nil, -32602, "Invalid params", {errmsg = string.format("unsupported reference type: %s", params.ref.type)}
+      end
     end or nil,
     ["logging/setLevel"] = self.capabilities.logging and function(params, rid)
       if not rid then
@@ -704,6 +762,7 @@ end
 
 function _MT.__index.run(self, options)
   self.capabilities = {
+    completions = {},
     logging = {},
     prompts = {
       listChanged = true

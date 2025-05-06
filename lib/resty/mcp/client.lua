@@ -387,6 +387,38 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
   return mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), req_opts)
 end
 
+function _MT.__index.prompt_complete(self, name, arg_name, arg_value, timeout)
+  if type(name) ~= "string" then
+    error("prompt name MUST be a string.")
+  end
+  if type(arg_name) ~= "string" then
+    error("argument name MUST be a string.")
+  end
+  if type(arg_value) ~= "string" then
+    error("argument value MUST be a string.")
+  end
+  if not self.server.capabilities.completions then
+    return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
+  end
+  return mcp.session.send_request(self, "prompt_complete", {name, arg_name, arg_value}, tonumber(timeout))
+end
+
+function _MT.__index.resource_complete(self, uri, arg_name, arg_value, timeout)
+  if type(uri) ~= "string" then
+    error("resource URI MUST be a string.")
+  end
+  if type(arg_name) ~= "string" then
+    error("argument name MUST be a string.")
+  end
+  if type(arg_value) ~= "string" then
+    error("argument value MUST be a string.")
+  end
+  if not self.server.capabilities.completions then
+    return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
+  end
+  return mcp.session.send_request(self, "resource_complete", {uri, arg_name, arg_value}, tonumber(timeout))
+end
+
 function _MT.__index.set_log_level(self, level, timeout)
   if type(level) ~= "string" then
     error("log level MUST be a string.")

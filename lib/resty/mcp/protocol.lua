@@ -86,6 +86,38 @@ function _M.request.call_tool(name, args)
   }
 end
 
+function _M.request.prompt_complete(name, arg_name, arg_value)
+  return {
+    msg = mcp.rpc.request("completion/complete", {
+      ref = {
+        type = "ref/prompt",
+        name = name
+      },
+      argument = {
+        name = arg_name,
+        value = arg_value
+      }
+    }),
+    validator = mcp.validator.CompleteResult
+  }
+end
+
+function _M.request.resource_complete(uri, arg_name, arg_value)
+  return {
+    msg = mcp.rpc.request("completion/complete", {
+      ref = {
+        type = "ref/resource",
+        uri = uri
+      },
+      argument = {
+        name = arg_name,
+        value = arg_value
+      }
+    }),
+    validator = mcp.validator.CompleteResult
+  }
+end
+
 function _M.request.set_log_level(level)
   return {
     msg = mcp.rpc.request("logging/setLevel", {level = level}),

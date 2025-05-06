@@ -98,6 +98,10 @@ location = /t {
     ngx.say(err)
     local _, err = client:set_log_level("warning")
     ngx.say(err)
+    local _, err = client:prompt_complete("foobar", "foo", "bar")
+    ngx.say(err)
+    local _, err = client:resource_complete("mock://foobar/{id}", "id", "foo")
+    ngx.say(err)
     client:shutdown()
   }
 }
@@ -113,6 +117,8 @@ MCP Handshake v1.0_alpha has no resources capability
 MCP Handshake v1.0_alpha has no tools capability
 MCP Handshake v1.0_alpha has no tools capability
 MCP Handshake v1.0_alpha has no logging capability
+MCP Handshake v1.0_alpha has no completions capability
+MCP Handshake v1.0_alpha has no completions capability
 --- no_error_log
 [error]
 
@@ -1416,6 +1422,95 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+nil
+--- no_error_log
+[error]
+
+
+=== TEST 15: completion
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client, err = mcp.client(mcp.transport.stdio, {
+      command = "/usr/local/openresty/bin/resty -I lib t/mock/completion.lua 2>> error.log"
+    })
+    if not client then
+      error(err)
+    end
+    local ok, err = client:initialize()
+    if not ok then
+      error(err)
+    end
+    local res, err = client:prompt_complete("simple_prompt", "foo", "bar")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "temperature", "0")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "style", "")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:prompt_complete("complex_prompt", "style", "a")
+    if not res then
+      error(err)
+    end
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://no_completion/text/{id}", "id", "")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "a")
+    ngx.say(#res.completion.values)
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+0
+nil
+nil
+0
+nil
+nil
+100
+102
+true
+2
+2
+false
+0
+nil
+nil
+100
+nil
+true
+2
+nil
 nil
 --- no_error_log
 [error]
