@@ -47,16 +47,15 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Start Redis
+    - name: Start Redis on Ubuntu
       if: ${{ matrix.os == 'ubuntu-latest' }}
       uses: supercharge/redis-github-action@1.8.0
       with:
         redis-version: 5
 
-    - name: Run tests on Ubuntu
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: TEST_NGINX_BINARY=/usr/local/openresty/bin/openresty prove -r t/ || ( cat error.log && exit 1 )
-
-    - name: Run tests on macOS
+    - name: Install and start Redis on macOS
       if: ${{ matrix.os == 'macos-latest' }}
-      run: ( find t/ -name "*.t" ! -name "mcp_redis.t" | TEST_NGINX_BINARY=/usr/local/openresty/bin/openresty xargs prove ) || ( cat error.log && exit 1 )
+      run: brew install redis@6.2 && brew services start redis@6.2
+
+    - name: Run tests
+      run: TEST_NGINX_BINARY=/usr/local/openresty/bin/openresty prove -r t/ || ( cat error.log && exit 1 )
