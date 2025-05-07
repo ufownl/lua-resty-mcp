@@ -173,19 +173,30 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 {
   -- Configure the message bus of this endpoint
   message_bus = {
-    -- Type of the message bus, currently only "builtin" is available
+    -- Type of the message bus, available types: "builtin", "redis"
     -- It's implemented using the shared memory zone of OpenResty
     type = "builtin",
 
-    -- Options for "builtin" message bus
-    shm_zone = "mcp_message_bus",  -- name of the shared memory zone
     mark_ttl = 10,  -- TTL of the session mark (seconds)
     cache_ttl = 90,  -- TTL of the cached events (seconds)
 
-    -- Options for spin waiting
+    -- Options for "builtin" message bus
+    shm_zone = "mcp_message_bus",  -- name of the shared memory zone
+    -- Spin waiting arguments for "builtin" message bus
     step = 0.001,
     ratio = 2,
-    max_step = 0.5
+    max_step = 0.5,
+
+    -- Options for "redis" message bus
+    redis = {
+      host = "127.0.0.1",  -- Host of the Redis server
+      port = 6379,  -- Port of the Redis server
+      db = 0,  -- Index of the Redis logical database
+      -- Options for Redis connections
+      options = {
+        ...
+      }
+    }
   },
 
   -- Whether to enable the resumability and redelivery mechanism
@@ -196,8 +207,11 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 }
 ```
 
+> [!NOTE]
+> Available options for Redis connections can be viewed [here](https://github.com/openresty/lua-resty-redis?tab=readme-ov-file#connect).
+
 > [!TIP]
-> It is recommended to use different shared memory zones for different endpoints.
+> It is recommended to use different shared memory zones or Redis logical databases for different endpoints.
 
 A simple echo demo server configuration:
 

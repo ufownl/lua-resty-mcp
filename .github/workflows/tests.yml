@@ -47,5 +47,10 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Start Redis
+      uses: supercharge/redis-github-action@1.8.0
+      with:
+        redis-version: 5
+
     - name: Run tests
       run: TEST_NGINX_BINARY=/usr/local/openresty/bin/openresty prove -r t/ || ( cat error.log && exit 1 )
