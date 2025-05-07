@@ -182,10 +182,12 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 
     -- Options for "builtin" message bus
     shm_zone = "mcp_message_bus",  -- name of the shared memory zone
-    -- Spin waiting arguments for "builtin" message bus
-    step = 0.001,
-    ratio = 2,
-    max_step = 0.5,
+    spin_opts = {
+      -- Spin waiting arguments for "builtin" message bus
+      step = 0.001,
+      ratio = 2,
+      max_step = 0.5
+    },
 
     -- Options for "redis" message bus
     redis = {

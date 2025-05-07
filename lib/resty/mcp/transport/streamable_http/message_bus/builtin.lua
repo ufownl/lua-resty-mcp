@@ -15,11 +15,7 @@ local function pop_sync(self, pop_impl, timeout)
   local ok, spin_err = mcp.utils.spin_until(function()
     val, err = pop_impl()
     return val or err
-  end, timeout, {
-    step = self.step,
-    ratio = self.ratio,
-    max_step = self.max_step
-  })
+  end, timeout, self.spin_opts)
   return val, spin_err or err
 end
 
@@ -236,9 +232,11 @@ function _M.new(options)
     shm_dict = shm_dict,
     mark_ttl = mark_ttl,
     cache_ttl = cache_ttl,
-    step = options and tonumber(options.step),
-    ratio = options and tonumber(options.ratio),
-    max_step = options and tonumber(options.max_step)
+    spin_opts = options and options.spin_opts and {
+      step = tonumber(options.spin_opts.step),
+      ratio = tonumber(options.spin_opts.ratio),
+      max_step = tonumber(options.spin_opts.max_step)
+    }
   }, _MT)
 end
 
