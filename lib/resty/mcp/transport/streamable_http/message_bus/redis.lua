@@ -21,6 +21,17 @@ local function redis_conn(self)
   if not ok then
     return nil, err
   end
+  if self.redis_cfg.password then
+    local res, err = conn:auth(self.redis_cfg.password)
+    if res ~= "OK" then
+      if err then
+        conn:close()
+      else
+        conn:set_keepalive()
+      end
+      return nil, err
+    end
+  end
   if self.redis_cfg.db then
     local res, err = conn:select(self.redis_cfg.db)
     if res ~= "OK" then
@@ -394,6 +405,7 @@ function _M.new(options)
     redis_cfg = options and options.redis and {
       host = options.redis.host or "127.0.0.1",
       port = tonumber(options.redis.port) or 6379,
+      password = options.redis.password,
       db = tonumber(options.redis.db),
       options = options.redis.options
     } or {
