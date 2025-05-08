@@ -199,7 +199,9 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
       options = {
         ...
       }
-    }
+    },
+    -- The maximum number of events that can be cached for replay
+    event_capacity = 1024
   },
 
   -- Whether to enable the resumability and redelivery mechanism

@@ -286,9 +286,9 @@ local function do_GET(message_bus, session_id, options)
   if options.enable_resumability then
     local last_event = tonumber(ngx.var.http_last_event_id)
     if last_event then
-      local events, err = message_bus:replay_events(session_id, last_event)
+      local events, evs = message_bus:replay_events(session_id, last_event)
       if not events then
-        ngx.log(ngx.ERR, err)
+        ngx.log(ngx.ERR, evs)
         ngx.exit(ngx.ERROR)
       end
       if #events > 0 then
@@ -301,7 +301,7 @@ local function do_GET(message_bus, session_id, options)
           ngx.exit(ngx.ERROR)
         end
       end
-      stream = err
+      stream = evs
       if not stream or string.sub(stream, 1, 2) ~= "G:" then
         ngx.exit(ngx.OK)
       end

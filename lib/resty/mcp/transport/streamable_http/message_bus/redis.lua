@@ -80,22 +80,21 @@ function _MT.__index.del_session(self, sid)
     ngx.log(ngx.ERR, "redis: ", err)
     return
   end
-  local keys = {"sess_mk#"..sid, "sess_mq#"..sid}
-  for i, pattern in ipairs({string.format("chan_mq#%s@*", sid), string.format("sess_ce#%s@*", sid)}) do
-    local cursor = "0"
-    repeat
-      local res, err = conn:scan(cursor, "MATCH", pattern)
-      if not res then
-        ngx.log(ngx.ERR, "redis: ", err)
-        conn:close()
-        return
-      end
-      cursor = res[1]
-      for j, v in ipairs(res[2]) do
-        table.insert(keys, v)
-      end
-    until cursor == "0"
-  end
+  local keys = {"sess_mk#"..sid, "sess_mq#"..sid, "sess_ce#"..sid}
+  local pattern = string.format("chan_mq#%s@*", sid)
+  local cursor = "0"
+  repeat
+    local res, err = conn:scan(cursor, "MATCH", pattern)
+    if not res then
+      ngx.log(ngx.ERR, "redis: ", err)
+      conn:close()
+      return
+    end
+    cursor = res[1]
+    for j, v in ipairs(res[2]) do
+      table.insert(keys, v)
+    end
+  until cursor == "0"
   local res, err = conn:del(unpack(keys))
   if not res then
     ngx.log(ngx.ERR, "redis: ", err)
@@ -321,16 +320,21 @@ function _MT.__index.cache_event(self, sid, stream, data)
     conn:set_keepalive()
     return nil, "not found"
   end
-  local key = string.format("sess_ce#%s@%u", sid, eid)
-  local val = string.format("%s\n%s", stream, data)
-  local res, err = conn:set(key, val, "NX", "EX", self.cache_ttl)
-  if res ~= "OK" then
-    if err then
-      conn:close()
-      return nil, err
-    end
-    conn:set_keepalive()
-    return nil, "duplicate event ID"
+  local cek = "sess_ce#"..sid
+  local res, err = conn:rpush(cek, string.format("%u\n%s\n%s", eid, stream, data))
+  if not res then
+    conn:close()
+    return nil, err
+  end
+  conn:init_pipeline(2)
+  if res > self.event_capacity then
+    conn:lpop(cek)
+  end
+  conn:expire(cek, self.cache_ttl)
+  local res, err = conn:commit_pipeline()
+  if not res then
+    conn:close()
+    return nil, err
   end
   conn:set_keepalive()
   return eid
@@ -356,59 +360,37 @@ function _MT.__index.replay_events(self, sid, last_event)
     conn:set_keepalive()
     return nil, "not found"
   end
-  local events = {}
-  local prefix = string.format("sess_ce#%s@", sid)
-  local evt, err = conn:get(prefix..last_event)
-  if err then
+  local res, err = conn:lrange("sess_ce#"..sid, 0, -1)
+  if not res then
     conn:close()
     return nil, err
   end
-  if evt == ngx.null then
-    conn:set_keepalive()
-    return events
-  end
-  local n = string.find(evt, "\n", 1, true)
-  if not n then
-    conn:set_keepalive()
-    return events
-  end
-  local eid_filter = {}
-  local stream = string.sub(evt, 1, n - 1)
-  local pattern = prefix.."*"
-  local cursor = "0"
-  repeat
-    local res, err = conn:scan(cursor, "MATCH", pattern)
-    if not res then
-      conn:close()
-      return nil, err
-    end
-    cursor = res[1]
-    for i, k in ipairs(res[2]) do
-      local eid = tonumber(string.sub(k, #prefix + 1))
-      if eid and eid > tonumber(last_event) and not eid_filter[eid] then
-        eid_filter[eid] = true
-        local evt, err = conn:get(k)
-        if evt and evt ~= ngx.null then
-          local n = string.find(evt, "\n", 1, true)
-          if n then
-            if string.sub(evt, 1, n - 1) == stream then
+  conn:set_keepalive()
+  local events = {}
+  local stream
+  for i, v in ipairs(res) do
+    local n1 = string.find(v, "\n", 1, true)
+    if n1 then
+      local n2 = string.find(v, "\n", n1 + 1, true)
+      if n2 then
+        local eid = tonumber(string.sub(v, 1, n1 - 1))
+        if eid then
+          if stream then
+            if string.sub(v, n1 + 1, n2 - 1) == stream then
               table.insert(events, {
-                data = string.sub(evt, n + 1),
+                data = string.sub(v, n2 + 1),
                 id = eid
               })
             end
+          elseif eid == tonumber(last_event) then
+            stream = string.sub(v, n1 + 1, n2 - 1)
+          elseif eid > tonumber(last_event) then
+            break
           end
-        elseif err then
-          conn:close()
-          return nil, err
         end
       end
     end
-  until cursor == "0"
-  conn:set_keepalive()
-  table.sort(events, function(a, b)
-    return a.id < b.id
-  end)
+  end
   return events, stream
 end
 
@@ -420,6 +402,10 @@ function _M.new(options)
   local cache_ttl = options and tonumber(options.cache_ttl) or 90
   if cache_ttl <= 0 then
     error("cache TTL MUST be a positive number")
+  end
+  local event_capacity = options and tonumber(options.event_capacity) or 1024
+  if event_capacity <= 0 then
+    error("event capacity MUST be a positive integer")
   end
   return setmetatable({
     redis_cfg = options and options.redis and {
@@ -433,7 +419,8 @@ function _M.new(options)
       port = 6379
     },
     mark_ttl = mark_ttl,
-    cache_ttl = cache_ttl
+    cache_ttl = cache_ttl,
+    event_capacity = event_capacity
   }, _MT)
 end
 
