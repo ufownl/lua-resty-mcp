@@ -4,7 +4,7 @@
 
 ## Status
 
-In development.
+Production ready.
 
 ## Table of Contents
 
@@ -193,6 +193,7 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
     redis = {
       host = "127.0.0.1",  -- Host of the Redis server
       port = 6379,  -- Port of the Redis server
+      password = "foobared",  -- Password of the Redis server
       db = 0,  -- Index of the Redis logical database
       -- Options for Redis connections
       options = {
@@ -222,7 +223,8 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 > Available options for Redis connections can be viewed [here](https://github.com/openresty/lua-resty-redis?tab=readme-ov-file#connect).
 
 > [!TIP]
-> It is recommended to use different shared memory zones or Redis logical databases for different endpoints.
+> 1. It is recommended to use different shared memory zones or Redis logical databases for different endpoints;
+> 2. Hard-coding the Redis password is not secure, it is recommended to pass it through environment variables.
 
 A simple echo demo server configuration:
 
