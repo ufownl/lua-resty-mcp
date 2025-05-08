@@ -73,7 +73,13 @@ function _MT.__index.push_smsg(self, sid, msg)
   if not val then
     return nil, err or "not found"
   end
-  return self.shm_dict:rpush("sess_mq#"..sid, msg)
+  local mqk = "sess_mq#"..sid
+  local res, err = self.shm_dict:rpush(mqk, msg)
+  if not res then
+    return nil, err
+  end
+  self.shm_dict:expire(mqk, self.mark_ttl)
+  return true
 end
 
 function _MT.__index.pop_smsg(self, sid, timeout)
@@ -85,7 +91,12 @@ function _MT.__index.pop_smsg(self, sid, timeout)
     if not ok then
       return nil, err
     end
-    local val, err = self.shm_dict:lpop("sess_mq#"..sid)
+    local mqk = "sess_mq#"..sid
+    local ok, err = self.shm_dict:expire(mqk, self.mark_ttl)
+    if not ok then
+      return nil, err ~= "not found" and err or nil
+    end
+    local val, err = self.shm_dict:lpop(mqk)
     if val then
       return val
     end
@@ -105,7 +116,13 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
   if not data then
     error(err)
   end
-  return self.shm_dict:rpush(string.format("chan_mq#%s@%s", sid, chk), data)
+  local mqk = string.format("chan_mq#%s@%s", sid, chk)
+  local res, err = self.shm_dict:rpush(mqk, data)
+  if not res then
+    return nil, err
+  end
+  self.shm_dict:expire(mqk, self.cache_ttl)
+  return true
 end
 
 function _MT.__index.pop_cmsgs(self, sid, chks, timeout)

@@ -178,7 +178,7 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
     type = "builtin",
 
     mark_ttl = 10,  -- TTL of the session mark (seconds)
-    cache_ttl = 90,  -- TTL of the cached events (seconds)
+    cache_ttl = 90,  -- TTL of the cached messages (seconds)
 
     -- Options for "builtin" message bus
     shm_zone = "mcp_message_bus",  -- name of the shared memory zone

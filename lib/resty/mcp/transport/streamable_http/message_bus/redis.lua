@@ -142,13 +142,19 @@ function _MT.__index.push_smsg(self, sid, msg)
     conn:set_keepalive()
     return nil, "not found"
   end
-  local res, err = conn:rpush("sess_mq#"..sid, msg)
+  local mqk = "sess_mq#"..sid
+  local res, err = conn:rpush(mqk, msg)
+  if not res then
+    conn:close()
+    return nil, err
+  end
+  local res, err = conn:expire(mqk, self.mark_ttl)
   if not res then
     conn:close()
     return nil, err
   end
   conn:set_keepalive()
-  return res
+  return true
 end
 
 function _MT.__index.pop_smsg(self, sid, timeout)
@@ -171,7 +177,13 @@ function _MT.__index.pop_smsg(self, sid, timeout)
       conn:set_keepalive()
       return nil, "not found"
     end
-    local res, err = conn:blpop("sess_mq#"..sid, 1)
+    local mqk = "sess_mq#"..sid
+    local res, err = conn:expire(mqk, self.mark_ttl)
+    if not res then
+      conn:close()
+      return nil, err
+    end
+    local res, err = conn:blpop(mqk, 1)
     if not res then
       conn:close()
       return nil, err
@@ -201,13 +213,19 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
   if not conn then
     return nil, err
   end
-  local res, err = conn:rpush(string.format("chan_mq#%s@%s", sid, chk), data)
+  local mqk = string.format("chan_mq#%s@%s", sid, chk)
+  local res, err = conn:rpush(mqk, data)
+  if not res then
+    conn:close()
+    return nil, err
+  end
+  local res, err = conn:expire(mqk, self.cache_ttl)
   if not res then
     conn:close()
     return nil, err
   end
   conn:set_keepalive()
-  return res
+  return true
 end
 
 function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
