@@ -354,6 +354,7 @@ function _MT.__index.replay_events(self, sid, last_event)
     conn:set_keepalive()
     return events
   end
+  local eid_filter = {}
   local stream = string.sub(evt, 1, n - 1)
   local pattern = prefix.."*"
   local cursor = "0"
@@ -366,7 +367,8 @@ function _MT.__index.replay_events(self, sid, last_event)
     cursor = res[1]
     for i, k in ipairs(res[2]) do
       local eid = tonumber(string.sub(k, #prefix + 1))
-      if eid and eid > tonumber(last_event) then
+      if eid and eid > tonumber(last_event) and not eid_filter[eid] then
+        eid_filter[eid] = true
         local evt, err = conn:get(k)
         if evt and evt ~= ngx.null then
           local n = string.find(evt, "\n", 1, true)
