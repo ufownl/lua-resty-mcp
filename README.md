@@ -204,6 +204,15 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
   -- Whether to enable the resumability and redelivery mechanism
   enable_resumability = false,
 
+  -- Longest standby in seconds, default: 600
+  -- If no request is received from the client for longer than this duration, the session will be terminated
+  -- If long inactivity is desired, please send a ping request periodically to avoid the auto-termination
+  longest_standby = 600,
+
+  -- Read timeout threshold, in seconds, default: 10
+  -- Best to be much smaller than longest_standby, and NOT exceed it
+  read_timeout = 10,
+
   -- Other options are the same as `mcp.server` API
   ...
 }

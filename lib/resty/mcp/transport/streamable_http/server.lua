@@ -74,7 +74,14 @@ function _MT.__index.recv(self)
   if not self.message_bus then
     return nil, "closed"
   end
-  return self.message_bus:pop_smsg(self.session_id, self.read_timeout)
+  local msg, err = self.message_bus:pop_smsg(self.session_id, self.read_timeout)
+  if msg then
+    self.last_active = ngx.now()
+  elseif err == "timeout" and ngx.now() - self.last_active >= self.longest_standby then
+    self:close()
+    return nil, "closed"
+  end
+  return msg, err
 end
 
 function _MT.__index.close(self)
@@ -101,6 +108,8 @@ function _M.new(options)
   return setmetatable({
     session_id = options.session_id,
     read_timeout = tonumber(options.read_timeout),
+    longest_standby = tonumber(options.longest_standby) or 600,
+    last_active = ngx.now(),
     message_bus = bus
   }, _MT)
 end
