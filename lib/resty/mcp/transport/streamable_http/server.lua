@@ -60,6 +60,9 @@ function _MT.__index.send(self, msg, options)
       if not ok then
         return nil, err
       end
+      if not self.message_bus then
+        return nil, "closed"
+      end
     end
     return true
   end
