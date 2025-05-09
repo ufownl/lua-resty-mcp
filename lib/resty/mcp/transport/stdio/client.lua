@@ -25,9 +25,6 @@ function _MT.__index.send(self, msg, options)
   if msg.error and msg.error.code >= 0 then
     return true
   end
-  if not self.pipe then
-    return nil, "closed"
-  end
   local data, err = cjson.encode(msg)
   if not data then
     error(err)
@@ -40,9 +37,6 @@ function _MT.__index.send(self, msg, options)
 end
 
 function _MT.__index.recv(self)
-  if not self.pipe then
-    return nil, "closed"
-  end
   local data, err, partial = self.pipe:stdout_read_line()
   if not data then
     return nil, err
@@ -51,25 +45,23 @@ function _MT.__index.recv(self)
 end
 
 function _MT.__index.close(self)
-  if not self.pipe then
-    return
-  end
   local ok, err = self.pipe:shutdown("stdin")
   if not ok then
-    ngx.log(ngx.ERR, "ngx pipe: ", err)
-    self.pipe = nil
+    if err ~= "closed" then
+      ngx.log(ngx.ERR, "ngx pipe: ", err)
+    end
     return
   end
   for i, sig in ipairs({"TERM", "KILL"}) do
     local ok, err = self.pipe:kill(resty_signal.signum(sig))
     if not ok then
-      ngx.log(ngx.ERR, "ngx pipe: ", err)
-      self.pipe = nil
+      if err ~= "closed" then
+        ngx.log(ngx.ERR, "ngx pipe: ", err)
+      end
       return
     end
     local ok, err = self.pipe:wait()
     if ok or err == "exit" or err == "signal" or err == "exited" then
-      self.pipe = nil
       return
     end
   end
