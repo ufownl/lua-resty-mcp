@@ -53,6 +53,7 @@ Production ready.
 - [x] Transports
   - [x] stdio
   - [x] Streamable HTTP
+  - [x] WebSocket *(non-specification)*
 - [x] Protocols
   - [x] Lifecycle
   - [x] Prompts
@@ -126,6 +127,11 @@ Create an MCP server session with the specific transport (currently only `mcp.tr
 
 A successful call returns an MCP server session. Otherwise, it returns `nil` and a string describing the error.
 
+Available transports:
+
+* `mcp.transport.stdio`
+* `mcp.transport.websocket`
+
 Available options:
 
 ```lua
@@ -134,7 +140,54 @@ Available options:
   name = "lua-resty-mcp",  -- Name of this session (optional)
   version = "1.0",  -- Version of this session (optional)
 
+  -- Options for WebSocket connections (optional)
+  websocket_opts = {
+    ...
+  },
+
   -- You can also put your other options here and access them via `options` field of the session instance
+}
+```
+
+> [!NOTE]
+> 1. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#new);
+> 2. WebSocket transport for the server should only be used in `content_by_lua*` directives.
+
+A simple echo demo server configuration that uses WebSocket transport:
+
+```lua
+worker_processes auto;
+
+events {
+}
+
+http {
+  server {
+    listen 80;
+
+    location = /mcp {
+      content_by_lua_block {
+        local mcp = require("resty.mcp")
+        local server, err = mcp.server(mcp.transport.websocket)
+        if not server then
+          error(err)
+        end
+        local ok, err = server:register(mcp.tool("echo", function(args)
+          return "Tool echo: "..args.message
+        end, "Echo a message as a tool", {
+          type = "object",
+          properties = {
+            message = {type = "string"}
+          },
+          required = {"message"}
+        }))
+        if not ok then
+          error(err)
+        end
+        server:run()
+      }
+    }
+  }
 }
 ```
 
@@ -216,7 +269,7 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
   -- Best to be much smaller than longest_standby, and NOT exceed it
   read_timeout = 10,
 
-  -- Other options are the same as `mcp.server` API
+  -- Common options are the same as `mcp.server` API
   ...
 }
 ```
@@ -228,7 +281,7 @@ The optional 2nd argument of this method `options`, should be a dict-like Lua ta
 > 1. It is recommended to use different shared memory zones or Redis logical databases for different endpoints;
 > 2. Hard-coding the Redis password is not secure, it is recommended to pass it through environment variables.
 
-A simple echo demo server configuration:
+A simple echo demo server configuration that uses Streamable HTTP transport:
 
 ```lua
 worker_processes auto;
@@ -806,9 +859,15 @@ client:shutdown()
 
 `syntax: client, err = mcp.client(transport, options)`
 
-Create an MCP client session with the specific transport (`mcp.transport.stdio` or `mcp.transport.streamable_http`) and options.
+Create an MCP client session with the specific transport and options.
 
 A successful call returns an MCP client session. Otherwise, it returns `nil` and a string describing the error.
+
+Available transports:
+
+* `mcp.transport.stdio`
+* `mcp.transport.streamable_http`
+* `mcp.transport.websocket`
 
 Available options:
 
@@ -873,12 +932,23 @@ Available options:
     max_step = 0.5
   },
 
+  -- Options for WebSocket transport
+
+  -- URL of the WebSocket MCP endpoint (required)
+  endpoint_url = "ws://127.0.0.1/mcp",
+
+  -- Options for WebSocket connections
+  websocket_opts = {
+    ...
+  },
+
   -- You can also put your other options here and access them via `options` field of the session instance
 }
 ```
 
 > [!NOTE]
-> Available options for HTTP connections can be viewed [here](https://github.com/ledgetech/lua-resty-http?tab=readme-ov-file#connect). Note that `scheme`, `host`, and `port` will be parsed according to `endpoint_url` automatically, so setting them in `http_opts` will be ignored.
+> 1. Available options for HTTP connections can be viewed [here](https://github.com/ledgetech/lua-resty-http?tab=readme-ov-file#connect). Note that `scheme`, `host`, and `port` will be parsed according to `endpoint_url` automatically, so setting them in `http_opts` will be ignored;
+> 2. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#clientnew), it combines the available options for `client:new` and `client:connect` methods. Note that the subprotocol will always be set to `"mcp"`, so setting `protocols` in `websocket_opts` will be ignored.
 
 ### client:initialize
 

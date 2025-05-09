@@ -3,7 +3,8 @@ return {
   _VERSION = require("resty.mcp.version").module,
   transport = {
     stdio = require("resty.mcp.transport.stdio"),
-    streamable_http = require("resty.mcp.transport.streamable_http")
+    streamable_http = require("resty.mcp.transport.streamable_http"),
+    websocket = require("resty.mcp.transport.websocket")
   },
   client = require("resty.mcp.client").new,
   server = require("resty.mcp.server").new,
