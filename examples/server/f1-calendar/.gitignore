@@ -1,0 +1,9 @@
+# log directory
+logs/
+
+# nginx additional configure files
+ngx_conf/resolvers/
+ngx_conf/lua_ssl/
+
+# nginx temporary directories
+*_temp/
