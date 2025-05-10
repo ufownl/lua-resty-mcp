@@ -15,9 +15,6 @@ server:run({
     completions = false,
     logging = false,
     prompts = false,
-    resources = false,
-    tools = {
-      listChanged = true
-    }
+    resources = false
   }
 })
