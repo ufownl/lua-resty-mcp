@@ -3,7 +3,7 @@ local mcp = require("resty.mcp")
 
 local https_proxy = os.getenv("https_proxy")
 local client, err = mcp.client(mcp.transport.stdio, {
-  command = 'resty --main-conf "env https_proxy;" --http-include ngx_conf/lua_ssl/conf -I ../../../lib/ run.lua',
+  command = 'resty --main-conf "env https_proxy;" --http-include ngx_conf/lua_ssl/conf -I ../../lib/ f1-calendar.lua',
   pipe_opts = {
     environ = {https_proxy and string.format("https_proxy=%s", https_proxy)}
   }

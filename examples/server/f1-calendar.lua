@@ -5,7 +5,7 @@ if not server then
   error(err)
 end
 
-local ok, err = require("server").declare(mcp, server)
+local ok, err = require("f1-calendar.server").declare(mcp, server)
 if not ok then
   error(err)
 end

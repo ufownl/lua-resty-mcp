@@ -1,15 +1,49 @@
 local _M = {
-  _NAME = "f1-calendar-mcp.server",
+  _NAME = "f1-calendar.server",
   _VERSION = "1.0"
 }
 
 function _M.declare(mcp, server)
-  local data, err = require("database").query()
+  local data, err = require("f1-calendar.database").query()
   if not data then
     return nil, err
   end
 
-  local utils = require("utils")
+  local function iso_date(date)
+    local m, err = ngx.re.match(date, "^(?<year>[0-9]+)-(?<month>[0-9]+)-(?<day>[0-9]+)T(?<hour>[0-9]+):(?<minute>[0-9]+):(?<second>[0-9]+(\\.[0-9]+)?)(?<offset_sign>[Z+-])((?<offset_hour>[0-9]+)(:(?<offset_minute>[0-9]+))?)?$", "o")
+    if not m then
+      if err then
+        ngx.log(ngx.ERR, "regex error: ", err)
+      end
+      return
+    end
+    local timestamp = os.time({
+      year = tonumber(m.year),
+      month = tonumber(m.month),
+      day = tonumber(m.day),
+      hour = tonumber(m.hour),
+      min = tonumber(m.minute)
+    }) + tonumber(m.second) - os.time({
+      year = 1970,
+      month = 1,
+      day = 1,
+      hour = 0
+    })
+    local offset = 0
+    if m.offset_sign ~= "Z" then
+      if tonumber(m.offset_hour) then
+        offset = offset + tonumber(m.offset_hour) * 3600
+      end
+      if tonumber(m.offset_minute) then
+        offset = offset + tonumber(m.offset_minute) * 60
+      end
+      if m.offset_sign == "+" then
+        offset = -offset
+      end
+    end
+    return timestamp + offset
+  end
+
   local session_names = {
     fp1 = "FP1",
     fp2 = "FP2",
@@ -33,7 +67,7 @@ function _M.declare(mcp, server)
     end
     local resp = "**Schedule:**\n\n"
     for i, s in ipairs(sessions) do
-      local sdt = utils.iso_date(race.sessions[s])
+      local sdt = iso_date(race.sessions[s])
       local edt = sdt + data.config.sessionLengths[s] * 60
       resp = resp..string.format("- **%s:** from %s to %s\n", session_names[s], os.date("%c", sdt), os.date("%c", edt))
     end
@@ -48,7 +82,7 @@ function _M.declare(mcp, server)
     local race
     local now = ngx.now()
     for i = #schedule.races, 1, -1 do
-      local dt = utils.iso_date(schedule.races[i].sessions.gp) + data.config.sessionLengths.gp * 60
+      local dt = iso_date(schedule.races[i].sessions.gp) + data.config.sessionLengths.gp * 60
       if now > dt then
         race = schedule.races[i + 1]
         break
@@ -59,7 +93,7 @@ function _M.declare(mcp, server)
     end
     local resp = string.format("The current date and time is %s. ", os.date("%c", now))
     local name = string.find(race.name, "Grand Prix", 1, true) and race.name or race.name.." Grand Prix"
-    local fp1_dt = utils.iso_date(race.sessions.fp1)
+    local fp1_dt = iso_date(race.sessions.fp1)
     if now < fp1_dt then
       resp = resp..string.format("The %s will start in ", name)
       local dur = fp1_dt - now
@@ -96,8 +130,8 @@ function _M.declare(mcp, server)
     local resp = string.format("## Race calendar of the %u Formula One World Championship\n\nThe %u Formula One World Championship has %u rounds.\n\n", year, year, #schedule.races)
     for i, r in ipairs(schedule.races) do
       local name = string.find(r.name, "Grand Prix", 1, true) and r.name or r.name.." Grand Prix"
-      local fp1_sdt = utils.iso_date(r.sessions.fp1)
-      local gp_edt = utils.iso_date(r.sessions.gp) + data.config.sessionLengths.gp * 60
+      local fp1_sdt = iso_date(r.sessions.fp1)
+      local gp_edt = iso_date(r.sessions.gp) + data.config.sessionLengths.gp * 60
       resp = resp..string.format("### Round %u: %s\n\nThe %s ", r.round, name, name)
       if now < fp1_sdt then
         resp = resp.."will be "

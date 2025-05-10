@@ -1,5 +1,5 @@
 local _M = {
-  _NAME = "f1-calendar-mcp.database",
+  _NAME = "f1-calendar.database",
   _VERSION = "1.0"
 }
 
