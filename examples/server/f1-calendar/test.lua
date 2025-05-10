@@ -1,10 +1,11 @@
 local cjson = require("cjson")
 local mcp = require("resty.mcp")
 
+local https_proxy = os.getenv("https_proxy")
 local client, err = mcp.client(mcp.transport.stdio, {
   command = 'resty --main-conf "env https_proxy;" --http-include ngx_conf/lua_ssl/conf -I ../../../lib/ run.lua',
   pipe_opts = {
-    environ = {string.format("https_proxy=%s", os.getenv("https_proxy"))}
+    environ = {https_proxy and string.format("https_proxy=%s", https_proxy)}
   }
 })
 if not client then
