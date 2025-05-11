@@ -466,7 +466,7 @@ local function define_methods(self)
       end
     end
   end
-  return methods
+  return mcp.session.inject_common(self, methods)
 end
 
 local function list_changed(self, category, rrid)

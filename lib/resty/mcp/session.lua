@@ -179,7 +179,7 @@ function _M.new(conn, options, mt)
   }, mt or {__index = _M})
 end
 
-function _M.initialize(self, methods)
+function _M.inject_common(self, methods)
   methods["notifications/progress"] = function(params)
     local ok, err = mcp.validator.ProgressNotification(params)
     if not ok then
@@ -226,6 +226,10 @@ function _M.initialize(self, methods)
     end
     return {}
   end
+  return methods
+end
+
+function _M.initialize(self, methods)
   self.methods = methods
   self.main_loop = ngx.thread.spawn(main_loop, self)
 end
