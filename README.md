@@ -19,7 +19,7 @@ Production ready.
   * [server:resource\_updated](#serverresource_updated)
   * [server:replace\_\*](#serverreplace_)
   * [server:list\_roots](#serverlist_roots)
-  * [server:create\_messages](#servercreate_message)
+  * [server:create\_message](#servercreate_message)
   * [server:log](#serverlog)
   * [server:ping](#serverping)
   * [server:wait\_background\_tasks](#serverwait_background_tasks)
@@ -880,7 +880,7 @@ Available options:
   -- Options for stdio transport
 
   -- Command and arguments for starting server (required)
-  command = "ngx -y @modelcontextprotocol/server-everything" or {"npx", "-y", "@modelcontextprotocol/server-everything"},
+  command = "npx -y @modelcontextprotocol/server-everything" or {"npx", "-y", "@modelcontextprotocol/server-everything"},
 
   -- Options for pipe connected to server (optional)
   pipe_opts = {
