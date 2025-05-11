@@ -235,7 +235,11 @@ function _MT.__index.initialize(self, options, timeout)
     instructions = res.instructions
   }
   self.event_handlers = options and options.event_handlers
-  local ok, err = mcp.session.send_notification(self, "initialized", {}, {get_sse = true})
+  local ok, err = mcp.session.send_notification(self, "initialized", {}, {
+    -- NOTE: This option acts as a hint flag to tell the transport to initiate a
+    -- GET SSE stream at this point if necessary.
+    get_sse = true
+  })
   if not ok then
     self.conn:close()
     return nil, err

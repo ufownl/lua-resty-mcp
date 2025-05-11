@@ -112,6 +112,10 @@ local function handle_impl(dm, methods, resp_cb)
         elseif code and message then
           return _M.fail_resp(dm.id, code, message, data)
         else
+          -- NOTE: Error code >= 0 means this is not an actual error, it should
+          -- only be used by the transport to handle some internal states
+          -- (e.g., removing requests that are waiting for results).
+          -- So, the transport MUST NOT send that to the peer.
           return _M.fail_resp(dm.id, 0, "Request cancelled")
         end
       else
