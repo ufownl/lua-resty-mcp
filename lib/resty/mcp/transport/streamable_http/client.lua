@@ -9,14 +9,9 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
-local _MT = {
-  __index = {
-    _NAME = _M._NAME
-  }
-}
-
 local cjson = require("cjson.safe")
 local http = require("resty.http")
+local ngx_semaphore = require("ngx.semaphore")
 
 local accepted_content = {
   json = "application/json",
@@ -122,6 +117,7 @@ local function open_get_sse(self, last_event)
     local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
       if self.pending_messages then
         table.insert(self.pending_messages, data)
+        self.message_sema:post()
       end
     end)
     sse_parser.last_event = last_event
@@ -152,6 +148,7 @@ local function resume_post_sse(self, last_event)
   local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
     if self.pending_messages then
       table.insert(self.pending_messages, data)
+      self.message_sema:post()
     end
   end)
   sse_parser.last_event = last_event
@@ -165,6 +162,12 @@ local function resume_post_sse(self, last_event)
   httpc:set_keepalive()
   return true
 end
+
+local _MT = {
+  __index = {
+    _NAME = _M._NAME
+  }
+}
 
 function _MT.__index.send(self, msg, options)
   if type(msg) ~= "table" then
@@ -245,6 +248,7 @@ function _MT.__index.send(self, msg, options)
       httpc:set_keepalive()
       if self.pending_messages then
         table.insert(self.pending_messages, body)
+        self.message_sema:post()
       end
     end)
   elseif string.sub(content_type, 1, #accepted_content.sse) == accepted_content.sse then
@@ -252,6 +256,7 @@ function _MT.__index.send(self, msg, options)
       local sse_parser = mcp.sse_parser.new(function(event, data, id, retry)
         if self.pending_messages then
           table.insert(self.pending_messages, data)
+          self.message_sema:post()
         end
       end)
       local ok, err = read_sse_stream(res.body_reader, sse_parser, function()
@@ -278,9 +283,7 @@ function _MT.__index.send(self, msg, options)
 end
 
 function _MT.__index.recv(self)
-  local ok, err = mcp.utils.spin_until(function()
-    return not self.pending_messages or #self.pending_messages > 0
-  end, self.read_timeout, self.spin_opts)
+  local ok, err = self.message_sema:wait(self.read_timeout)
   if not ok then
     return nil, err
   end
@@ -292,6 +295,7 @@ end
 
 function _MT.__index.close(self)
   self.pending_messages = nil
+  self.message_sema:post()
   local httpc, err = connect(self)
   if not httpc then
     ngx.log(ngx.ERR, "http: ", err)
@@ -330,6 +334,10 @@ function _M.new(options)
   if not parsed_url then
     return nil, err
   end
+  local sema, err = ngx_semaphore.new()
+  if not sema then
+    return nil, err
+  end
   return setmetatable({
     endpoint = {
       scheme = parsed_url[1],
@@ -339,11 +347,11 @@ function _M.new(options)
       query = parsed_url[5],
       authorization = options.endpoint_auth
     },
-    read_timeout = tonumber(options.read_timeout),
-    spin_opts = options.spin_opts,
+    read_timeout = tonumber(options.read_timeout) or 10,
     http_opts = options.http_opts,
     enable_get_sse = options.enable_get_sse,
     sse_counter = 0,
+    message_sema = sema,
     pending_messages = {}
   }, _MT)
 end

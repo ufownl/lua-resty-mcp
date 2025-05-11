@@ -3,12 +3,12 @@ local mcp = {
   utils = require("resty.mcp.utils")
 }
 
-local cjson = require("cjson.safe")
-
 local _M = {
   _NAME = "resty.mcp.transport.streamable_http.server",
   _VERSION = mcp.version.module
 }
+
+local cjson = require("cjson.safe")
 
 local function route_single(msg, rrid)
   if msg.method then

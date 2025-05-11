@@ -925,13 +925,6 @@ Available options:
     ...
   },
 
-  -- Options for spin waiting
-  spin_opts = {
-    step = 0.001,
-    ratio = 2,
-    max_step = 0.5
-  },
-
   -- Options for WebSocket transport
 
   -- URL of the WebSocket MCP endpoint (required)
