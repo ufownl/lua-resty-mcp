@@ -152,6 +152,9 @@ local function define_methods(self)
       if not rid then
         return
       end
+      if self.client then
+        return nil, -32601, "Method not found"
+      end
       local ok, err = mcp.validator.InitializeRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -164,6 +167,9 @@ local function define_methods(self)
       return mcp.protocol.result.initialize(self.capabilities, self.options.name, self.options.version, self.instructions)
     end,
     ["notifications/initialized"] = function(params)
+      if not self.client or self.initialized then
+        return
+      end
       self.initialized = true
       local handler = self.event_handlers and self.event_handlers.initialized
       if handler then
@@ -171,7 +177,7 @@ local function define_methods(self)
       end
     end,
     ["notifications/roots/list_changed"] = function(params)
-      if not self.client.capabilities.roots or not self.client.capabilities.roots.listChanged then
+      if not self.initialized or not self.client.capabilities.roots or not self.client.capabilities.roots.listChanged then
         return
       end
       if self.client.discovered_roots then
@@ -192,6 +198,9 @@ local function define_methods(self)
     ["prompts/get"] = self.capabilities.prompts and function(params, rid)
       if not rid then
         return
+      end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
       end
       local ok, err = mcp.validator.GetPromptRequest(params)
       if not ok then
@@ -224,6 +233,9 @@ local function define_methods(self)
       if not rid then
         return
       end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
+      end
       local ok, err = mcp.validator.ListResourceTemplatesRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -249,6 +261,9 @@ local function define_methods(self)
     ["resources/read"] = self.capabilities.resources and function(params, rid)
       if not rid then
         return
+      end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
       end
       local ok, err = mcp.validator.ReadResourceRequest(params)
       if not ok then
@@ -295,6 +310,9 @@ local function define_methods(self)
     ["resources/subscribe"] = self.capabilities.resources and function(params, rid)
       if not rid then
         return
+      end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
       end
       local ok, err = mcp.validator.SubscribeRequest(params)
       if not ok then
@@ -344,6 +362,9 @@ local function define_methods(self)
       if not rid then
         return
       end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
+      end
       local ok, err = mcp.validator.UnsubscribeRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -363,6 +384,9 @@ local function define_methods(self)
     ["tools/call"] = self.capabilities.tools and function(params, rid)
       if not rid then
         return
+      end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
       end
       local ok, err = mcp.validator.CallToolRequest(params)
       if not ok then
@@ -395,6 +419,9 @@ local function define_methods(self)
       if not rid then
         return
       end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
+      end
       local ok, err = mcp.validator.CompleteRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -422,6 +449,9 @@ local function define_methods(self)
       if not rid then
         return
       end
+      if not self.initialized then
+        return nil, -32601, "Method not found"
+      end
       local ok, err = mcp.validator.SetLevelRequest(params)
       if not ok then
         return nil, -32602, "Invalid params", {errmsg = err}
@@ -440,6 +470,9 @@ local function define_methods(self)
       methods[cap_k.."/list"] = function(params, rid)
         if not rid then
           return
+        end
+        if not self.initialized then
+          return nil, -32601, "Method not found"
         end
         local ok, err = validator[i](params)
         if not ok then
