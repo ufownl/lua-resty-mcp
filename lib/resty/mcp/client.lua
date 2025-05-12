@@ -10,6 +10,8 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local ngx_semaphore = require("ngx.semaphore")
+
 local function push_progress(self, progress_token, rid)
   return function(progress, total, message)
     if type(progress) ~= "number" then
@@ -145,12 +147,14 @@ local function define_methods(self)
       end
       for i, key in ipairs(v) do
         if self.server[key] then
-          local ok, err = mcp.utils.spin_until(function()
-            return type(self.server[key]) == "table" or not self.server[key]
-          end)
-          if not ok then
-            ngx.log(ngx.ERR, err)
-            return
+          if type(self.server[key]) == "number" then
+            self.server[key] = self.server[key] + 1
+            local ok, err = self.semaphores[key]:wait(10)
+            if not ok then
+              self.server[key] = self.server[key] - 1
+              ngx.log(ngx.ERR, err)
+              return
+            end
           end
           self.server[key] = nil
         end
@@ -174,20 +178,25 @@ local function list_impl(self, category, timeout)
   local key = "discovered_"..category
   repeat
     if self.server[key] then
-      local ok, err = mcp.utils.spin_until(function()
-        return type(self.server[key]) == "table" or not self.server[key]
-      end, timeout)
-      if not ok then
-        return nil, err
+      if type(self.server[key]) == "number" then
+        self.server[key] = self.server[key] + 1
+        local ok, err = self.semaphores[key]:wait(tonumber(timeout) or 10)
+        if not ok then
+          self.server[key] = self.server[key] - 1
+          return nil, err
+        end
       end
     else
-      self.server[key] = true
+      self.server[key] = 0
       local list, err = get_list(self, category, timeout)
-      if not list then
-        self.server[key] = nil
+      local n = self.server[key]
+      self.server[key] = list
+      if n > 0 then
+        self.semaphores[key]:post(n)
+      end
+      if err then
         return nil, err
       end
-      self.server[key] = list
     end
   until self.server[key]
   return self.server[key]
@@ -234,6 +243,24 @@ function _MT.__index.initialize(self, options, timeout)
     info = res.serverInfo,
     instructions = res.instructions
   }
+  self.semaphores = {}
+  local categories = {
+    prompts = {"discovered_prompts"},
+    resources = {"discovered_resources", "discovered_resource_templates"},
+    tools = {"discovered_tools"}
+  }
+  for category, keys in pairs(categories) do
+    local cap = self.server.capabilities[category]
+    if cap and cap.listChanged then
+      for i, k in ipairs(keys) do
+        local sema, err = ngx_semaphore.new()
+        if not sema then
+          return nil, err
+        end
+        self.semaphores[k] = sema
+      end
+    end
+  end
   self.event_handlers = options and options.event_handlers
   local ok, err = mcp.session.send_notification(self, "initialized", {}, {
     -- NOTE: This option acts as a hint flag to tell the transport to initiate a
@@ -295,20 +322,25 @@ function _MT.__index.list_resource_templates(self, timeout)
   end
   repeat
     if self.server.discovered_resource_templates then
-      local ok, err = mcp.utils.spin_until(function()
-        return type(self.server.discovered_resource_templates) == "table" or not self.server.discovered_resource_templates
-      end, timeout)
-      if not ok then
-        return nil, err
+      if type(self.server.discovered_resource_templates) == "number" then
+        self.server.discovered_resource_templates = self.server.discovered_resource_templates + 1
+        local ok, err = self.semaphores.discovered_resource_templates:wait(tonumber(timeout) or 10)
+        if not ok then
+          self.server.discovered_resource_templates = self.server.discovered_resource_templates - 1
+          return nil, err
+        end
       end
     else
-      self.server.discovered_resource_templates = true
+      self.server.discovered_resource_templates = 0
       local list, err = get_list(self, "resources/templates", timeout, "resourceTemplates")
-      if not list then
-        self.server.discovered_resource_templates = nil
+      local n = self.server.discovered_resource_templates
+      self.server.discovered_resource_templates = list
+      if n > 0 then
+        self.semaphores.discovered_resource_templates:post(n)
+      end
+      if err then
         return nil, err
       end
-      self.server.discovered_resource_templates = list
     end
   until self.server.discovered_resource_templates
   return self.server.discovered_resource_templates

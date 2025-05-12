@@ -16,6 +16,7 @@ local _M = {
 }
 
 local cjson = require("cjson.safe")
+local ngx_semaphore = require("ngx.semaphore")
 
 local function session(server, rid)
   local function rrid()
@@ -164,6 +165,13 @@ local function define_methods(self)
         capabilities = params.capabilities,
         info = params.clientInfo
       }
+      if self.client.capabilities.roots and self.client.capabilities.roots.listChanged then
+        local sema, err = ngx_semaphore.new()
+        if not sema then
+          return nil, -32603, "Internal error", {errmsg = err}
+        end
+        self.semaphores = {discovered_roots = sema}
+      end
       return mcp.protocol.result.initialize(self.capabilities, self.options.name, self.options.version, self.instructions)
     end,
     ["notifications/initialized"] = function(params)
@@ -181,12 +189,14 @@ local function define_methods(self)
         return
       end
       if self.client.discovered_roots then
-        local ok, err = mcp.utils.spin_until(function()
-          return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
-        end)
-        if not ok then
-          ngx.log(ngx.ERR, err)
-          return
+        if type(self.client.discovered_roots) == "number" then
+          self.client.discovered_roots = self.client.discovered_roots + 1
+          local ok, err = self.semaphores.discovered_roots:wait(10)
+          if not ok then
+            self.client.discovered_roots = self.client.discovered_roots - 1
+            ngx.log(ngx.ERR, err)
+            return
+          end
         end
         self.client.discovered_roots = nil
       end
@@ -727,20 +737,25 @@ function _MT.__index.list_roots(self, timeout, rrid)
   end
   repeat
     if self.client.discovered_roots then
-      local ok, err = mcp.utils.spin_until(function()
-        return type(self.client.discovered_roots) == "table" or not self.client.discovered_roots
-      end, timeout)
-      if not ok then
-        return nil, err
+      if type(self.client.discovered_roots) == "number" then
+        self.client.discovered_roots = self.client.discovered_roots + 1
+        local ok, err = self.semaphores.discovered_roots:wait(tonumber(timeout) or 10)
+        if not ok then
+          self.client.discovered_roots = self.client.discovered_roots - 1
+          return nil, err
+        end
       end
     else
-      self.client.discovered_roots = true
+      self.client.discovered_roots = 0
       local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
-      if not res then
-        self.client.discovered_roots = nil
+      local n = self.client.discovered_roots
+      self.client.discovered_roots = res and res.roots
+      if n > 0 then
+        self.semaphores.discovered_roots:post(n)
+      end
+      if err then
         return nil, err
       end
-      self.client.discovered_roots = res.roots
     end
   until self.client.discovered_roots
   return self.client.discovered_roots
