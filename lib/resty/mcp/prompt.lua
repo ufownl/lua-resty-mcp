@@ -85,10 +85,7 @@ function _MT.__index.get(self, args, ctx)
       description = self.description,
       messages = setmetatable(messages, cjson.array_mt)
     }
-    local ok, err = mcp.validator.GetPromptResult(result)
-    if not ok then
-      error(err)
-    end
+    assert(mcp.validator.GetPromptResult(result))
     return result
   end
   return {

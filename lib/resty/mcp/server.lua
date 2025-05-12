@@ -129,10 +129,7 @@ local function complete(cbs, name, value)
       hasMore = has_more and true or tonumber(total) and tonumber(total) > #values
     }
   }
-  local ok, err = mcp.validator.CompleteResult(result)
-  if not ok then
-    error(err)
-  end
+  assert(mcp.validator.CompleteResult(result))
   return result
 end
 

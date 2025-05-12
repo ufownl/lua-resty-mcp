@@ -1,11 +1,8 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
   local contents = {}
   if ctx.session.client.capabilities.roots then
     table.insert(contents, {uri = uri.."/roots", text = "true"})
@@ -17,12 +14,9 @@ local ok, err = server:register(mcp.resource("mock://client_capabilities", "Clie
     table.insert(contents, {uri = uri.."/sampling", text = "true"})
   end
   return contents
-end, "Capabilities of client."))
-if not ok then
-  error(err)
-end
+end, "Capabilities of client.")))
 
-local ok, err = server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
+assert(server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
   local roots, err = ctx.session:list_roots()
   if not roots then
     return nil, err
@@ -32,7 +26,7 @@ local ok, err = server:register(mcp.resource("mock://discovered_roots", "Discove
     table.insert(contents, {uri = v.uri, text = v.name or ""})
   end
   return contents
-end, "Discovered roots from client."))
+end, "Discovered roots from client.")))
 
 server:run({
   capabilities = {
@@ -43,10 +37,7 @@ server:run({
   },
   event_handlers = {
     ["roots/list_changed"] = function(params, ctx)
-      local ok, err = ctx.session:resource_updated("mock://discovered_roots")
-      if not ok then
-        error(err)
-      end
+      assert(ctx.session:resource_updated("mock://discovered_roots"))
     end
   }
 })

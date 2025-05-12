@@ -204,10 +204,7 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
   if type(chk) ~= "string" then
     error("channel key MUST be a string")
   end
-  local data, err = cjson.encode(msg)
-  if not data then
-    error(err)
-  end
+  local data = assert(cjson.encode(msg))
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err

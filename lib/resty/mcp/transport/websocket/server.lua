@@ -24,10 +24,7 @@ function _MT.__index.send(self, msg, options)
   if msg.error and msg.error.code >= 0 then
     return true
   end
-  local data, err = cjson.encode(msg)
-  if not data then
-    error(err)
-  end
+  local data = assert(cjson.encode(msg))
   local res, err = self.conn:send_text(data)
   if not res then
     return nil, err

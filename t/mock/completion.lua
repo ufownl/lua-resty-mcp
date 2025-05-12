@@ -1,18 +1,12 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = server:register(mcp.prompt("simple_prompt", function(args)
+assert(server:register(mcp.prompt("simple_prompt", function(args)
   return "This is a simple prompt without arguments."
-end, "A prompt without arguments."))
-if not ok then
-  error(err)
-end
+end, "A prompt without arguments.")))
 
-local ok, err = server:register(mcp.prompt("complex_prompt", function(args)
+assert(server:register(mcp.prompt("complex_prompt", function(args)
   return {
     {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
     {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
@@ -34,24 +28,18 @@ end, "A prompt with arguments.", {
     end
     return values, #values
   end
-}))
-if not ok then
-  error(err)
-end
+})))
 
-local ok, err = server:register(mcp.resource_template("mock://no_completion/text/{id}", "NoCompletion", function(uri, vars)
+assert(server:register(mcp.resource_template("mock://no_completion/text/{id}", "NoCompletion", function(uri, vars)
   if vars.id == "" then
     return false
   end
   return true, {
     {text = string.format("content of no_completion text resource %s, id=%s", uri, vars.id)},
   }
-end, "No completion text resource.", "text/plain"))
-if not ok then
-  error(err)
-end
+end, "No completion text resource.", "text/plain")))
 
-local ok, err = server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
+assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
   if vars.id == "" then
     return false
   end
@@ -72,10 +60,7 @@ end, "Dynamic text resource.", "text/plain"):complete({
     end
     return values, nil, #values > 2
   end
-}))
-if not ok then
-  error(err)
-end
+})))
 
 server:run({
   capabilities = {

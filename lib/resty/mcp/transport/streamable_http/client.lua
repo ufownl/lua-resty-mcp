@@ -179,10 +179,7 @@ function _MT.__index.send(self, msg, options)
   if not self.pending_messages then
     return nil, "closed"
   end
-  local data, err = cjson.encode(msg)
-  if not data then
-    error(err)
-  end
+  local data = assert(cjson.encode(msg))
   local httpc, err = connect(self)
   if not httpc then
     return nil, err

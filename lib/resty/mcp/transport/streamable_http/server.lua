@@ -16,10 +16,7 @@ local function route_single(msg, rrid)
   elseif msg.id and msg.id ~= cjson.null then
     return tostring(msg.id)
   else
-    local data, err = cjson.encode(msg)
-    if not data then
-      error(err)
-    end
+    local data = assert(cjson.encode(msg))
     ngx.log(ngx.ERR, "unable to route: "..data)
   end
 end

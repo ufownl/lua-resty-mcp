@@ -16,19 +16,11 @@ location = /t {
     }
     local function test_case(case)
       local utils = require("resty.mcp.utils")
-      local t, err = utils.uri_template(case)
-      if not t then
-        error(err)
-      end
+      local t = assert(utils.uri_template(case))
       local uri = t:expand(ctx)
       ngx.say(uri)
-      if not t:test(uri) then
-        error("test failure")
-      end
-      local m, err = t:match(uri)
-      if not m then
-        error(err)
-      end
+      assert(t:test(uri))
+      local m = assert(t:match(uri))
       for i, v in ipairs(t.variables) do
         ngx.say(ngx.unescape_uri(m[v]))
       end
@@ -62,19 +54,11 @@ location = /t {
     }
     local function test_case(case)
       local utils = require("resty.mcp.utils")
-      local t, err = utils.uri_template(case)
-      if not t then
-        error(err)
-      end
+      local t = assert(utils.uri_template(case))
       local uri = t:expand(ctx)
       ngx.say(uri)
-      if not t:test(uri) then
-        error("test failure")
-      end
-      local m, err = t:match(uri)
-      if not m then
-        error(err)
-      end
+      assert(t:test(uri))
+      local m = assert(t:match(uri))
       for i, v in ipairs(t.variables) do
         ngx.say(ngx.unescape_uri(m[v]))
       end
@@ -123,19 +107,11 @@ location = /t {
     }
     local function test_case(case)
       local utils = require("resty.mcp.utils")
-      local t, err = utils.uri_template(case)
-      if not t then
-        error(err)
-      end
+      local t = assert(utils.uri_template(case))
       local uri = t:expand(ctx)
       ngx.say(uri)
-      if not t:test(uri) then
-        error("test failure")
-      end
-      local m, err = t:match(uri)
-      if not m then
-        error(err)
-      end
+      assert(t:test(uri))
+      local m = assert(t:match(uri))
       for i, v in ipairs(t.variables) do
         ngx.say(ngx.unescape_uri(m[v]))
       end
@@ -234,10 +210,7 @@ location = /t {
     }
     local function test_case(case, reorder)
       local utils = require("resty.mcp.utils")
-      local t, err = utils.uri_template(case)
-      if not t then
-        error(err)
-      end
+      local t = assert(utils.uri_template(case))
       local uri = t:expand(ctx)
       if reorder then
         local prefix = #uri
@@ -261,13 +234,8 @@ location = /t {
         uri = reordered_uri
       end
       ngx.say(uri)
-      if not t:test(uri) then
-        error("test failure")
-      end
-      local m, err = t:match(uri)
-      if not m then
-        error(err)
-      end
+      assert(t:test(uri))
+      local m = assert(t:match(uri))
       for i, v in ipairs(t.variables) do
         ngx.say(ngx.unescape_uri(m[v]))
       end

@@ -51,10 +51,7 @@ function _MT.__index.read(self, uri, ctx)
       v.mimeType = v.mimeType or self.mime
     end
     local result = {contents = setmetatable(contents, cjson.array_mt)}
-    local ok, err = mcp.validator.ReadResourceResult(result)
-    if not ok then
-      error(err)
-    end
+    assert(mcp.validator.ReadResourceResult(result))
     for i, v in ipairs(contents) do
       if self.mime and v.uri == uri and v.mimeType ~= self.mime then
         error("resource MIME type mismatch")
@@ -96,10 +93,7 @@ function _M.new(pattern, name, cb, desc, mime, annos)
   if mime and type(mime) ~= "string" then
     error("MIME type of resource template MUST be a string.")
   end
-  local template, err = mcp.utils.uri_template(pattern)
-  if not template then
-    error(err)
-  end
+  local template = assert(mcp.utils.uri_template(pattern))
   return setmetatable({
     uri_template = template,
     name = name,

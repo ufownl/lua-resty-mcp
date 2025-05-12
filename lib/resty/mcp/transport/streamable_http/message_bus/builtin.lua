@@ -112,10 +112,7 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
   if type(chk) ~= "string" then
     error("channel key MUST be a string")
   end
-  local data, err = cjson.encode(msg)
-  if not data then
-    error(err)
-  end
+  local data = assert(cjson.encode(msg))
   local mqk = string.format("chan_mq#%s@%s", sid, chk)
   local res, err = self.shm_dict:rpush(mqk, data)
   if not res then

@@ -26,14 +26,11 @@ location = /t {
       end
     end
     for i, v in ipairs({"foo", "bar", "hello"}) do
-      local ok, err = server:register(mcp.tool(v, function(args)
+      assert(server:register(mcp.tool(v, function(args)
         return {
           {type = "text", text = v}
         }
-      end))
-      if not ok then
-        error(err)
-      end
+      end)))
     end
     print_stats()
     local ok, err = server:register(mcp.tool("bar", function(args)
@@ -43,22 +40,16 @@ location = /t {
     end))
     ngx.say(err)
     print_stats()
-    local ok, err = server:unregister_tool("bar")
-    if not ok then
-      error(err)
-    end
+    assert(server:unregister_tool("bar"))
     print_stats()
     local ok, err = server:unregister_tool("bar")
     ngx.say(err)
     print_stats()
-    local ok, err = server:register(mcp.tool("bar", function(args)
+    assert(server:register(mcp.tool("bar", function(args)
       return {
         {type = "text", text = "new bar"}
       }
-    end))
-    if not ok then
-      error(err)
-    end
+    end)))
     print_stats()
   }
 }
@@ -121,14 +112,11 @@ location = /t {
       end
     end
     for i, v in ipairs({"foo", "bar", "hello"}) do
-      local ok, err = server:register(mcp.prompt(v, function(args)
+      assert(server:register(mcp.prompt(v, function(args)
         return {
           {role = "user", content = {type = "text", text = v}}
         }
-      end))
-      if not ok then
-        error(err)
-      end
+      end)))
     end
     print_stats()
     local ok, err = server:register(mcp.prompt("bar", function(args)
@@ -138,22 +126,16 @@ location = /t {
     end))
     ngx.say(err)
     print_stats()
-    local ok, err = server:unregister_prompt("bar")
-    if not ok then
-      error(err)
-    end
+    assert(server:unregister_prompt("bar"))
     print_stats()
     local ok, err = server:unregister_prompt("bar")
     ngx.say(err)
     print_stats()
-    local ok, err = server:register(mcp.prompt("bar", function(args)
+    assert(server:register(mcp.prompt("bar", function(args)
       return {
         {role = "assistant", content = {type = "text", text = "new bar"}}
       }
-    end))
-    if not ok then
-      error(err)
-    end
+    end)))
     print_stats()
   }
 }
@@ -222,22 +204,16 @@ location = /t {
       end
     end
     for i, v in ipairs({"foo", "bar", "hello"}) do
-      local ok, err = server:register(mcp.resource("static://"..v, v, function(uri)
+      assert(server:register(mcp.resource("static://"..v, v, function(uri)
         return {
           {text = "content of "..uri}
         }
-      end))
-      if not ok then
-        error(err)
-      end
-      local ok, err = server:register(mcp.resource_template(string.format("dynamic://%s/{x}", v), v, function(uri, vars)
+      end)))
+      assert(server:register(mcp.resource_template(string.format("dynamic://%s/{x}", v), v, function(uri, vars)
         return true, {
           {text = "dynamic content of "..uri}
         }
-      end))
-      if not ok then
-        error(err)
-      end
+      end)))
     end
     print_stats()
     local ok, err = server:register(mcp.resource("static://bar", "NewBar", function(uri)
@@ -253,36 +229,24 @@ location = /t {
     end))
     ngx.say(err)
     print_stats()
-    local ok, err = server:unregister_resource("static://bar")
-    if not ok then
-      error(err)
-    end
-    local ok, err = server:unregister_resource_template("dynamic://bar/{x}")
-    if not ok then
-      error(err)
-    end
+    assert(server:unregister_resource("static://bar"))
+    assert(server:unregister_resource_template("dynamic://bar/{x}"))
     print_stats()
     local ok, err = server:unregister_resource("static://bar")
     ngx.say(err)
     local ok, err = server:unregister_resource_template("dynamic://bar/{x}")
     ngx.say(err)
     print_stats()
-    local ok, err = server:register(mcp.resource("static://bar", "NewBar", function(uri)
+    assert(server:register(mcp.resource("static://bar", "NewBar", function(uri)
       return {
         {text = "new content of "..uri, mimeType = "text/plain"}
       }
-    end))
-    if not ok then
-      error(err)
-    end
-    local ok, err = server:register(mcp.resource_template("dynamic://bar/{x}", "NewBarTemplate", function(uri, vars)
+    end)))
+    assert(server:register(mcp.resource_template("dynamic://bar/{x}", "NewBarTemplate", function(uri, vars)
       return true, {
         {text = "new dynamic content of "..uri}
       }
-    end))
-    if not ok then
-      error(err)
-    end
+    end)))
     print_stats()
   }
 }

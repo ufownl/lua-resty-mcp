@@ -26,10 +26,7 @@ function _MT.__index.send(self, msg, options)
   if not self.stdout then
     return nil, "closed"
   end
-  local data, err = cjson.encode(msg)
-  if not data then
-    error(err)
-  end
+  local data = assert(cjson.encode(msg))
   self.stdout:write(data, "\n")
   self.stdout:flush()
   return true

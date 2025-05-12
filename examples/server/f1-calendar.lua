@@ -1,14 +1,8 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = require("f1-calendar.server").declare(mcp, server)
-if not ok then
-  error(err)
-end
+assert(require("f1-calendar.server").declare(mcp, server))
 
 server:run({
   capabilities = {

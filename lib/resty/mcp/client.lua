@@ -94,10 +94,7 @@ local function define_methods(self)
         if not result.model then
           result.model = "unknown"
         end
-        local ok, err = mcp.validator.CreateMessageResult(result)
-        if not ok then
-          error(err)
-        end
+        assert(mcp.validator.CreateMessageResult(result))
         return result
       end
       return {
@@ -203,10 +200,7 @@ local function list_impl(self, category, timeout)
 end
 
 local function expose_roots_impl(self, roots)
-  local template, err = mcp.utils.uri_template("file://{+path}")
-  if not template then
-    error(err)
-  end
+  local template = assert(mcp.utils.uri_template("file://{+path}"))
   self.exposed_roots = {}
   for i, v in ipairs(roots) do
     if v.path and v.path ~= "" then

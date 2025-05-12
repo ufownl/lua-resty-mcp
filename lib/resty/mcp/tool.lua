@@ -44,10 +44,7 @@ function _MT.__call(self, args, ctx)
       content = setmetatable(content, cjson.array_mt),
       isError = is_error
     }
-    local ok, err = mcp.validator.CallToolResult(result)
-    if not ok then
-      error(err)
-    end
+    assert(mcp.validator.CallToolResult(result))
     return result
   end
   return {
@@ -63,15 +60,12 @@ function _M.new(name, cb, desc, input_schema, annos)
     error("callback of tool MUST be set.")
   end
   local annotations = annos and mcp.protocol.tool_annotations(annos) or nil
-  local ok, err = mcp.validator.Tool({
+  assert(mcp.validator.Tool({
     name = name,
     description = desc,
     inputSchema = input_schema or {type = "object"},
     annotations = annotations
-  })
-  if not ok then
-    error(err)
-  end
+  }))
   return setmetatable({
     name = name,
     callback = cb,

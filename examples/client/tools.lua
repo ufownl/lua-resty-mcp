@@ -1,35 +1,20 @@
 local mcp = require("resty.mcp")
 local cjson = require("cjson")
 
-local client, err = mcp.client(mcp.transport.stdio, {
+local client = assert(mcp.client(mcp.transport.stdio, {
   command = {"npx", "-y", "@modelcontextprotocol/server-everything"}
-})
-if not client then
-  error(err)
-end
-local ok, err = client:initialize()
-if not ok then
-  error(err)
-end
+}))
+assert(client:initialize())
 print(ngx.localtime(), " initialized")
 print("serverInfo: ", cjson.encode(client.server))
 
-local tools, err = client:list_tools()
-if not tools then
-  error(err)
-end
+local tools = assert(client:list_tools())
 print("tools: ", cjson.encode(tools))
 
-local res, err = client:call_tool("echo", {message = "Hello, world!"})
-if not res then
-  error(err)
-end
+local res = assert(client:call_tool("echo", {message = "Hello, world!"}))
 print("tool calling: ", cjson.encode(res))
 
-local res, err = client:call_tool("add", {a = 1, b = 2})
-if not res then
-  error(err)
-end
+local res = assert(client:call_tool("add", {a = 1, b = 2}))
 print("tool calling: ", cjson.encode(res))
 
 local _, err = client:call_tool("foobar")

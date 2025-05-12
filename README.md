@@ -78,29 +78,20 @@ A simple server demonstrating prompts, resources, tools:
 local mcp = require("resty.mcp")
 
 -- Create an MCP server session with stdio transport
-local server, err = mcp.server(mcp.transport.stdio, {})
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio, {}))
 
 -- Register a prompt
-local ok, err = server:register(mcp.prompt("echo", function(args)
+assert(server:register(mcp.prompt("echo", function(args)
   return "Please process this message: "..args.message
-end, "Create an echo prompt", {message = {required = true}}))
-if not ok then
-  error(err)
-end
+end, "Create an echo prompt", {message = {required = true}})))
 
 -- Register a resource template
-local ok, err = server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
+assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-end, "Echo a message as a resource", "text/plain"))
-if not ok then
-  error(err)
-end
+end, "Echo a message as a resource", "text/plain")))
 
 -- Register a tool
-local ok, err = server:register(mcp.tool("echo", function(args)
+assert(server:register(mcp.tool("echo", function(args)
   return "Tool echo: "..args.message
 end, "Echo a message as a tool", {
   type = "object",
@@ -108,10 +99,7 @@ end, "Echo a message as a tool", {
     message = {type = "string"}
   },
   required = {"message"}
-}))
-if not ok then
-  error(err)
-end
+})))
 
 -- Launch the server session
 server:run()
@@ -168,11 +156,8 @@ http {
     location = /mcp {
       content_by_lua_block {
         local mcp = require("resty.mcp")
-        local server, err = mcp.server(mcp.transport.websocket)
-        if not server then
-          error(err)
-        end
-        local ok, err = server:register(mcp.tool("echo", function(args)
+        local server = assert(mcp.server(mcp.transport.websocket))
+        assert(server:register(mcp.tool("echo", function(args)
           return "Tool echo: "..args.message
         end, "Echo a message as a tool", {
           type = "object",
@@ -180,10 +165,7 @@ http {
             message = {type = "string"}
           },
           required = {"message"}
-        }))
-        if not ok then
-          error(err)
-        end
+        })))
         server:run()
       }
     }
@@ -204,7 +186,7 @@ The 1st argument of this method `custom_fn`, will be called when the clients ini
 
 ```lua
 function custom_fn(mcp, server)
-  local ok, err = server:register(mcp.tool("echo", function(args)
+  assert(server:register(mcp.tool("echo", function(args)
     return "Tool echo: "..args.message
   end, "Echo a message as a tool", {
     type = "object",
@@ -212,10 +194,7 @@ function custom_fn(mcp, server)
       message = {type = "string"}
     },
     required = {"message"}
-  }))
-  if not ok then
-    error(err)
-  end
+  })))
   server:run()
 end
 ```
@@ -298,7 +277,7 @@ http {
     location = /mcp {
       content_by_lua_block {
         require("resty.mcp").transport.streamable_http.endpoint(function(mcp, server)
-          local ok, err = server:register(mcp.tool("echo", function(args)
+          assert(server:register(mcp.tool("echo", function(args)
             return "Tool echo: "..args.message
           end, "Echo a message as a tool", {
             type = "object",
@@ -306,10 +285,7 @@ http {
               message = {type = "string"}
             },
             required = {"message"}
-          }))
-          if not ok then
-            error(err)
-          end
+          })))
           server:run()
         end)
       }
@@ -813,7 +789,7 @@ local client, err = mcp.client(mcp.transport.stdio, {
 })
 
 -- Initialize this session with roots (optional) and sampling callback (optional)
-local ok, err = client:initialize({
+assert(client:initialize({
   roots = {
     {path = "/path/to/project", name = "Project"}  -- Expose a directory named `Project` to server
   },
@@ -821,33 +797,33 @@ local ok, err = client:initialize({
     -- Sampling callback
     return "Mock sampling text."
   end
-})
+}))
 
 -- Discover available prompts
-local prompts, err = client:list_prompts()
+local prompts = assert(client:list_prompts())
 
 -- Get a specific prompt
-local res, err = client:get_prompt("complex_prompt", {temperature = "0.4", style = "json"})
+local res = assert(client:get_prompt("complex_prompt", {temperature = "0.4", style = "json"}))
 
 -- Discover available resources
-local resources, err = client:list_resources()
+local resources = assert(client:list_resources())
 
 -- Read a specific resource
-local res, err = client:read_resource("test://static/resource/1")
+local res = assert(client:read_resource("test://static/resource/1"))
 
 -- Subscribe to a specific resource
-local ok, err = client:subscribe_resource("test://static/resource/42", function(uri)
+assert(client:subscribe_resource("test://static/resource/42", function(uri)
   -- Resource updated callback
-end)
+end))
 
 -- Unsubscribe from a specific resource
-local ok, err = client:unsubscribe_resource("test://static/resource/42")
+assert(client:unsubscribe_resource("test://static/resource/42"))
 
 -- Discover available tools
-local tools, err = client:list_tools()
+local tools = assert(client:list_tools())
 
 -- Call a specific tool
-local res, err = client:call_tool("echo", {message = "Hello, world!"})
+local res = assert(client:call_tool("echo", {message = "Hello, world!"}))
 
 -- Shutdown this client session
 client:shutdown()

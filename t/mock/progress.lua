@@ -1,11 +1,8 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = server:register(mcp.prompt("echo", function(args, ctx)
+assert(server:register(mcp.prompt("echo", function(args, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do
     local ok, err = ctx.push_progress(v, 1, "prompt")
     if not ok then
@@ -13,12 +10,9 @@ local ok, err = server:register(mcp.prompt("echo", function(args, ctx)
     end
   end
   return "Please process this message: "..args.message
-end, "Create an echo prompt", {message = {required = true}}))
-if not ok then
-  error(err)
-end
+end, "Create an echo prompt", {message = {required = true}})))
 
-local ok, err = server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
+assert(server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do
     local ok, err = ctx.push_progress(v, 1, "resource")
     if not ok then
@@ -26,12 +20,9 @@ local ok, err = server:register(mcp.resource("echo://static", "echo static", fun
     end
   end
   return "Resource echo: static"
-end, "Echo a static message as a resource", "text/plain"))
-if not ok then
-  error(err)
-end
+end, "Echo a static message as a resource", "text/plain")))
 
-local ok, err = server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
+assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do
     local ok, err = ctx.push_progress(v, 1, "resource_template")
     if not ok then
@@ -39,12 +30,9 @@ local ok, err = server:register(mcp.resource_template("echo://{message}", "echo"
     end
   end
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-end, "Echo a message as a resource", "text/plain"))
-if not ok then
-  error(err)
-end
+end, "Echo a message as a resource", "text/plain")))
 
-local ok, err = server:register(mcp.tool("echo", function(args, ctx)
+assert(server:register(mcp.tool("echo", function(args, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do
     local ok, err = ctx.push_progress(v, 1, "tool")
     if not ok then
@@ -58,12 +46,9 @@ end, "Echo a message as a tool", {
     message = {type = "string"}
   },
   required = {"message"}
-}))
-if not ok then
-  error(err)
-end
+})))
 
-local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
   local messages =  {
     {role = "user", content = {type = "text", text = "Hey, man!"}}
   }
@@ -82,9 +67,9 @@ local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments."))
+end, "Sampling prompt from client without arguments.")))
 
-local ok, err = server:register(mcp.prompt("cancel_sampling", function(args, ctx)
+assert(server:register(mcp.prompt("cancel_sampling", function(args, ctx)
   local messages =  {
     {role = "user", content = {type = "text", text = "Hey, man!"}}
   }
@@ -103,6 +88,6 @@ local ok, err = server:register(mcp.prompt("cancel_sampling", function(args, ctx
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments."))
+end, "Sampling prompt from client without arguments.")))
 
 server:run()

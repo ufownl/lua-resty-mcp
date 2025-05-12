@@ -74,7 +74,7 @@ function _M.declare(mcp, server)
     return resp
   end
 
-  local ok, err = server:register(mcp.tool("upcoming_or_ungoing_race", function(args, ctx)
+  assert(server:register(mcp.tool("upcoming_or_ungoing_race", function(args, ctx)
     local schedule = data.schedules[data.config.calendarOutputYear]
     if not schedule then
       return nil, "No schedule found for this year's Formula One World Championship."
@@ -115,12 +115,9 @@ function _M.declare(mcp, server)
     end
     resp = resp..string.format("at %s (lon %f, lat %f).\n\n", race.location, race.longitude, race.latitude)
     return resp..race_schedule(race)
-  end, "Get detailed information and the race schedule about the upcoming or ongoing Formula One Grand Prix. The race schedule includes the start and end times of each session."))
-  if not ok then
-    error(err)
-  end
+  end, "Get detailed information and the race schedule about the upcoming or ongoing Formula One Grand Prix. The race schedule includes the start and end times of each session.")))
 
-  local ok, err = server:register(mcp.tool("race_calendar", function(args, ctx)
+  assert(server:register(mcp.tool("race_calendar", function(args, ctx)
     local year = args.year or data.config.calendarOutputYear
     local schedule = data.schedules[year]
     if not schedule then
@@ -154,7 +151,7 @@ function _M.declare(mcp, server)
         maximum = data.config.availableYears[-1],
       }
     }
-  }))
+  })))
 
   return true
 end

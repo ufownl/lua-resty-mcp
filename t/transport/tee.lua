@@ -1,16 +1,10 @@
 local cjson = require("cjson")
 local stdio = require("resty.mcp.transport.stdio")
-local conn, err = stdio.server()
-if not conn then
-  error(err)
-end
+local conn = assert(stdio.server())
 while true do
   local data, err = conn:recv()
   if data then
-    local ok, err = conn:send(cjson.decode(data))
-    if not ok then
-      error(err)
-    end
+    assert(conn:send(cjson.decode(data)))
   elseif err ~= "timeout" then
     break
   end

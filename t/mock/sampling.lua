@@ -1,11 +1,8 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
+assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabilities", function(uri, ctx)
   local contents = {}
   if ctx.session.client.capabilities.roots then
     table.insert(contents, {uri = uri.."/roots", text = "true"})
@@ -17,12 +14,9 @@ local ok, err = server:register(mcp.resource("mock://client_capabilities", "Clie
     table.insert(contents, {uri = uri.."/sampling", text = "true"})
   end
   return contents
-end, "Capabilities of client."))
-if not ok then
-  error(err)
-end
+end, "Capabilities of client.")))
 
-local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx)
+assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
   local messages =  {
     {role = "user", content = {type = "text", text = "Hey, man!"}}
   }
@@ -32,7 +26,7 @@ local ok, err = server:register(mcp.prompt("simple_sampling", function(args, ctx
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments."))
+end, "Sampling prompt from client without arguments.")))
 
 server:run({
   capabilities = {

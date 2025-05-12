@@ -55,10 +55,7 @@ local function do_POST(req_body, message_bus, session_id, options)
     end
   end)
   if #pending_msgs > 0 then
-    local data, err = cjson.encode(#pending_msgs > 1 and pending_msgs or pending_msgs[1])
-    if not data then
-      error(err)
-    end
+    local data = assert(cjson.encode(#pending_msgs > 1 and pending_msgs or pending_msgs[1]))
     local ok, err = message_bus:push_smsg(session_id, data)
     if not ok then
       ngx.log(ngx.ERR, err)
@@ -74,10 +71,7 @@ local function do_POST(req_body, message_bus, session_id, options)
     table.insert(waiting_rids, k)
   end
   if #waiting_rids == 0 then
-    local res_body, err = cjson.encode(reply)
-    if not res_body then
-      error(err)
-    end
+    local res_body = assert(cjson.encode(reply))
     ngx.header["Content-Type"] = "application/json"
     ngx.header["Content-Length"] = #res_body
     ngx.header["Cache-Control"] = "no-store, no-transform"
@@ -96,10 +90,7 @@ local function do_POST(req_body, message_bus, session_id, options)
       end
     end
     if #pending_errs > 0 then
-      local data, err = cjson.encode(#pending_errs > 1 and pending_errs or pending_errs[1])
-      if not data then
-        error(err)
-      end
+      local data = assert(cjson.encode(#pending_errs > 1 and pending_errs or pending_errs[1]))
       local ok, err = deliver_event(message_bus, session_id, data, stream)
       if not ok then
         ngx.log(ngx.ERR, err)
@@ -142,10 +133,7 @@ local function do_POST(req_body, message_bus, session_id, options)
           end
         end)
         if #event_msgs > 0 then
-          local data, err = cjson.encode(#event_msgs > 1 and event_msgs or event_msgs[1])
-          if not data then
-            error(err)
-          end
+          local data = assert(cjson.encode(#event_msgs > 1 and event_msgs or event_msgs[1]))
           local ok, err = deliver_event(message_bus, session_id, data, stream)
           if not ok then
             ngx.log(ngx.ERR, err)
@@ -192,10 +180,7 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
     ngx.exit(ngx.HTTP_BAD_REQUEST)
   end
   if reply.error then
-    local res_body, err = cjson.encode(reply)
-    if not res_body then
-      error(err)
-    end
+    local res_body = assert(cjson.encode(reply))
     ngx.header["Content-Type"] = "application/json"
     ngx.header["Content-Length"] = #res_body
     ngx.header["Cache-Control"] = "no-store, no-transform"

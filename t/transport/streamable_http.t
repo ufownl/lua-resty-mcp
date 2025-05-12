@@ -14,51 +14,27 @@ location = /t {
     local cjson = require("cjson")
     local message_bus = require("resty.mcp.transport.streamable_http.message_bus.builtin").new()
     local streamable_http = require("resty.mcp.transport.streamable_http")
-    local session_id, err = message_bus:new_session()
-    if not session_id then
-      error(err)
-    end
+    local session_id = assert(message_bus:new_session())
     local conn = streamable_http.server({session_id = session_id})
     ngx.thread.spawn(function()
-      local data, err = conn:recv()
-      if not data then
-        error(err)
-      end
+      local data = assert(conn:recv())
       ngx.say(data)
-      local ok, err = conn:send({method = "hello"})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({method = "progress_1"}, {related_request = 1})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({
+      assert(conn:send({method = "hello"}))
+      assert(conn:send({method = "progress_1"}, {related_request = 1}))
+      assert(conn:send({
         {method = "progress_2"},
         {method = "request_related_2"},
-      }, {related_request = 2})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({
+      }, {related_request = 2}))
+      assert(conn:send({
         {id = 1, result = "foo"},
         {method = "test"},
         {id = 2, result = "bar"}
-      })
-      if not ok then
-        error(err)
-      end
+      }))
     end)
-    local ok, err = message_bus:push_smsg(session_id, "Hello, Streamable HTTP!")
-    if not ok then
-      error(err)
-    end
+    assert(message_bus:push_smsg(session_id, "Hello, Streamable HTTP!"))
     local n = 6
     while n > 0 do
-      local msgs, err = message_bus:pop_cmsgs(session_id, {"get", "1", "2"})
-      if not msgs then
-        error(err)
-      end
+      local msgs = assert(message_bus:pop_cmsgs(session_id, {"get", "1", "2"}))
       for i, msg in ipairs(msgs) do
         local dm = cjson.decode(msg)
         if #dm > 0 then
@@ -101,57 +77,33 @@ location = /t {
     local cjson = require("cjson")
     local message_bus = require("resty.mcp.transport.streamable_http.message_bus.redis").new()
     local streamable_http = require("resty.mcp.transport.streamable_http")
-    local session_id, err = message_bus:new_session()
-    if not session_id then
-      error(err)
-    end
-    local conn = streamable_http.server({
+    local session_id = assert(message_bus:new_session())
+    local conn = assert(streamable_http.server({
       session_id = session_id,
       message_bus = {
         type = "redis"
       }
-    })
+    }))
     local co = ngx.thread.spawn(function()
-      local data, err = conn:recv()
-      if not data then
-        error(err)
-      end
+      local data = assert(conn:recv())
       ngx.say(data)
-      local ok, err = conn:send({method = "hello"})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({method = "progress_1"}, {related_request = 1})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({
+      assert(conn:send({method = "hello"}))
+      assert(conn:send({method = "progress_1"}, {related_request = 1}))
+      assert(conn:send({
         {method = "progress_2"},
         {method = "request_related_2"},
-      }, {related_request = 2})
-      if not ok then
-        error(err)
-      end
-      local ok, err = conn:send({
+      }, {related_request = 2}))
+      assert(conn:send({
         {id = 1, result = "foo"},
         {method = "test"},
         {id = 2, result = "bar"}
-      })
-      if not ok then
-        error(err)
-      end
+      }))
     end)
-    local ok, err = message_bus:push_smsg(session_id, "Hello, Streamable HTTP!")
-    if not ok then
-      error(err)
-    end
+    assert(message_bus:push_smsg(session_id, "Hello, Streamable HTTP!"))
     ngx.thread.wait(co)
     local n = 6
     while n > 0 do
-      local msgs, err = message_bus:pop_cmsgs(session_id, {"get", "1", "2"})
-      if not msgs then
-        error(err)
-      end
+      local msgs = assert(message_bus:pop_cmsgs(session_id, {"get", "1", "2"}))
       for i, msg in ipairs(msgs) do
         local dm = cjson.decode(msg)
         if #dm > 0 then

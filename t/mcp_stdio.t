@@ -11,16 +11,10 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/handshake.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize()
-    if not ok then
-      error(err)
-    end
+    }))
+    assert(client:initialize())
     client:shutdown()
     ngx.say(client.server.info.name)
     ngx.say(client.server.info.version)
@@ -45,12 +39,9 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/empty.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
+    }))
     local _, err = client:initialize()
     client:shutdown()
     ngx.say(err)
@@ -72,16 +63,10 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/handshake.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize()
-    if not ok then
-      error(err)
-    end
+    }))
+    assert(client:initialize())
     local _, err = client:list_prompts()
     ngx.say(err)
     local _, err = client:get_prompt("foobar")
@@ -130,91 +115,61 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       name = "MCP Tools",
       version = "1.0_alpha",
       command = "/usr/local/openresty/bin/resty -I lib t/mock/tools.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       event_handlers = {
         ["tools/list_changed"] = function()
           ngx.say("tools/list_changed")
         end
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
+    }))
+    local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
-    local res, err = client:call_tool("add", {a = 1, b = 2})
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("add", {a = 1, b = 2}))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     local _, err = client:call_tool("echo", {message = "Hello, world!"})
     ngx.say(err)
-    local res, err = client:call_tool("enable_echo")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_echo"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
+    local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
-    local res, err = client:call_tool("echo", {message = "Hello, world!"})
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("echo", {message = "Hello, world!"}))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local res, err = client:call_tool("enable_echo")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_echo"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
-    local res, err = client:call_tool("disable_echo")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("disable_echo"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
+    local tools = assert(client:list_tools())
     ngx.say(tostring(client.server.discovered_tools == tools))
     for i, v in ipairs(tools) do
       ngx.say(v.name)
@@ -275,65 +230,44 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/prompts.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       event_handlers = {
         ["prompts/list_changed"] = function()
           ngx.say("prompts/list_changed")
         end
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local prompts, err = client:list_prompts()
-    if not prompts then
-      error(err)
-    end
+    }))
+    local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
-    local res, err = client:get_prompt("simple_prompt")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:get_prompt("simple_prompt"))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
     end
-    local res, err = client:get_prompt("complex_prompt", {
+    local res = assert(client:get_prompt("complex_prompt", {
       temperature = "0.4",
       style = "json"
-    })
-    if not res then
-      error(err)
-    end
+    }))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
     end
     local _, err = client:get_prompt("mock_error")
     ngx.say(err)
-    local res, err = client:call_tool("enable_mock_error")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_mock_error"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
-    local prompts, err = client:list_prompts()
-    if not prompts then
-      error(err)
-    end
+    local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
       ngx.say(v.description)
@@ -341,28 +275,19 @@ location = /t {
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     local _, err = client:get_prompt("mock_error")
     ngx.say(err)
-    local res, err = client:call_tool("enable_mock_error")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_mock_error"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
-    local res, err = client:call_tool("disable_mock_error")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("disable_mock_error"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
-    local prompts, err = client:list_prompts()
-    if not prompts then
-      error(err)
-    end
+    local prompts = assert(client:list_prompts())
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
@@ -419,26 +344,17 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/resources.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       event_handlers = {
         ["resources/list_changed"] = function()
           ngx.say("resources/list_changed")
         end
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    }))
+    local resources = assert(client:list_resources())
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
@@ -459,18 +375,12 @@ location = /t {
         ngx.say(err)
       end
     end
-    local res, err = client:call_tool("enable_hidden_resource")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_hidden_resource"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local res, err = client:read_resource("mock://static/hidden")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:read_resource("mock://static/hidden"))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(tostring(v.mimeType))
@@ -478,10 +388,7 @@ location = /t {
       ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
     end
     ngx.say(tostring(client.server.discovered_resources == resources))
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    local resources = assert(client:list_resources())
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
@@ -489,10 +396,7 @@ location = /t {
       ngx.say(tostring(v.mimeType))
     end
     ngx.say(tostring(client.server.discovered_resources == resources))
-    local templates, err = client:list_resource_templates()
-    if not templates then
-      error(err)
-    end
+    local templates = assert(client:list_resource_templates())
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
@@ -515,18 +419,12 @@ location = /t {
     end
     local res, err = client:read_resource("mock://dynamic/hidden/foobar")
     ngx.say(err)
-    local res, err = client:call_tool("enable_hidden_template")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("enable_hidden_template"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local res, err = client:read_resource("mock://dynamic/hidden/foobar")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:read_resource("mock://dynamic/hidden/foobar"))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(tostring(v.mimeType))
@@ -534,10 +432,7 @@ location = /t {
       ngx.say(v.blob and ngx.decode_base64(v.blob) or "nil")
     end
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
-    local templates, err = client:list_resource_templates()
-    if not templates then
-      error(err)
-    end
+    local templates = assert(client:list_resource_templates())
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
@@ -545,10 +440,7 @@ location = /t {
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
-    local res, err = client:call_tool("touch_resource", {uri = "mock://static/text"})
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("touch_resource", {uri = "mock://static/text"}))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
@@ -563,43 +455,28 @@ location = /t {
       end
     end
     for i, uri in ipairs(uris) do
-      local res, err = client:call_tool("touch_resource", {uri = uri})
-      if not res then
-        error(err)
-      end
+      local res = assert(client:call_tool("touch_resource", {uri = uri}))
       ngx.say(tostring(res.isError))
       for j, v in ipairs(res.content) do
         ngx.say(string.format("%s %s", v.type, v.text))
       end
     end
-    local ok, err = client:unsubscribe_resource(uris[1])
-    if not ok then
-      error(err)
-    end
+    assert(client:unsubscribe_resource(uris[1]))
     for i, uri in ipairs(uris) do
-      local res, err = client:call_tool("touch_resource", {uri = uri})
-      if not res then
-        error(err)
-      end
+      local res = assert(client:call_tool("touch_resource", {uri = uri}))
       ngx.say(tostring(res.isError))
       for j, v in ipairs(res.content) do
         ngx.say(string.format("%s %s", v.type, v.text))
       end
     end
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
-    local res, err = client:call_tool("disable_hidden_template")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("disable_hidden_template"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
-    local templates, err = client:list_resource_templates()
-    if not templates then
-      error(err)
-    end
+    local templates = assert(client:list_resource_templates())
     ngx.say(tostring(client.server.discovered_resource_templates == templates))
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
@@ -607,24 +484,15 @@ location = /t {
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    local resources = assert(client:list_resources())
     ngx.say(tostring(client.server.discovered_resources == resources))
-    local res, err = client:call_tool("disable_hidden_resource")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("disable_hidden_resource"))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
     ngx.say(tostring(client.server.discovered_resources == resources))
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    local resources = assert(client:list_resources())
     ngx.say(tostring(client.server.discovered_resources == resources))
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
@@ -764,47 +632,29 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/roots.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       roots = {
         {path = "/path/to/foo/bar", name = "Foobar"},
         {path = "/path/to/hello/world"}
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local res, err = client:read_resource("mock://client_capabilities")
-    if not res then
-      error(err)
-    end
+    }))
+    local res = assert(client:read_resource("mock://client_capabilities"))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(v.text)
     end
-    local res, err = client:read_resource("mock://discovered_roots")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:read_resource("mock://discovered_roots"))
     ngx.say(#res.contents)
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(v.text)
     end
-    local sema, err = require("ngx.semaphore").new()
-    if not sema then
-      error(err)
-    end
+    local sema = assert(require("ngx.semaphore").new())
     local ok, err = client:subscribe_resource("mock://discovered_roots", function(uri, ctx)
-      local res, err = ctx.session:read_resource("mock://discovered_roots")
-      if not res then
-        error(err)
-      end
+      local res = assert(ctx.session:read_resource("mock://discovered_roots"))
       ngx.say(#res.contents)
       for i, v in ipairs(res.contents) do
         ngx.say(v.uri)
@@ -815,25 +665,13 @@ location = /t {
     if not ok then
       ngx.say(err)
     end
-    local ok, err = client:expose_roots()
-    if not ok then
-      error(err)
-    end
-    local ok, err = sema:wait(5)
-    if not ok then
-      error(err)
-    end
-    local ok, err = client:expose_roots({
+    assert(client:expose_roots())
+    assert(sema:wait(5))
+    assert(client:expose_roots({
       {path = "/path/to/foo/bar"},
       {path = "/path/to/hello/world", name = "Hello, world!"}
-    })
-    if not ok then
-      error(err)
-    end
-    local ok, err = sema:wait(5)
-    if not ok then
-      error(err)
-    end
+    }))
+    assert(sema:wait(5))
     ngx.say("END")
     client:shutdown()
   }
@@ -869,32 +707,20 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/sampling.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       sampling_callback = function(params)
         return "Hey there! What's up?"
       end
-    })
-    if not ok then
-      error(err)
-    end
-    local res, err = client:read_resource("mock://client_capabilities")
-    if not res then
-      error(err)
-    end
+    }))
+    local res = assert(client:read_resource("mock://client_capabilities"))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(v.text)
     end
-    local res, err = client:get_prompt("simple_sampling")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:get_prompt("simple_sampling"))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s %s", v.role, v.content.type, v.content.text, tostring(v.model)))
@@ -926,13 +752,10 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/sampling.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       sampling_callback = function(params)
         return {
           content = {
@@ -943,22 +766,13 @@ location = /t {
           model = "mock"
         }
       end
-    })
-    if not ok then
-      error(err)
-    end
-    local res, err = client:read_resource("mock://client_capabilities")
-    if not res then
-      error(err)
-    end
+    }))
+    local res = assert(client:read_resource("mock://client_capabilities"))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(v.text)
     end
-    local res, err = client:get_prompt("simple_sampling")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:get_prompt("simple_sampling"))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s %s %s", v.role, v.content.type, v.content.text or v.content.data, tostring(v.content.mimeType), tostring(v.model)))
@@ -990,76 +804,52 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/progress.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       sampling_callback = function(params, ctx)
         for i, v in ipairs({0.25, 0.5, 1}) do
-          local ok, err = ctx.push_progress(v, 1, "sampling")
-          if not ok then
-            return
-          end
+          assert(ctx.push_progress(v, 1, "sampling"))
         end
         return "Hey there! What's up?"
       end
-    })
-    if not ok then
-      error(err)
-    end
-    local res, err = client:get_prompt("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+    }))
+    local res = assert(client:get_prompt("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
       ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
       return true
-    end)
-    if not res then
-      error(err)
-    end
+    end))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s", v.role, v.content.type, v.content.text))
     end
-    local res, err = client:read_resource("echo://static", 180, function(progress, total, message)
+    local res = assert(client:read_resource("echo://static", 180, function(progress, total, message)
       ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
       return true
-    end)
-    if not res then
-      error(err)
-    end
+    end))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(tostring(v.mimeType))
       ngx.say(tostring(v.text))
     end
-    local res, err = client:read_resource("echo://foobar", 180, function(progress, total, message)
+    local res = assert(client:read_resource("echo://foobar", 180, function(progress, total, message)
       ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
       return true
-    end)
-    if not res then
-      error(err)
-    end
+    end))
     for i, v in ipairs(res.contents) do
       ngx.say(v.uri)
       ngx.say(tostring(v.mimeType))
       ngx.say(tostring(v.text))
     end
-    local res, err = client:call_tool("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
+    local res = assert(client:call_tool("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
       ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
       return true
-    end)
-    if not res then
-      error(err)
-    end
+    end))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
       ngx.say(string.format("%s %s", v.type, v.text))
     end
-    local res, err = client:get_prompt("simple_sampling")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:get_prompt("simple_sampling"))
     ngx.say(res.description)
     for i, v in ipairs(res.messages) do
       ngx.say(string.format("%s %s %s %s %s", v.role, v.content.type, v.content.text or v.content.data, tostring(v.content.mimeType), tostring(v.model)))
@@ -1110,13 +900,10 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/progress.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       sampling_callback = function(params, ctx)
         for i, v in ipairs({0.25, 0.5, 1}) do
           local ok, err = ctx.push_progress(v, 1, "sampling")
@@ -1126,10 +913,7 @@ location = /t {
         end
         return "Hey there! What's up?"
       end
-    })
-    if not ok then
-      error(err)
-    end
+    }))
     local res, err = client:get_prompt("echo", {message = "Hello, MCP!"}, 180, function(progress, total, message)
       ngx.say(string.format("progress=%s, total=%s, message=%s", tostring(progress), tostring(total), tostring(message)))
       return nil, "test cancellation"
@@ -1179,13 +963,10 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/batch_replace.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       event_handlers = {
         ["prompts/list_changed"] = function()
           ngx.say("prompts/list_changed")
@@ -1197,93 +978,45 @@ location = /t {
           ngx.say("tools/list_changed")
         end
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local prompts, err = client:list_prompts()
-    if not prompts then
-      error(err)
-    end
+    }))
+    local prompts = assert(client:list_prompts())
     ngx.say(#prompts)
-    local res, err = client:call_tool("batch_prompts")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("batch_prompts"))
     ngx.say(tostring(res.isError))
-    local prompts, err = client:list_prompts()
-    if not prompts then
-      error(err)
-    end
+    local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
-      local res, err = client:get_prompt(v.name)
-      if not res then
-        error(err)
-      end
+      local res = assert(client:get_prompt(v.name))
       ngx.say(res.messages[1].content.text)
     end
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    local resources = assert(client:list_resources())
     ngx.say(#resources)
-    local templates, err = client:list_resource_templates()
-    if not templates then
-      error(err)
-    end
+    local templates = assert(client:list_resource_templates())
     ngx.say(#templates)
-    local res, err = client:call_tool("batch_resources")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("batch_resources"))
     ngx.say(tostring(res.isError))
-    local resources, err = client:list_resources()
-    if not resources then
-      error(err)
-    end
+    local resources = assert(client:list_resources())
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
-      local res, err = client:read_resource(v.uri)
-      if not res then
-        error(err)
-      end
+      local res = assert(client:read_resource(v.uri))
       ngx.say(res.contents[1].text)
     end
-    local templates, err = client:list_resource_templates()
-    if not templates then
-      error(err)
-    end
+    local templates = assert(client:list_resource_templates())
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
-      local res, err = client:read_resource(string.format("mock://batch/dynamic_%d/foobar", i))
-      if not res then
-        error(err)
-      end
+      local res = assert(client:read_resource(string.format("mock://batch/dynamic_%d/foobar", i)))
       ngx.say(res.contents[1].text)
     end
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
+    local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
     end
-    local res, err = client:call_tool("batch_tools")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("batch_tools"))
     ngx.say(tostring(res.isError))
-    local tools, err = client:list_tools()
-    if not tools then
-      error(err)
-    end
+    local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
-      local res, err = client:call_tool(v.name)
-      if not res then
-        error(err)
-      end
+      local res = assert(client:call_tool(v.name))
       ngx.say(res.content[1].text)
     end
     client:shutdown()
@@ -1332,45 +1065,24 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/logging.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize({
+    }))
+    assert(client:initialize({
       event_handlers = {
         message = function(params)
           ngx.say(string.format("[%s] %s %s", params.level, params.data, tostring(params.logger)))
         end
       }
-    })
-    if not ok then
-      error(err)
-    end
-    local res, err = client:call_tool("log_echo", {level = "error", data = "Foobar"})
-    if not res then
-      error(err)
-    end
+    }))
+    local res = assert(client:call_tool("log_echo", {level = "error", data = "Foobar"}))
     ngx.say(tostring(res.isError))
-    local res, err = client:set_log_level("warning")
-    if not res then
-      error(err)
-    end
-    local res, err = client:call_tool("log_echo", {level = "error", data = "Foobar"})
-    if not res then
-      error(err)
-    end
+    assert(client:set_log_level("warning"))
+    local res = assert(client:call_tool("log_echo", {level = "error", data = "Foobar"}))
     ngx.say(tostring(res.isError))
-    local res, err = client:call_tool("log_echo", {level = "warning", data = "Hello, MCP!", logger = "mock"})
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("log_echo", {level = "warning", data = "Hello, MCP!", logger = "mock"}))
     ngx.say(tostring(res.isError))
-    local res, err = client:call_tool("log_echo", {level = "notice", data = "Hello, MCP!", logger = "mock"})
-    if not res then
-      error(err)
-    end
+    local res = assert(client:call_tool("log_echo", {level = "notice", data = "Hello, MCP!", logger = "mock"}))
     ngx.say(tostring(res.isError))
     client:shutdown()
   }
@@ -1396,24 +1108,12 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/ping.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize()
-    if not ok then
-      error(err)
-    end
-    local ok, err = client:ping()
-    if not ok then
-      error(err)
-    end
-    local res, err = client:call_tool("ping")
-    if not res then
-      error(err)
-    end
+    }))
+    assert(client:initialize())
+    assert(client:ping())
+    local res = assert(client:call_tool("ping"))
     ngx.say(tostring(res.isError))
     client:shutdown()
   }
@@ -1434,53 +1134,35 @@ lua_package_path 'lib/?.lua;;';
 location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
-    local client, err = mcp.client(mcp.transport.stdio, {
+    local client = assert(mcp.client(mcp.transport.stdio, {
       command = "/usr/local/openresty/bin/resty -I lib t/mock/completion.lua 2>> error.log"
-    })
-    if not client then
-      error(err)
-    end
-    local ok, err = client:initialize()
-    if not ok then
-      error(err)
-    end
-    local res, err = client:prompt_complete("simple_prompt", "foo", "bar")
-    if not res then
-      error(err)
-    end
+    }))
+    assert(client:initialize())
+    local res = assert(client:prompt_complete("simple_prompt", "foo", "bar"))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:prompt_complete("complex_prompt", "temperature", "0")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:prompt_complete("complex_prompt", "temperature", "0"))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:prompt_complete("complex_prompt", "style", "")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:prompt_complete("complex_prompt", "style", ""))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:prompt_complete("complex_prompt", "style", "a")
-    if not res then
-      error(err)
-    end
+    local res = assert(client:prompt_complete("complex_prompt", "style", "a"))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:resource_complete("mock://no_completion/text/{id}", "id", "")
+    local res = assert(client:resource_complete("mock://no_completion/text/{id}", "id", ""))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "")
+    local res = assert(client:resource_complete("mock://dynamic/text/{id}", "id", ""))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
-    local res, err = client:resource_complete("mock://dynamic/text/{id}", "id", "a")
+    local res = assert(client:resource_complete("mock://dynamic/text/{id}", "id", "a"))
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))

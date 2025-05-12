@@ -1,11 +1,8 @@
 local mcp = require("resty.mcp")
 
-local server, err = mcp.server(mcp.transport.stdio)
-if not server then
-  error(err)
-end
+local server = assert(mcp.server(mcp.transport.stdio))
 
-local ok, err = server:register(mcp.tool("batch_prompts", function(args, ctx)
+assert(server:register(mcp.tool("batch_prompts", function(args, ctx)
   local ok, err = ctx.session:replace_prompts({
     mcp.prompt("batch_prompt_1", function(args, ctx)
       return "content of batch_prompt_1"
@@ -18,9 +15,9 @@ local ok, err = server:register(mcp.tool("batch_prompts", function(args, ctx)
     return nil, err
   end
   return {}
-end))
+end)))
 
-local ok, err = server:register(mcp.tool("batch_resources", function(args, ctx)
+assert(server:register(mcp.tool("batch_resources", function(args, ctx)
   local ok, err = ctx.session:replace_resources({
     mcp.resource("mock://batch/static_1", "static_1", function(uri, ctx)
       return "batch_static_1"
@@ -46,9 +43,9 @@ local ok, err = server:register(mcp.tool("batch_resources", function(args, ctx)
     return nil, err
   end
   return {}
-end))
+end)))
 
-local ok, err = server:register(mcp.tool("batch_tools", function(args, ctx)
+assert(server:register(mcp.tool("batch_tools", function(args, ctx)
   local ok, err = ctx.session:replace_tools({
     mcp.tool("batch_tool_1", function(args, ctx)
       return "result of batch_tool_1"
@@ -61,6 +58,6 @@ local ok, err = server:register(mcp.tool("batch_tools", function(args, ctx)
     return nil, err
   end
   return {}
-end))
+end)))
 
 server:run()

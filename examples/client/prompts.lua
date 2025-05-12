@@ -1,35 +1,20 @@
 local mcp = require("resty.mcp")
 local cjson = require("cjson")
 
-local client, err = mcp.client(mcp.transport.stdio, {
+local client = assert(mcp.client(mcp.transport.stdio, {
   command = {"npx", "-y", "@modelcontextprotocol/server-everything"}
-})
-if not client then
-  error(err)
-end
-local ok, err = client:initialize()
-if not ok then
-  error(err)
-end
+}))
+assert(client:initialize())
 print(ngx.localtime(), " initialized")
 print("serverInfo: ", cjson.encode(client.server))
 
-local prompts, err = client:list_prompts()
-if not prompts then
-  error(err)
-end
+local prompts = assert(client:list_prompts())
 print("prompts: ", cjson.encode(prompts))
 
-local prompt, err = client:get_prompt("simple_prompt")
-if not prompt then
-  error(err)
-end
+local prompt = assert(client:get_prompt("simple_prompt"))
 print("simple prompt: ", cjson.encode(prompt))
 
-local prompt, err = client:get_prompt("complex_prompt", {temperature = "0.4", style = "json"})
-if not prompt then
-  error(err)
-end
+local prompt = assert(client:get_prompt("complex_prompt", {temperature = "0.4", style = "json"}))
 print("complex prompt: ", cjson.encode(prompt))
 
 local _, err = client:get_prompt("foobar")

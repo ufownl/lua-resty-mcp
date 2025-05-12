@@ -40,10 +40,7 @@ function _MT.__index.read(self, ctx)
       v.mimeType = v.mimeType or self.mime
     end
     local result = {contents = setmetatable(contents, cjson.array_mt)}
-    local ok, err = mcp.validator.ReadResourceResult(result)
-    if not ok then
-      error(err)
-    end
+    assert(mcp.validator.ReadResourceResult(result))
     for i, v in ipairs(contents) do
       if self.mime and v.uri == self.uri and v.mimeType ~= self.mime then
         error("resource MIME type mismatch")
