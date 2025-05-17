@@ -77,9 +77,9 @@ local function return_result(result, errobj, validator)
   if errobj then
     if errobj.data then
       local data, err = cjson.encode(errobj.data)
-      return nil, string.format("%d %s %s", errobj.code, errobj.message, data or err)
+      return nil, string.format("%d %s %s", errobj.code, errobj.message, data or err), errobj
     end
-    return nil, string.format("%d %s", errobj.code, errobj.message)
+    return nil, string.format("%d %s", errobj.code, errobj.message), errobj
   end
   local ok, err = validator(result)
   if not ok then
@@ -97,8 +97,7 @@ local function request_async(self, req, cb, options)
     if options and options.progress_token then
       self.monitoring_progress[options.progress_token] = nil
     end
-    local res, err = return_result(result, errobj, req.validator)
-    cb(res, err)
+    cb(return_result(result, errobj, req.validator))
   end
   return true
 end

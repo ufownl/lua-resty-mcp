@@ -649,11 +649,11 @@ A successful call returns `true`. Otherwise, it returns `nil` and a string descr
 
 ### server:list\_roots
 
-`syntax: roots, err = server:list_roots([timeout])`
+`syntax: roots, err, rpc_err = server:list_roots([timeout])`
 
 Request a list of root URIs from the client.
 
-A successful call returns an array-like Lua table that contains the roots. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns an array-like Lua table that contains the roots. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The returned `roots` may have the following structure:
 
@@ -667,11 +667,11 @@ The returned `roots` may have the following structure:
 
 ### server:create\_message
 
-`syntax: res, err = server:create_message(messages, max_tokens[, options[, timeout[, progress_cb]]])`
+`syntax: res, err, rpc_err = server:create_message(messages, max_tokens[, options[, timeout[, progress_cb]]])`
 
 Request to sample an LLM via the client.
 
-A successful call returns a dict-like Lua table that contains the sampled message from the client. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the sampled message from the client. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The 1st argument of this method `messages`, should be an array-like Lua table that contains a list of structured conversation messages. It could be defined as follows:
 
@@ -755,11 +755,11 @@ The 2nd argument `data` could be any JSON serializable type, and the optional `l
 
 ### server:ping
 
-`syntax: ok, err = server:ping([timeout])`
+`syntax: ok, err, rpc_err = server:ping([timeout])`
 
 Send a `ping` request to the client.
 
-A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 ### server:wait\_background\_tasks
 
@@ -921,11 +921,11 @@ Available options:
 
 ### client:initialize
 
-`syntax: ok, err = client:initialize([options[, timeout]])`
+`syntax: ok, err, rpc_err = client:initialize([options[, timeout]])`
 
 Initialize the client session.
 
-A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 Available options:
 
@@ -1045,11 +1045,11 @@ The argument `roots` is the same as in `client:initialize`, pass `nil` or `{}` t
 
 ### client:list\_prompts
 
-`syntax: prompts, err = client:list_prompts([timeout])`
+`syntax: prompts, err, rpc_err = client:list_prompts([timeout])`
 
 List the available prompts of the MCP server.
 
-A successful call returns an array-like Lua table that contains the prompts. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns an array-like Lua table that contains the prompts. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The returned `prompts` may have the following structure:
 
@@ -1073,11 +1073,11 @@ The returned `prompts` may have the following structure:
 
 ### client:get\_prompt
 
-`syntax: res, err = client:get_prompt(name, args[, timeout[, progress_cb]])`
+`syntax: res, err, rpc_err = client:get_prompt(name, args[, timeout[, progress_cb]])`
 
 Get a specific prompt from the MCP server.
 
-A successful call returns a dict-like Lua table that contains the content of the prompt. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the content of the prompt. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The 4th argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
 
@@ -1108,11 +1108,11 @@ The content of the prompt may have the following structure:
 
 ### client:list\_resources
 
-`syntax: resources, err = client:list_resources([timeout])`
+`syntax: resources, err, rpc_err = client:list_resources([timeout])`
 
 List the available resources of the MCP server.
 
-A successful call returns an array-like Lua table that contains the resources. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns an array-like Lua table that contains the resources. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The returned `resources` may have the following structure:
 
@@ -1130,11 +1130,11 @@ The returned `resources` may have the following structure:
 
 ### client:list\_resource\_templates
 
-`syntax: templates, err = client:list_resource_templates([timeout])`
+`syntax: templates, err, rpc_err = client:list_resource_templates([timeout])`
 
 List the available resource templates of the MCP server.
 
-A successful call returns an array-like Lua table that contains the resource templates. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns an array-like Lua table that contains the resource templates. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The returned `templates` may have the following structure:
 
@@ -1152,11 +1152,11 @@ The returned `templates` may have the following structure:
 
 ### client:read\_resource
 
-`syntax: res, err = client:read_resource(uri[, timeout[, progress_cb]])`
+`syntax: res, err, rpc_err = client:read_resource(uri[, timeout[, progress_cb]])`
 
 Read a specific resource from the MCP server.
 
-A successful call returns a dict-like Lua table that contains the content of the resource. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the content of the resource. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The 3rd argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
 
@@ -1184,11 +1184,11 @@ The content of the resource may have the following structure:
 
 ### client:subscribe\_resource
 
-`syntax: ok, err = client:subscribe_resource(uri, callback[, timeout])`
+`syntax: ok, err, rpc_err = client:subscribe_resource(uri, callback[, timeout])`
 
 Subscribe to a specific resource of the MCP server.
 
-A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 `callback` will be called when the MCP server triggers `notifications/resources/updated`, and it could be defined as follows:
 
@@ -1202,19 +1202,19 @@ end
 
 ### client:unsubscribe\_resource
 
-`syntax: ok, err = client:unsubscribe_resource(uri[, timeout])`
+`syntax: ok, err, rpc_err = client:unsubscribe_resource(uri[, timeout])`
 
 Unsubscribe from a subscribed resource of the MCP server.
 
-A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns `true`. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 ### client:list\_tools
 
-`syntax: tools, err = client:list_tools([timeout])`
+`syntax: tools, err, rpc_err = client:list_tools([timeout])`
 
 List the available tools of the MCP server.
 
-A successful call returns an array-like Lua table that contains the tools. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns an array-like Lua table that contains the tools. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The returned `tools` may have the following structure:
 
@@ -1240,11 +1240,11 @@ The returned `tools` may have the following structure:
 
 ### client:call\_tool
 
-`syntax: res, err = client:call_tool(name, args[, timeout[, progress_cb]])`
+`syntax: res, err, rpc_err = client:call_tool(name, args[, timeout[, progress_cb]])`
 
 Call a specific tool in the MCP server.
 
-A successful call returns a dict-like Lua table that contains the result of the tool call. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the result of the tool call. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The 4th argument of this method `progress_cb`, is the callback to receive the progress of this request. It could be defined as follows:
 
@@ -1272,11 +1272,11 @@ The result of the tool calling may have the following structure:
 
 ### client:prompt\_complete
 
-`syntax: res, err = client:prompt_complete(name, arg_name, arg_value)`
+`syntax: res, err, rpc_err = client:prompt_complete(name, arg_name, arg_value)`
 
 Request to complete an argument of a prompt.
 
-A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The result of the argument completion may have the following structure:
 
@@ -1297,31 +1297,31 @@ The result of the argument completion may have the following structure:
 
 ### client:resource\_complete
 
-`syntax: res, err = client:resource_complete(uri, arg_name, arg_value)`
+`syntax: res, err, rpc_err = client:resource_complete(uri, arg_name, arg_value)`
 
 Request to complete an argument of a resource template.
 
-A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a dict-like Lua table that contains the result of the argument completion. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 The 1st argument `uri` should be the URI pattern of the resource template, and the structure of the result is the same as in [client:prompt\_complete](#clientprompt_complete).
 
 ### client:set\_log\_level
 
-`syntax: res, err = client:set_log_level(level[, timeout])`
+`syntax: res, err, rpc_err = client:set_log_level(level[, timeout])`
 
 Configure the minimum log level.
 
-A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 Available log levels: `"debug"`, `"info"`, `"notice"`, `"warning"`, `"error"`, `"critical"`, `"alert"`, `"emergency"`.
 
 ### client:ping
 
-`syntax: ok, err = client:ping([timeout])`
+`syntax: ok, err, rpc_err = client:ping([timeout])`
 
 Send a `ping` request to the server.
 
-A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error.
+A successful call returns a conditional true value. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
 
 ## Known Issues
 

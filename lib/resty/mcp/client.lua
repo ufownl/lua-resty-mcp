@@ -37,9 +37,9 @@ local function get_list(self, category, timeout, field_name)
   local list = {}
   local cursor
   repeat
-    local res, err = mcp.session.send_request(self, "list", {category, cursor}, tonumber(timeout))
+    local res, err, errobj = mcp.session.send_request(self, "list", {category, cursor}, tonumber(timeout))
     if not res then
-      return nil, err
+      return nil, err, errobj
     end
     for i, v in ipairs(res[field_name or category]) do
       table.insert(list, v)
@@ -185,14 +185,14 @@ local function list_impl(self, category, timeout)
       end
     else
       self.server[key] = 0
-      local list, err = get_list(self, category, timeout)
+      local list, err, errobj = get_list(self, category, timeout)
       local n = self.server[key]
       self.server[key] = list
       if n > 0 then
         self.semaphores[key]:post(n)
       end
       if err then
-        return nil, err
+        return nil, err, errobj
       end
     end
   until self.server[key]
@@ -226,10 +226,10 @@ function _MT.__index.initialize(self, options, timeout)
   self.sampling_callback = options and options.sampling_callback
   mcp.session.initialize(self, define_methods(self))
   local capabilities = {roots = true, sampling = self.sampling_callback}
-  local res, err = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
+  local res, err, errobj = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
   if not res then
     self.conn:close()
-    return nil, err
+    return nil, err, errobj
   end
   self.server = {
     protocol = res.protocolVersion,
@@ -326,14 +326,14 @@ function _MT.__index.list_resource_templates(self, timeout)
       end
     else
       self.server.discovered_resource_templates = 0
-      local list, err = get_list(self, "resources/templates", timeout, "resourceTemplates")
+      local list, err, errobj = get_list(self, "resources/templates", timeout, "resourceTemplates")
       local n = self.server.discovered_resource_templates
       self.server.discovered_resource_templates = list
       if n > 0 then
         self.semaphores.discovered_resource_templates:post(n)
       end
       if err then
-        return nil, err
+        return nil, err, errobj
       end
     end
   until self.server.discovered_resource_templates
@@ -367,9 +367,9 @@ function _MT.__index.subscribe_resource(self, uri, cb, timeout)
   if self.subscribed_resources and self.subscribed_resources[uri] then
     return nil, string.format("resource %s had been subscribed", uri)
   end
-  local res, err = mcp.session.send_request(self, "subscribe_resource", {uri}, tonumber(timeout))
+  local res, err, errobj = mcp.session.send_request(self, "subscribe_resource", {uri}, tonumber(timeout))
   if not res then
-    return nil, err
+    return nil, err, errobj
   end
   if self.subscribed_resources then
     self.subscribed_resources[uri] = cb
@@ -389,9 +389,9 @@ function _MT.__index.unsubscribe_resource(self, uri, timeout)
   if not self.server.capabilities.resources.subscribe then
     return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
   end
-  local res, err = mcp.session.send_request(self, "unsubscribe_resource", {uri}, tonumber(timeout))
+  local res, err, errobj = mcp.session.send_request(self, "unsubscribe_resource", {uri}, tonumber(timeout))
   if not res then
-    return nil, err
+    return nil, err, errobj
   end
   if self.subscribed_resources then
     self.subscribed_resources[uri] = nil

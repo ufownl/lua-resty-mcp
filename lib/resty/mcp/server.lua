@@ -726,9 +726,9 @@ function _MT.__index.list_roots(self, timeout, rrid)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
+    local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
     if not res then
-      return nil, err
+      return nil, err, errobj
     end
     return res.roots
   end
@@ -744,14 +744,14 @@ function _MT.__index.list_roots(self, timeout, rrid)
       end
     else
       self.client.discovered_roots = 0
-      local res, err = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
+      local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
       local n = self.client.discovered_roots
       self.client.discovered_roots = res and res.roots
       if n > 0 then
         self.semaphores.discovered_roots:post(n)
       end
       if err then
-        return nil, err
+        return nil, err, errobj
       end
     end
   until self.client.discovered_roots
