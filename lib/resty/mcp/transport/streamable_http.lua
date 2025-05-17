@@ -161,7 +161,8 @@ end
 local function session_worker(message_bus, custom_fn, options, session_id)
   options.session_id = session_id
   local mcp = require("resty.mcp")
-  local server, err = mcp.server(_M, options)
+  local fn = options.proxy and mcp.proxy or mcp.server
+  local server, err = fn(_M, options)
   if not server then
     ngx.log(ngx.ERR, err)
     message_bus:del_session(session_id)
@@ -412,6 +413,10 @@ function _M.endpoint(custom_fn, options)
     end
     do_DELETE(message_bus, session_id)
   end
+end
+
+function _M.check(v)
+  return mcp.utils.check_mcp_type(_M, v)
 end
 
 return _M
