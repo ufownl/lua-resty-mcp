@@ -13,6 +13,8 @@ local _M = {
 }
 
 local cjson = require("cjson.safe")
+local ngx_semaphore = require("ngx.semaphore")
+local unpack = table.unpack or unpack
 
 local function deliver_event(message_bus, session_id, data, stream)
   if stream then
@@ -156,6 +158,20 @@ local function do_POST(req_body, message_bus, session_id, options)
   until #waiting_rids == 0
 end
 
+local function session_worker(message_bus, custom_fn, options, session_id)
+  options.session_id = session_id
+  local mcp = require("resty.mcp")
+  local server, err = mcp.server(_M, options)
+  if not server then
+    ngx.log(ngx.ERR, err)
+    message_bus:del_session(session_id)
+    return
+  end
+  custom_fn(mcp, server)
+end
+
+local session_scheduler
+
 local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
   local reply = mcp.rpc.handle(req_body, setmetatable({}, {
     __index = function(_, key)
@@ -192,21 +208,38 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
     ngx.log(ngx.ERR, err)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
-  local ok, err = ngx.timer.at(0, function(premature)
-    options.session_id = session_id
-    local mcp = require("resty.mcp")
-    local server, err = mcp.server(_M, options)
-    if not server then
+  if session_scheduler then
+    table.insert(session_scheduler.pending, {message_bus, custom_fn, options, session_id})
+    session_scheduler.sema:post()
+  else
+    local sema, err = ngx_semaphore.new(1)
+    if not sema then
       ngx.log(ngx.ERR, err)
       message_bus:del_session(session_id)
-      return
+      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
     end
-    custom_fn(mcp, server)
-  end)
-  if not ok then
-    ngx.log(ngx.ERR, err)
-    message_bus:del_session(session_id)
-    ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    session_scheduler = {
+      sema = sema,
+      pending = {
+        {message_bus, custom_fn, options, session_id}
+      }
+    }
+    local ok, err = ngx.timer.at(0, function(premature)
+      while not ngx.worker.exiting() do
+        local ok, err = session_scheduler.sema:wait(1)
+        if ok then
+          ngx.thread.spawn(session_worker, unpack(table.remove(session_scheduler.pending, 1)))
+        elseif err ~= "timeout" then
+          ngx.log(ngx.ERR, err)
+        end
+      end
+    end)
+    if not ok then
+      ngx.log(ngx.ERR, err)
+      session_scheduler = nil
+      message_bus:del_session(session_id)
+      ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+    end
   end
   local ok, err = message_bus:push_smsg(session_id, req_body)
   if not ok then
