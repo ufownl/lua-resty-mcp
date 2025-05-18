@@ -88,8 +88,8 @@ local function return_result(result, errobj, validator)
   return result
 end
 
-local function request_async(self, req, cb, options, cleanup)
-  local ok, err = self.conn:send(req.msg, options)
+local function request_async(self, req, cb, meta, cleanup)
+  local ok, err = self.conn:send(req.msg, meta)
   if not ok then
     cleanup()
     return nil, err
@@ -101,8 +101,8 @@ local function request_async(self, req, cb, options, cleanup)
   return true
 end
 
-local function request_sync_blocking(self, req, options, cleanup)
-  local ok, err = self.conn:send(req.msg, options)
+local function request_sync_blocking(self, req, meta, cleanup)
+  local ok, err = self.conn:send(req.msg, meta)
   if not ok then
     cleanup()
     return nil, err
@@ -129,13 +129,13 @@ local function request_sync_blocking(self, req, options, cleanup)
   return return_result(result, errobj, req.validator)
 end
 
-local function request_sync_nonblocking(self, req, timeout, options, cleanup)
+local function request_sync_nonblocking(self, req, timeout, meta, cleanup)
   local sema, err = ngx_semaphore.new()
   if not sema then
     cleanup()
     return nil, err
   end
-  local ok, err = self.conn:send(req.msg, options)
+  local ok, err = self.conn:send(req.msg, meta)
   if not ok then
     cleanup()
     return nil, err
@@ -257,47 +257,47 @@ function _M.wait_background_tasks(self, timeout)
   return ok, err
 end
 
-function _M.send_request(self, name, args, cb_or_to, options)
+function _M.send_request(self, name, args, cb_or_to, meta)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid request format")
   end
   local req = mcp.protocol.request[name](unpack(args))
-  if options and options.progress_callback then
-    options.progress_token = mcp.utils.generate_id()
-    self.monitoring_progress[options.progress_token] = {
+  if meta and meta.progress_callback then
+    meta.progress_token = mcp.utils.generate_id()
+    self.monitoring_progress[meta.progress_token] = {
       rid = req.msg.id,
-      callback = options.progress_callback
+      callback = meta.progress_callback
     }
     local req_params = req.msg.params
     if req_params then
       if req_params._meta then
-        req_params._meta.progressToken = options.progress_token
+        req_params._meta.progressToken = meta.progress_token
       else
-        req_params._meta = {progressToken = options.progress_token}
+        req_params._meta = {progressToken = meta.progress_token}
       end
     else
-      req.msg.params = {_meta = {progressToken = options.progress_token}}
+      req.msg.params = {_meta = {progressToken = meta.progress_token}}
     end
   end
   local cleanup = function()
-    if options and options.progress_token then
-      self.monitoring_progress[options.progress_token] = nil
+    if meta and meta.progress_token then
+      self.monitoring_progress[meta.progress_token] = nil
     end
   end
   if cb_or_to and not tonumber(cb_or_to) then
-    return request_async(self, req, cb_or_to, options, cleanup)
+    return request_async(self, req, cb_or_to, meta, cleanup)
   elseif self.conn.blocking_io then
-    return request_sync_blocking(self, req, options, cleanup)
+    return request_sync_blocking(self, req, meta, cleanup)
   else
-    return request_sync_nonblocking(self, req, cb_or_to, options, cleanup)
+    return request_sync_nonblocking(self, req, cb_or_to, meta, cleanup)
   end
 end
 
-function _M.send_notification(self, name, args, options)
+function _M.send_notification(self, name, args, meta)
   if type(name) ~= "string" or type(args) ~= "table" then
     error("invalid notification format")
   end
-  return self.conn:send(mcp.protocol.notification[name](unpack(args)), options)
+  return self.conn:send(mcp.protocol.notification[name](unpack(args)), meta)
 end
 
 return _M

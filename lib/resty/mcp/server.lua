@@ -18,49 +18,49 @@ local _M = {
 local cjson = require("cjson.safe")
 local ngx_semaphore = require("ngx.semaphore")
 
-local function session(server, rid)
-  local function rrid()
+local function context_session(server, rid)
+  local function meta_fa()
     return {related_request = rid}
   end
   return setmetatable({
     register = function(_, component)
-      return server:register(component, rrid)
+      return server:register(component, meta_fa)
     end,
     unregister_prompt = function(_, name)
-      return server:unregister_prompt(name, rrid)
+      return server:unregister_prompt(name, meta_fa)
     end,
     unregister_resource = function(_, uri)
-      return server:unregister_resource(uri, rrid)
+      return server:unregister_resource(uri, meta_fa)
     end,
     unregister_resource_template = function(_, pattern)
-      return server:unregister_resource_template(pattern, rrid)
+      return server:unregister_resource_template(pattern, meta_fa)
     end,
     resource_updated = function(_, uri)
-      return server:resource_updated(uri, rrid)
+      return server:resource_updated(uri, meta_fa)
     end,
     unregister_tool = function(_, name)
-      return server:unregister_tool(name, rrid)
+      return server:unregister_tool(name, meta_fa)
     end,
     replace_prompts = function(_, prompts)
-      return server:replace_prompts(prompts, rrid)
+      return server:replace_prompts(prompts, meta_fa)
     end,
     replace_resources = function(_, resources, templates)
-      return server:replace_resources(resources, templates, rrid)
+      return server:replace_resources(resources, templates, meta_fa)
     end,
     replace_tools = function(_, tools)
-      return server:replace_tools(tools, rrid)
+      return server:replace_tools(tools, meta_fa)
     end,
     list_roots = function(_, timeout)
-      return server:list_roots(timeout, rrid)
+      return server:list_roots(timeout, meta_fa)
     end,
     create_message = function(_, messages, max_tokens, options, timeout, progress_cb)
-      return server:create_message(messages, max_tokens, options, timeout, progress_cb, rrid)
+      return server:create_message(messages, max_tokens, options, timeout, progress_cb, meta_fa)
     end,
     log = function(_, level, data, logger)
-      return server:log(level, data, logger, rrid)
+      return server:log(level, data, logger, meta_fa)
     end,
     ping = function(_, timeout)
-      return server:ping(timeout, rrid)
+      return server:ping(timeout, meta_fa)
     end
   }, {
     __index = function(self, key)
@@ -223,7 +223,7 @@ local function define_methods(self)
       end
       self.processing_requests[rid] = true
       local result, code, message, data = prompt:get(params.arguments, {
-        session = session(self, rid),
+        session = context_session(self, rid),
         _meta = params._meta,
         push_progress = push_progress(self, progress_token, rid),
         cancelled = function()
@@ -282,7 +282,7 @@ local function define_methods(self)
           progress_token = nil
         end
         local ctx = {
-          session = session(self, rid),
+          session = context_session(self, rid),
           _meta = params._meta,
           push_progress = push_progress(self, progress_token, rid),
           cancelled = function()
@@ -327,7 +327,7 @@ local function define_methods(self)
       end
       local handler = self.event_handlers and self.event_handlers["resources/subscribe"]
       local ctx = handler and {
-        session = session(self, rid),
+        session = context_session(self, rid),
         _meta = params._meta
       }
       if self.subscribed_resources and self.subscribed_resources[params.uri] then
@@ -382,7 +382,7 @@ local function define_methods(self)
       local handler = self.event_handlers and self.event_handlers["resources/unsubscribe"]
       if handler then
         handler(params, {
-          session = session(self, rid),
+          session = context_session(self, rid),
           _meta = params._meta
         })
       end
@@ -409,7 +409,7 @@ local function define_methods(self)
       end
       self.processing_requests[rid] = true
       local result, code, message, data = tool(params.arguments, {
-        session = session(self, rid),
+        session = context_session(self, rid),
         _meta = params._meta,
         push_progress = push_progress(self, progress_token, rid),
         cancelled = function()
@@ -509,9 +509,9 @@ local function define_methods(self)
   return mcp.session.inject_common(self, methods)
 end
 
-local function list_changed(self, category, rrid)
+local function list_changed(self, category, meta_fa)
   if self.initialized and self.capabilities[category] and self.capabilities[category].listChanged then
-    return mcp.session.send_notification(self, "list_changed", {category}, rrid and rrid() or nil)
+    return mcp.session.send_notification(self, "list_changed", {category}, meta_fa and meta_fa() or nil)
   end
   return true
 end
@@ -570,67 +570,67 @@ local _MT = {
   }
 }
 
-function _MT.__index.register(self, component, rrid)
+function _MT.__index.register(self, component, meta_fa)
   if mcp.prompt.check(component) then
     local ok, err = register_impl(self, component, "prompts", "name")
     if not ok then
       return nil, err
     end
-    return list_changed(self, "prompts", rrid)
+    return list_changed(self, "prompts", meta_fa)
   end
   if mcp.resource.check(component) then
     local ok, err = register_impl(self, component, "resources", "uri")
     if not ok then
       return nil, err
     end
-    return list_changed(self, "resources", rrid)
+    return list_changed(self, "resources", meta_fa)
   end
   if mcp.resource_template.check(component) then
     local ok, err = register_resource_template(self, component)
     if not ok then
       return nil, err
     end
-    return list_changed(self, "resources", rrid)
+    return list_changed(self, "resources", meta_fa)
   end
   if mcp.tool.check(component) then
     local ok, err = register_impl(self, component, "tools", "name")
     if not ok then
       return nil, err
     end
-    return list_changed(self, "tools", rrid)
+    return list_changed(self, "tools", meta_fa)
   end
   error("unsupported component")
 end
 
-function _MT.__index.unregister_prompt(self, name, rrid)
+function _MT.__index.unregister_prompt(self, name, meta_fa)
   local ok, err = unregister_impl(self, name, "prompts", "name")
   if not ok then
     return nil, err
   end
-  return list_changed(self, "prompts", rrid)
+  return list_changed(self, "prompts", meta_fa)
 end
 
-function _MT.__index.unregister_resource(self, uri, rrid)
+function _MT.__index.unregister_resource(self, uri, meta_fa)
   local ok, err = unregister_impl(self, uri, "resources", "uri")
   if not ok then
     return nil, err
   end
-  return list_changed(self, "resources", rrid)
+  return list_changed(self, "resources", meta_fa)
 end
 
-function _MT.__index.unregister_resource_template(self, pattern, rrid)
+function _MT.__index.unregister_resource_template(self, pattern, meta_fa)
   if self.available_resource_templates then
     for i, v in ipairs(self.available_resource_templates) do
       if pattern == v.uri_template.pattern then
         table.remove(self.available_resource_templates, i)
-        return list_changed(self, "resources", rrid)
+        return list_changed(self, "resources", meta_fa)
       end
     end
   end
   return nil, string.format("resource template (pattern: %s) is not registered", pattern)
 end
 
-function _MT.__index.resource_updated(self, uri, rrid)
+function _MT.__index.resource_updated(self, uri, meta_fa)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
@@ -638,20 +638,20 @@ function _MT.__index.resource_updated(self, uri, rrid)
     return nil, "resources capability has been disabled"
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
-    return mcp.session.send_notification(self, "resource_updated", {uri}, rrid and rrid() or nil)
+    return mcp.session.send_notification(self, "resource_updated", {uri}, meta_fa and meta_fa() or nil)
   end
   return true
 end
 
-function _MT.__index.unregister_tool(self, name, rrid)
+function _MT.__index.unregister_tool(self, name, meta_fa)
   local ok, err = unregister_impl(self, name, "tools", "name")
   if not ok then
     return nil, err
   end
-  return list_changed(self, "tools", rrid)
+  return list_changed(self, "tools", meta_fa)
 end
 
-function _MT.__index.replace_prompts(self, prompts, rrid)
+function _MT.__index.replace_prompts(self, prompts, meta_fa)
   if type(prompts) ~= "table" then
     error("prompts MUST be a array-like table")
   end
@@ -666,10 +666,10 @@ function _MT.__index.replace_prompts(self, prompts, rrid)
       end
     end
   end
-  return list_changed(self, "prompts", rrid)
+  return list_changed(self, "prompts", meta_fa)
 end
 
-function _MT.__index.replace_resources(self, resources, templates, rrid)
+function _MT.__index.replace_resources(self, resources, templates, meta_fa)
   local original_resources = self.available_resources
   if type(resources) == "table" then
     self.available_resources = nil
@@ -697,10 +697,10 @@ function _MT.__index.replace_resources(self, resources, templates, rrid)
       end
     end
   end
-  return list_changed(self, "resources", rrid)
+  return list_changed(self, "resources", meta_fa)
 end
 
-function _MT.__index.replace_tools(self, tools, rrid)
+function _MT.__index.replace_tools(self, tools, meta_fa)
   if type(tools) ~= "table" then
     error("tools MUST be a array-like table")
   end
@@ -715,10 +715,10 @@ function _MT.__index.replace_tools(self, tools, rrid)
       end
     end
   end
-  return list_changed(self, "tools", rrid)
+  return list_changed(self, "tools", meta_fa)
 end
 
-function _MT.__index.list_roots(self, timeout, rrid)
+function _MT.__index.list_roots(self, timeout, meta_fa)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
@@ -726,7 +726,7 @@ function _MT.__index.list_roots(self, timeout, rrid)
     return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
-    local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
+    local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), meta_fa and meta_fa() or nil)
     if not res then
       return nil, err, errobj
     end
@@ -744,7 +744,7 @@ function _MT.__index.list_roots(self, timeout, rrid)
       end
     else
       self.client.discovered_roots = 0
-      local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), rrid and rrid() or nil)
+      local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), meta_fa and meta_fa() or nil)
       local n = self.client.discovered_roots
       self.client.discovered_roots = res and res.roots
       if n > 0 then
@@ -758,24 +758,24 @@ function _MT.__index.list_roots(self, timeout, rrid)
   return self.client.discovered_roots
 end
 
-function _MT.__index.create_message(self, messages, max_tokens, options, timeout, progress_cb, rrid)
+function _MT.__index.create_message(self, messages, max_tokens, options, timeout, progress_cb, meta_fa)
   if not self.initialized then
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.sampling then
     return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
   end
-  local req_opts
-  if rrid then
-    req_opts = rrid()
-    req_opts.progress_callback = progress_cb
+  local meta
+  if meta_fa then
+    meta = meta_fa()
+    meta.progress_callback = progress_cb
   elseif progress_cb then
-    req_opts = {progress_callback = progress_cb}
+    meta = {progress_callback = progress_cb}
   end
-  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), req_opts)
+  return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), meta)
 end
 
-function _MT.__index.log(self, level, data, logger, rrid)
+function _MT.__index.log(self, level, data, logger, meta_fa)
   local llv = available_log_level[level]
   if not llv then
     return nil, "invalid log level"
@@ -796,13 +796,13 @@ function _MT.__index.log(self, level, data, logger, rrid)
     ngx.log(llv, encoded_data)
   end
   if self.capabilities.logging and self.log_level and llv <= self.log_level then
-    return mcp.session.send_notification(self, "message", {level, data, logger}, rrid and rrid() or nil)
+    return mcp.session.send_notification(self, "message", {level, data, logger}, meta_fa and meta_fa() or nil)
   end
   return true
 end
 
-function _MT.__index.ping(self, timeout, rrid)
-  return mcp.session.send_request(self, "ping", {}, tonumber(timeout), rrid and rrid() or nil)
+function _MT.__index.ping(self, timeout, meta_fa)
+  return mcp.session.send_request(self, "ping", {}, tonumber(timeout), meta_fa and meta_fa() or nil)
 end
 
 function _MT.__index.run(self, options)

@@ -43,14 +43,14 @@ local _MT = {
   }
 }
 
-function _MT.__index.send(self, msg, options)
+function _MT.__index.send(self, msg, meta)
   if type(msg) ~= "table" then
     error("message MUST be a table.")
   end
   if not self.message_bus then
     return nil, "closed"
   end
-  local rrid = options and options.related_request
+  local rrid = meta and meta.related_request
   if #msg > 0 then
     for k, v in pairs(route_messages(msg, rrid)) do
       local ok, err = self.message_bus:push_cmsg(self.session_id, k, #v > 1 and v or v[1])

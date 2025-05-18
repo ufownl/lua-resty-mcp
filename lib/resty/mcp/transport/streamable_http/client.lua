@@ -169,7 +169,7 @@ local _MT = {
   }
 }
 
-function _MT.__index.send(self, msg, options)
+function _MT.__index.send(self, msg, meta)
   if type(msg) ~= "table" then
     error("message MUST be a table.")
   end
@@ -213,7 +213,7 @@ function _MT.__index.send(self, msg, options)
         return nil, err
       end
     until body
-    if options and options.get_sse and self.enable_get_sse then
+    if meta and meta.get_sse and self.enable_get_sse then
       local ok, err = open_get_sse(self)
       if not ok then
         httpc:close()
