@@ -5,6 +5,7 @@ local _M = {
 
 local cjson = require("cjson.safe")
 local http = require("resty.http")
+local ngx_semaphore = require("ngx.semaphore")
 
 local function get_config()
   local httpc, err = http.new()
@@ -52,7 +53,7 @@ local function get_schedule(year)
   return sch
 end
 
-function _M.query()
+local function get_data()
   local cfg, err = get_config()
   if not cfg then
     return nil, err
@@ -69,6 +70,35 @@ function _M.query()
     config = cfg,
     schedules = schedules
   }
+end
+
+local cache_storage = {sema = assert(ngx_semaphore.new())}
+
+function _M.query(timeout)
+  repeat
+    if cache_storage.data then
+      if type(cache_storage.data) == "number" then
+        cache_storage.data = cache_storage.data + 1
+        local ok, err = cache_storage.sema:wait(tonumber(timeout) or 30)
+        if not ok then
+          cache_storage.data = cache_storage.data - 1
+          return nil, err
+        end
+      end
+    else
+      cache_storage.data = 0
+      local data, err = get_data()
+      local n = cache_storage.data
+      cache_storage.data = data
+      if n > 0 then
+        cache_storage.sema:post(n)
+      end
+      if err then
+        return nil, err
+      end
+    end
+  until cache_storage.data
+  return cache_storage.data
 end
 
 return _M
