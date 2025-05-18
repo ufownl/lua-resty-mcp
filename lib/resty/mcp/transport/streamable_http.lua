@@ -105,7 +105,7 @@ local function do_POST(req_body, message_bus, session_id, options)
     end
   end
   repeat
-    local msgs, err = message_bus:pop_cmsgs(session_id, waiting_rids)
+    local msgs, err = message_bus:pop_cmsgs(session_id, waiting_rids, tonumber(options.read_timeout) or 10)
     if msgs then
       for i, msg in ipairs(msgs) do
         local event_msgs = {}
@@ -255,7 +255,7 @@ local function do_POST_init_phase(req_body, message_bus, custom_fn, options)
     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
   end
   while true do
-    local msgs, err = message_bus:pop_cmsgs(session_id, {reply.id})
+    local msgs, err = message_bus:pop_cmsgs(session_id, {reply.id}, tonumber(options.read_timeout) or 10)
     if msgs then
       if #msgs > 1 then
         init_process_error()
@@ -328,7 +328,7 @@ local function do_GET(message_bus, session_id, options)
     end
   end
   while true do
-    local msgs, err = message_bus:pop_cmsgs(session_id, {"get"})
+    local msgs, err = message_bus:pop_cmsgs(session_id, {"get"}, tonumber(options.read_timeout) or 10)
     if msgs then
       for i, msg in ipairs(msgs) do
         local ok, err = deliver_event(message_bus, session_id, msg, stream)
