@@ -88,30 +88,28 @@ local function return_result(result, errobj, validator)
   return result
 end
 
-local function request_async(self, req, cb, options)
+local function request_async(self, req, cb, options, cleanup)
   local ok, err = self.conn:send(req.msg, options)
   if not ok then
+    cleanup()
     return nil, err
   end
   self.pending_requests[req.msg.id] = function(result, errobj)
-    if options and options.progress_token then
-      self.monitoring_progress[options.progress_token] = nil
-    end
+    cleanup()
     cb(return_result(result, errobj, req.validator))
   end
   return true
 end
 
-local function request_sync_blocking(self, req, options)
+local function request_sync_blocking(self, req, options, cleanup)
   local ok, err = self.conn:send(req.msg, options)
   if not ok then
+    cleanup()
     return nil, err
   end
   local result, errobj
   self.pending_requests[req.msg.id] = function(res, err)
-    if options and options.progress_token then
-      self.monitoring_progress[options.progress_token] = nil
-    end
+    cleanup()
     result = res
     errobj = err
   end
@@ -120,35 +118,38 @@ local function request_sync_blocking(self, req, options)
     if msg then
       local ok, err = handle_message(self, msg)
       if not ok then
+        cleanup()
         return nil, err
       end
     elseif err ~= "timeout" then
+      cleanup()
       return nil, err
     end
   until result or errobj
   return return_result(result, errobj, req.validator)
 end
 
-local function request_sync_nonblocking(self, req, timeout, options)
+local function request_sync_nonblocking(self, req, timeout, options, cleanup)
   local sema, err = ngx_semaphore.new()
   if not sema then
+    cleanup()
     return nil, err
   end
   local ok, err = self.conn:send(req.msg, options)
   if not ok then
+    cleanup()
     return nil, err
   end
   local result, errobj
   self.pending_requests[req.msg.id] = function(res, err)
-    if options and options.progress_token then
-      self.monitoring_progress[options.progress_token] = nil
-    end
+    cleanup()
     result = res
     errobj = err
     sema:post()
   end
   local ok, err = sema:wait(tonumber(timeout) or 10)
   if not ok then
+    cleanup()
     return nil, err
   end
   return return_result(result, errobj, req.validator)
@@ -278,12 +279,17 @@ function _M.send_request(self, name, args, cb_or_to, options)
       req.msg.params = {_meta = {progressToken = options.progress_token}}
     end
   end
+  local cleanup = function()
+    if options and options.progress_token then
+      self.monitoring_progress[options.progress_token] = nil
+    end
+  end
   if cb_or_to and not tonumber(cb_or_to) then
-    return request_async(self, req, cb_or_to, options)
+    return request_async(self, req, cb_or_to, options, cleanup)
   elseif self.conn.blocking_io then
-    return request_sync_blocking(self, req, options)
+    return request_sync_blocking(self, req, options, cleanup)
   else
-    return request_sync_nonblocking(self, req, cb_or_to, options)
+    return request_sync_nonblocking(self, req, cb_or_to, options, cleanup)
   end
 end
 
