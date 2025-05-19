@@ -64,10 +64,7 @@ local function main_loop(self)
   end
   if running_tasks then
     for k, v in pairs(running_tasks) do
-      local ok, err = ngx.thread.wait(v)
-      if not ok then
-        ngx.log(ngx.ERR, "ngx thread: ", err)
-      end
+      ngx.thread.wait(v)
     end
   end
   self.main_loop = nil
@@ -239,10 +236,7 @@ function _M.shutdown(self, dont_wait)
   if co then
     self.conn:close()
     if not dont_wait then
-      local ok, err = ngx.thread.wait(co)
-      if not ok then
-        ngx.log(ngx.ERR, "ngx thread: ", err)
-      end
+      ngx.thread.wait(co)
     end
   end
 end
