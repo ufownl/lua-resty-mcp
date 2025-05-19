@@ -93,13 +93,16 @@ function _M.declare(mcp, server)
     end
     local resp = string.format("The current date and time is %s. ", os.date("%c", now))
     local name = string.find(race.name, "Grand Prix", 1, true) and race.name or race.name.." Grand Prix"
-    local fp1_dt = iso_date(race.sessions.fp1)
-    if now < fp1_dt then
+    local fp1_ts = iso_date(race.sessions.fp1)
+    if now < fp1_ts then
       resp = resp..string.format("The %s will start in ", name)
-      local dur = fp1_dt - now
-      local days = math.floor(dur / (24 * 3600))
-      local minuts = math.floor(dur % 3600 / 60)
-      if days > 0 then
+      local dur = fp1_ts - now
+      if dur > 24 * 3600 then
+        local dt = os.date("*t", math.floor(now))
+        local today = math.floor(now) - dt.hour * 3600 - dt.min * 60 - dt.sec
+        local fp1_dt = os.date("*t", math.floor(fp1_ts))
+        local fp1_day = math.floor(fp1_ts) - fp1_dt.hour * 3600 - fp1_dt.min * 60 - fp1_dt.sec
+        local days = (fp1_day - today) / (24 * 3600)
         resp = resp..string.format("%u %s ", days, days > 1 and "days" or "day")
       else
         local hours = math.floor(dur % (24 * 3600) / 3600)
