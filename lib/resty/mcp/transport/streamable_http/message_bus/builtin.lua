@@ -191,31 +191,22 @@ function _MT.__index.replay_events(self, sid, last_event)
     return events
   end
   local stream = string.sub(evt, 1, n - 1)
-  for i, k in ipairs(self.shm_dict:get_keys(0)) do
-    local l, r = string.find(k, prefix, 1, true)
-    if l == 1 then
-      local eid = tonumber(string.sub(k, r + 1))
-      if eid and eid > tonumber(last_event) then
-        local evt, err = self.shm_dict:get(k)
-        if evt then
-          local n = string.find(evt, "\n", 1, true)
-          if n then
-            if string.sub(evt, 1, n - 1) == stream then
-              table.insert(events, {
-                data = string.sub(evt, n + 1),
-                id = eid
-              })
-            end
-          end
-        elseif err then
-          return nil, err
+  for eid = tonumber(last_event) + 1, val do
+    local evt, err = self.shm_dict:get(prefix..eid)
+    if evt then
+      local n = string.find(evt, "\n", 1, true)
+      if n then
+        if string.sub(evt, 1, n - 1) == stream then
+          table.insert(events, {
+            data = string.sub(evt, n + 1),
+            id = eid
+          })
         end
       end
+    elseif err then
+      return nil, err
     end
   end
-  table.sort(events, function(a, b)
-    return a.id < b.id
-  end)
   return events, stream
 end
 
