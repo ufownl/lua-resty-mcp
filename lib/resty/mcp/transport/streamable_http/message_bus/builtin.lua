@@ -40,15 +40,6 @@ function _MT.__index.del_session(self, sid)
   end
   self.shm_dict:delete("sess_mk#"..sid)
   self.shm_dict:delete("sess_mq#"..sid)
-  local pattern = string.format("^(chan_mq|sess_ce)#%s@", sid)
-  for i, k in ipairs(self.shm_dict:get_keys(0)) do
-    local l, r, err = ngx.re.find(k, pattern)
-    if l == 1 then
-      self.shm_dict:delete(k)
-    elseif err then
-      error(err)
-    end
-  end
 end
 
 function _MT.__index.check_session(self, sid)
