@@ -80,22 +80,7 @@ function _MT.__index.del_session(self, sid)
     ngx.log(ngx.ERR, "redis: ", err)
     return
   end
-  local keys = {"sess_mk#"..sid, "sess_mq#"..sid, "sess_ce#"..sid}
-  local pattern = string.format("chan_mq#%s@*", sid)
-  local cursor = "0"
-  repeat
-    local res, err = conn:scan(cursor, "MATCH", pattern)
-    if not res then
-      ngx.log(ngx.ERR, "redis: ", err)
-      conn:close()
-      return
-    end
-    cursor = res[1]
-    for j, v in ipairs(res[2]) do
-      table.insert(keys, v)
-    end
-  until cursor == "0"
-  local res, err = conn:del(unpack(keys))
+  local res, err = conn:del(unpack({"sess_mk#"..sid, "sess_mq#"..sid, "sess_ce#"..sid}))
   if not res then
     ngx.log(ngx.ERR, "redis: ", err)
     conn:close()
