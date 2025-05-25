@@ -188,9 +188,13 @@ function _M.notification.message(level, data, logger)
   })
 end
 
-function _M.result.initialize(capabilities, name, version, instructions)
+function _M.result.initialize(client_protocol, capabilities, name, version, instructions)
+  local protocol = mcp.version.protocol
+  if client_protocol ~= protocol and mcp.version.compatible_protocols[client_protocol] then
+    protocol = client_protocol
+  end
   return {
-    protocolVersion = mcp.version.protocol,
+    protocolVersion = protocol,
     capabilities = capabilities and {
       tools = capabilities.tools and (type(capabilities.tools) == "table" and capabilities.tools or {listChanged = true}) or nil,
       resources = capabilities.resources and (type(capabilities.resources) == "table" and capabilities.resources or {subscribe = true, listChanged = true}) or nil,
