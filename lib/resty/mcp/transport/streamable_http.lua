@@ -334,11 +334,7 @@ local function do_GET(message_bus, session_id, options)
         local ok, err = deliver_event(message_bus, session_id, msg, stream)
         if not ok then
           ngx.log(ngx.ERR, err)
-          if ngx.headers_sent then
-            ngx.exit(ngx.ERROR)
-          else
-            ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
-          end
+          ngx.exit(ngx.ERROR)
         end
       end
     elseif err == "not found" then
