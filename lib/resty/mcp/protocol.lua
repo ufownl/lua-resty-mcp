@@ -142,8 +142,8 @@ function _M.request.create_message(messages, max_tokens, options)
       messages = messages,
       maxTokens = tonumber(max_tokens),
       modelPreferences = options and options.modelPreferences,
-      systemPrompt = options and tostring(options.systemPrompt),
-      includeContext = options and tostring(options.includeContext),
+      systemPrompt = options and options.systemPrompt,
+      includeContext = options and options.includeContext,
       temperature = options and tonumber(options.temperature),
       stopSequences = options and options.stopSequences,
       metadata = options and options.metadata
