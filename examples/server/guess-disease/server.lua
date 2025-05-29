@@ -62,7 +62,7 @@ local function game_state(self, mcp, server)
       if not res.content.text then
         return nil, "invalid response type: "..res.content.type
       end
-      ctx.session:replace_tools({})
+      ctx.session:replace_tools({self.start_game})
       return "Host: "..res.content.text
     end, "Make a diagnosis for the patient.", {
       type = "object",
@@ -84,7 +84,7 @@ local _MT = {
 }
 
 function _MT.__index.initialize(self, mcp, server)
-  local ok, err = server:register(mcp.tool("start_game", function(args, ctx)
+  self.start_game = mcp.tool("start_game", function(args, ctx)
     local res, err = ctx.session:create_message({
       {
         role = "user",
@@ -161,11 +161,9 @@ function _MT.__index.initialize(self, mcp, server)
     table.insert(self.history, {role = res.role, content = res.content})
     game_state(self, mcp, ctx.session)
     return "Patient: "..res.content.text
-  end, "Start a round of the disease guessing game."))
-  if not ok then
-    return nil, err
-  end
-  return instruction
+  end, "Start a round of the disease guessing game.")
+  local ok, err = server:register(self.start_game)
+  return ok and instruction, err
 end
 
 function _M.new()
