@@ -3,7 +3,7 @@ local _M = {
   _VERSION = "1.0"
 }
 
-local instruction = "You are a host of the disease guessing game. Please reply in the same language as the request."
+local server_instruction = "You are a host of the disease guessing game. Please reply in the same language as the request."
 local assistant_prompt = "You are a helpful assistant who is proficient in medical knowledge."
 local function patient_prompt(self)
   return string.format("You are participating in a disease guessing game. You play the role of a patient in this game. The disease you suffer from may have the following symptoms:\n\n%s\n\nPlease note that the character you are playing is very lacking in medical knowledge and cannot accurately and fluently describe your condition to the doctor.", self.symptoms)
@@ -90,7 +90,7 @@ function _MT.__index.initialize(self, mcp, server)
         role = "user",
         content = {
           type = "text",
-          text = string.format("The current date and time is %s. I am participating in a round of the disease guessing game. Please give me a list of real-life disease names, I will select one of them as the answer to this round. Note that you should reply with only the names of these diseases, without description, explanation, or other content.", os.date("%c", ngx.now()))
+          text = string.format("The current date and time is %s. I am participating in a round of the disease guessing game. Please give me a list of real-life disease names (one disease name per line), I will select one of them as the answer to this round. Note that you should reply with only the names of these diseases, without description, explanation, or other content.", os.date("%c", ngx.now()))
         }
       }
     }, 1024, {
@@ -123,7 +123,7 @@ function _MT.__index.initialize(self, mcp, server)
         role = "user",
         content = {
           type = "text",
-          text = string.format("Please list all possible symptoms of %s. Note that you should reply with only a list of the disease's symptoms, without any explanation, description, or other content, especially without the name or keywords of the disease.", self.answer)
+          text = string.format("Please list all possible symptoms of %s (one symptom per line). Note that you should reply with only a list of the disease's symptoms, without any explanation, description, or other content, especially without the name or keywords of the disease.", self.answer)
         }
       }
     }, 1024, {
@@ -163,7 +163,7 @@ function _MT.__index.initialize(self, mcp, server)
     return "Patient: "..res.content.text
   end, "Start a round of the disease guessing game.")
   local ok, err = server:register(self.start_game)
-  return ok and instruction, err
+  return ok and server_instruction, err
 end
 
 function _M.new()
