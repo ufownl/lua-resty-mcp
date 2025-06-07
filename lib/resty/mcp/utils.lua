@@ -8,22 +8,47 @@ local _M = {
   uri_template = require("resty.mcp.utils.uri_template").new
 }
 
-local resty_random = require("resty.random")
-local resty_sha256 = require("resty.sha256")
+local bit = require("bit")
 local ngx_base64 = require("ngx.base64")
 
-local hostname = os.getenv("HOSTNAME") or io.popen("uname -n"):read("*l")
+local function crc16(s)
+  local v = 0
+  for i = 1, #s do
+    v = bit.bxor(v, bit.band(bit.lshift(string.byte(s, i), 8), 0xFFFF))
+    for j = 1, 8 do
+      local u = bit.band(bit.lshift(v, 1), 0xFFFF)
+      if bit.band(v, 0x8000) ~= 0 then
+        v = bit.bxor(u, 0x1021)
+      else
+        v = u
+      end
+    end
+  end
+  return v
+end
+
+local hostname = crc16(os.getenv("HOSTNAME") or io.popen("uname -n"):read("*l"))
 local id_counter = 0
 
-function _M.generate_id()
-  local sha256 = resty_sha256.new()
-  sha256:update(hostname.."&")
-  sha256:update(ngx.worker.pid().."&")
-  sha256:update(ngx.time().."&")
-  sha256:update(id_counter.."&")
-  id_counter = (id_counter + 1) % 10000
-  sha256:update(resty_random.bytes(8))
-  return ngx_base64.encode_base64url(sha256:final())
+function _M.generate_id(raw)
+  local ts = ngx.time()
+  local pid = ngx.worker.pid()
+  local id = string.char(
+    bit.band(bit.rshift(ts, 24), 0xFF),
+    bit.band(bit.rshift(ts, 16), 0xFF),
+    bit.band(bit.rshift(ts, 8), 0xFF),
+    bit.band(ts, 0xFF),
+    bit.band(hostname, 0xFF),
+    bit.band(bit.rshift(hostname, 8), 0xFF),
+    bit.band(pid, 0xFF),
+    bit.band(bit.rshift(pid, 8), 0xFF),
+    bit.band(bit.rshift(pid, 16), 0xFF),
+    bit.band(bit.rshift(id_counter, 16), 0xFF),
+    bit.band(bit.rshift(id_counter, 8), 0xFF),
+    bit.band(id_counter, 0xFF)
+  )
+  id_counter = bit.band(id_counter + 1, 0xFFFFFF)
+  return raw and id or ngx_base64.encode_base64url(id)
 end
 
 function _M.check_mcp_type(module, v)
