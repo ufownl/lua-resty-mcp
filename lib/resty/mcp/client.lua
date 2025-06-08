@@ -14,15 +14,9 @@ local ngx_semaphore = require("ngx.semaphore")
 
 local function push_progress(self, progress_token, rid)
   return function(progress, total, message)
-    if type(progress) ~= "number" then
-      error("progress MUST be a number")
-    end
-    if total and type(total) ~= "number" then
-      error("total MUST be a number")
-    end
-    if message and type(message) ~= "string" then
-      error("message MUST be a string")
-    end
+    assert(type(progress) == "number", "progress MUST be a number")
+    assert(total == nil or type(total) == "number", "total MUST be a number")
+    assert(message == nil or type(message) == "string", "message MUST be a string")
     if not self.processing_requests[rid] then
       return nil, "cancelled"
     end
@@ -290,12 +284,8 @@ function _MT.__index.list_prompts(self, timeout)
 end
 
 function _MT.__index.get_prompt(self, name, args, timeout, progress_cb)
-  if type(name) ~= "string" then
-    error("prompt name MUST be a string.")
-  end
-  if args and (type(args) ~= "table" or #args > 0) then
-    error("arguments of prompt MUST be a dict.")
-  end
+  assert(type(name) == "string", "prompt name MUST be a string.")
+  assert(args == nil or type(args) == "table" and #args == 0, "arguments of prompt MUST be a dict.")
   if not self.server.capabilities.prompts then
     return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
   end
@@ -341,9 +331,7 @@ function _MT.__index.list_resource_templates(self, timeout)
 end
 
 function _MT.__index.read_resource(self, uri, timeout, progress_cb)
-  if type(uri) ~= "string" then
-    error("resource uri MUST be a string.")
-  end
+  assert(type(uri) == "string", "resource uri MUST be a string.")
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
@@ -352,12 +340,8 @@ function _MT.__index.read_resource(self, uri, timeout, progress_cb)
 end
 
 function _MT.__index.subscribe_resource(self, uri, cb, timeout)
-  if type(uri) ~= "string" then
-    error("resource uri MUST be a string.")
-  end
-  if not cb then
-    error("callback of subscribed resource MUST be set")
-  end
+  assert(type(uri) == "string", "resource uri MUST be a string.")
+  assert(cb, "callback of subscribed resource MUST be set")
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
@@ -380,9 +364,7 @@ function _MT.__index.subscribe_resource(self, uri, cb, timeout)
 end
 
 function _MT.__index.unsubscribe_resource(self, uri, timeout)
-  if type(uri) ~= "string" then
-    error("resource uri MUST be a string.")
-  end
+  assert(type(uri) == "string", "resource uri MUST be a string.")
   if not self.server.capabilities.resources then
     return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
   end
@@ -404,12 +386,8 @@ function _MT.__index.list_tools(self, timeout)
 end
 
 function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
-  if type(name) ~= "string" then
-    error("tool name MUST be a string.")
-  end
-  if args and (type(args) ~= "table" or #args > 0) then
-    error("arguments of tool calling MUST be a dict.")
-  end
+  assert(type(name) == "string", "tool name MUST be a string.")
+  assert(args == nil or type(args) == "table" and #args == 0, "arguments of tool calling MUST be a dict.")
   if not self.server.capabilities.tools then
     return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
   end
@@ -418,15 +396,9 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
 end
 
 function _MT.__index.prompt_complete(self, name, arg_name, arg_value, timeout)
-  if type(name) ~= "string" then
-    error("prompt name MUST be a string.")
-  end
-  if type(arg_name) ~= "string" then
-    error("argument name MUST be a string.")
-  end
-  if type(arg_value) ~= "string" then
-    error("argument value MUST be a string.")
-  end
+  assert(type(name) == "string", "prompt name MUST be a string.")
+  assert(type(arg_name) == "string", "argument name MUST be a string.")
+  assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
     return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
   end
@@ -434,15 +406,9 @@ function _MT.__index.prompt_complete(self, name, arg_name, arg_value, timeout)
 end
 
 function _MT.__index.resource_complete(self, uri, arg_name, arg_value, timeout)
-  if type(uri) ~= "string" then
-    error("resource URI MUST be a string.")
-  end
-  if type(arg_name) ~= "string" then
-    error("argument name MUST be a string.")
-  end
-  if type(arg_value) ~= "string" then
-    error("argument value MUST be a string.")
-  end
+  assert(type(uri) == "string", "resource URI MUST be a string.")
+  assert(type(arg_name) == "string", "argument name MUST be a string.")
+  assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
     return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
   end
@@ -450,9 +416,7 @@ function _MT.__index.resource_complete(self, uri, arg_name, arg_value, timeout)
 end
 
 function _MT.__index.set_log_level(self, level, timeout)
-  if type(level) ~= "string" then
-    error("log level MUST be a string.")
-  end
+  assert(type(level) == "string", "log level MUST be a string.")
   if not self.server.capabilities.logging then
     return nil, string.format("%s v%s has no logging capability", self.server.info.name, self.server.info.version)
   end

@@ -42,9 +42,7 @@ function _MT.__index.read(self, ctx)
     local result = {contents = setmetatable(contents, cjson.array_mt)}
     assert(mcp.validator.ReadResourceResult(result))
     for i, v in ipairs(contents) do
-      if self.mime and v.uri == self.uri and v.mimeType ~= self.mime then
-        error("resource MIME type mismatch")
-      end
+      assert(self.mime == nil or v.uri ~= self.uri or v.mimeType == self.mime, "resource MIME type mismatch")
     end
     return result
   end
@@ -56,21 +54,11 @@ function _MT.__index.read(self, ctx)
 end
 
 function _M.new(uri, name, cb, desc, mime, annos, size)
-  if type(uri) ~= "string" then
-    error("resource uri MUST be a string.")
-  end
-  if type(name) ~= "string" then
-    error("resource name MUST be a string.")
-  end
-  if not cb then
-    error("callback of resource MUST be set.")
-  end
-  if desc and type(desc) ~= "string" then
-    error("description of resource MUST be a string.")
-  end
-  if mime and type(mime) ~= "string" then
-    error("MIME type of resource MUST be a string.")
-  end
+  assert(type(uri) == "string", "resource uri MUST be a string.")
+  assert(type(name) == "string", "resource name MUST be a string.")
+  assert(cb, "callback of resource MUST be set.")
+  assert(desc == nil or type(desc) == "string", "description of resource MUST be a string.")
+  assert(mime == nil or type(mime) == "string", "MIME type of resource MUST be a string.")
   return setmetatable({
     uri = uri,
     name = name,

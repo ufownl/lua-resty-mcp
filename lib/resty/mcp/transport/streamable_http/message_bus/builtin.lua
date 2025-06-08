@@ -35,17 +35,13 @@ function _MT.__index.new_session(self)
 end
 
 function _MT.__index.del_session(self, sid)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   self.shm_dict:delete("sess_mk#"..sid)
   self.shm_dict:delete("sess_mq#"..sid)
 end
 
 function _MT.__index.check_session(self, sid)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   local val, err = self.shm_dict:get("sess_mk#"..sid)
   if not val and err then
     return nil, err
@@ -54,12 +50,8 @@ function _MT.__index.check_session(self, sid)
 end
 
 function _MT.__index.push_smsg(self, sid, msg)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(msg) ~= "string" then
-    error("message MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(msg) == "string", "message MUST be a string")
   local val, err = self.shm_dict:get("sess_mk#"..sid)
   if not val then
     return nil, err or "not found"
@@ -74,9 +66,7 @@ function _MT.__index.push_smsg(self, sid, msg)
 end
 
 function _MT.__index.pop_smsg(self, sid, timeout)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   local function pop_impl()
     local ok, err = self.shm_dict:expire("sess_mk#"..sid, self.mark_ttl)
     if not ok then
@@ -97,12 +87,8 @@ function _MT.__index.pop_smsg(self, sid, timeout)
 end
 
 function _MT.__index.push_cmsg(self, sid, chk, msg)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(chk) ~= "string" then
-    error("channel key MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(chk) == "string", "channel key MUST be a string")
   local data = assert(cjson.encode(msg))
   local mqk = string.format("chan_mq#%s@%s", sid, chk)
   local res, err = self.shm_dict:rpush(mqk, data)
@@ -114,12 +100,8 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
 end
 
 function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(chks) ~= "table" or #chks < 1 then
-    error("channel keys MUST be a non-empty array-like table")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(chks) == "table" and #chks > 0, "channel keys MUST be a non-empty array-like table")
   local function pop_impl()
     local val, err = self.shm_dict:get("sess_mk#"..sid)
     if not val then
@@ -144,15 +126,9 @@ function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
 end
 
 function _MT.__index.cache_event(self, sid, stream, data)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(stream) ~= "string" then
-    error("stream ID MUST be a string")
-  end
-  if type(data) ~= "string" then
-    error("data of event MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(stream) == "string", "stream ID MUST be a string")
+  assert(type(data) == "string", "data of event MUST be a string")
   local eid, err = self.shm_dict:incr("sess_mk#"..sid, 1)
   if not eid then
     return nil, err
@@ -167,12 +143,8 @@ function _MT.__index.cache_event(self, sid, stream, data)
 end
 
 function _MT.__index.replay_events(self, sid, last_event)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if not tonumber(last_event) then
-    error("last event ID MUST be set")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(tonumber(last_event), "last event ID MUST be set")
   local val, err = self.shm_dict:get("sess_mk#"..sid)
   if not val then
     return nil, err or "not found"
@@ -217,13 +189,9 @@ function _M.new(options)
     error(string.format("shm-zone named %s MUST be defined by `lua_shared_dict` directive", shm_zone))
   end
   local mark_ttl = options and tonumber(options.mark_ttl) or 10
-  if mark_ttl <= 0 then
-    error("session mark TTL MUST be a positive number")
-  end
+  assert(mark_ttl > 0, "session mark TTL MUST be a positive number")
   local cache_ttl = options and tonumber(options.cache_ttl) or 90
-  if cache_ttl <= 0 then
-    error("cache TTL MUST be a positive number")
-  end
+  assert(cache_ttl > 0, "cache TTL MUST be a positive number")
   return setmetatable({
     shm_dict = shm_dict,
     mark_ttl = mark_ttl,

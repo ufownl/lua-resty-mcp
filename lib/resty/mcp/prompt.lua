@@ -97,9 +97,7 @@ function _MT.__index.get(self, args, ctx)
 end
 
 function _MT.__index.complete(self, cbs)
-  if not cbs then
-    error("completion callbacks of prompt MUST be set.")
-  end
+  assert(cbs, "completion callbacks of prompt MUST be set.")
   self.completion_callbacks = {}
   for k, v in pairs(self.expected_args) do
     self.completion_callbacks[k] = cbs[k]
@@ -108,18 +106,10 @@ function _MT.__index.complete(self, cbs)
 end
 
 function _M.new(name, cb, desc, args)
-  if type(name) ~= "string" then
-    error("prompt name MUST be a string.")
-  end
-  if not cb then
-    error("callback of prompt MUST be set.")
-  end
-  if desc and type(desc) ~= "string" then
-    error("description of prompt MUST be a string.")
-  end
-  if args and (type(args) ~= "table" or #args > 0) then
-    error("expected arguments of prompt MUST be a dict.")
-  end
+  assert(type(name) == "string", "prompt name MUST be a string.")
+  assert(cb, "callback of prompt MUST be set.")
+  assert(desc == nil or type(desc) == "string", "description of prompt MUST be a string.")
+  assert(args == nil or type(args) == "table" and #args == 0, "expected arguments of prompt MUST be a dict.")
   return setmetatable({
     name = name,
     callback = cb,

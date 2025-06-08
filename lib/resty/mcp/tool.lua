@@ -56,9 +56,7 @@ function _MT.__call(self, args, ctx)
 end
 
 function _M.new(name, cb, desc, input_schema, annos)
-  if not cb then
-    error("callback of tool MUST be set.")
-  end
+  assert(cb, "callback of tool MUST be set.")
   local annotations = annos and mcp.protocol.tool_annotations(annos) or nil
   assert(mcp.validator.Tool({
     name = name,

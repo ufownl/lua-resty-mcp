@@ -18,9 +18,7 @@ local _MT = {
 }
 
 function _MT.__index.send(self, msg, meta)
-  if type(msg) ~= "table" then
-    error("message MUST be a table.")
-  end
+  assert(type(msg) == "table", "message MUST be a table.")
   if msg.error and msg.error.code >= 0 then
     return true
   end
@@ -84,12 +82,8 @@ function _MT.__index.close(self)
 end
 
 function _M.new(options)
-  if type(options) ~= "table" then
-    error("options of websocket client transport MUST be a table.")
-  end
-  if type(options.endpoint_url) ~= "string" then
-    error("endpoint URL MUST be a string")
-  end
+  assert(type(options) == "table", "options of websocket client transport MUST be a table.")
+  assert(type(options.endpoint_url) == "string", "endpoint URL MUST be a string")
   local conn, err = websocket:new(options.websocket_opts and {
     max_payload_len = tonumber(options.websocket_opts.max_payload_len),
     max_recv_len = tonumber(options.websocket_opts.max_recv_len),

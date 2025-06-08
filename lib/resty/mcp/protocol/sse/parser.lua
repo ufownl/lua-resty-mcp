@@ -56,9 +56,7 @@ function _MT.__call(self, line)
 end
 
 function _M.new(event_cb)
-  if not event_cb then
-    error("event callback of sse parser MUST be set.")
-  end
+  assert(event_cb, "event callback of sse parser MUST be set.")
   return setmetatable({
     current_fields = new_state(),
     event_callback = event_cb

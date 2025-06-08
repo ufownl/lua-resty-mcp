@@ -234,9 +234,7 @@ local _MT = {
 }
 
 function _MT.__index.expand(self, ctx)
-  if not ctx then
-    error("context MUST be set")
-  end
+  assert(ctx, "context MUST be set")
   local out, vars = expand_impl(self.pattern, ctx)
   return out
 end

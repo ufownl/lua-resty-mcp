@@ -191,9 +191,7 @@ function _M.inject_common(self, methods)
     if ok then
       return
     end
-    if reason ~= nil and type(reason) ~= "string" then
-      error("reason MUST be a string")
-    end
+    assert(reason == nil or type(reason) == "string", "reason MUST be a string")
     local ok, err = _M.send_notification(self, "cancelled", {monitor.rid, reason})
     if not ok then
       ngx.log(ngx.ERR, err)
@@ -252,9 +250,7 @@ function _M.wait_background_tasks(self, timeout)
 end
 
 function _M.send_request(self, name, args, cb_or_to, meta)
-  if type(name) ~= "string" or type(args) ~= "table" then
-    error("invalid request format")
-  end
+  assert(type(name) == "string" and type(args) == "table", "invalid request format")
   local req = mcp.protocol.request[name](unpack(args))
   if meta and meta.progress_callback then
     meta.progress_token = mcp.utils.generate_id()
@@ -288,9 +284,7 @@ function _M.send_request(self, name, args, cb_or_to, meta)
 end
 
 function _M.send_notification(self, name, args, meta)
-  if type(name) ~= "string" or type(args) ~= "table" then
-    error("invalid notification format")
-  end
+  assert(type(name) == "string" and type(args) == "table", "invalid notification format")
   return self.conn:send(mcp.protocol.notification[name](unpack(args)), meta)
 end
 

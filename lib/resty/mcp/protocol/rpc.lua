@@ -13,41 +13,29 @@ local _M = {
 local cjson = require("cjson.safe")
 
 function _M.request(method, params, rid)
-  if type(method) ~= "string" then
-    error("JSONRPC: method MUST be a string.")
-  end
-  if params and type(params) ~= "table" then
-    error("JSONRPC: params MUST be a table.")
-  end
+  assert(type(method) == "string", "JSONRPC: method MUST be a string.")
+  assert(params == nil or type(params) == "table" and #params == 0, "JSONRPC: params MUST be a dict.")
   return {
     jsonrpc = JSONRPC_VERSION,
     id = rid or mcp.utils.generate_id(),
     method = method,
-    params = params or nil
+    params = params
   }
 end
 
 function _M.notification(method, params)
-  if type(method) ~= "string" then
-    error("JSONRPC: method MUST be a string.")
-  end
-  if params and type(params) ~= "table" then
-    error("JSONRPC: params MUST be a dict.")
-  end
+  assert(type(method) == "string", "JSONRPC: method MUST be a string.")
+  assert(params == nil or type(params) == "table" and #params == 0, "JSONRPC: params MUST be a dict.")
   return {
     jsonrpc = JSONRPC_VERSION,
     method = method,
-    params = params or nil
+    params = params
   }
 end
 
 function _M.succ_resp(rid, result)
-  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) then
-    error("JSONRPC: ID MUST be a string or integer.")
-  end
-  if result == nil then
-    error("JSONRPC: result MUST be set in a successful response.")
-  end
+  assert(type(rid) == "string" or type(rid) == "number" and rid % 1 == 0, "JSONRPC: ID MUST be a string or integer.")
+  assert(result ~= nil, "JSONRPC: result MUST be set in a successful response.")
   return {
     jsonrpc = JSONRPC_VERSION,
     id = rid,
@@ -56,15 +44,9 @@ function _M.succ_resp(rid, result)
 end
 
 function _M.fail_resp(rid, code, message, data)
-  if type(rid) ~= "string" and (type(rid) ~= "number" or rid % 1 ~= 0) and rid ~= cjson.null then
-    error("JSONRPC: ID MUST be a string or integer, or null.")
-  end
-  if type(code) ~= "number" or code % 1 ~= 0 then
-    error("JSONRPC: error code MUST be an integer.")
-  end
-  if type(message) ~= "string" then
-    error("JSONRPC: error message MUST be a string.")
-  end
+  assert(type(rid) == "string" or type(rid) == "number" and rid % 1 == 0 or rid == cjson.null, "JSONRPC: ID MUST be a string or integer, or null.")
+  assert(type(code) == "number" and code % 1 == 0, "JSONRPC: error code MUST be an integer.")
+  assert(type(message) == "string", "JSONRPC: error message MUST be a string.")
   return {
     jsonrpc = JSONRPC_VERSION,
     id = rid,
@@ -130,12 +112,8 @@ local function handle_impl(dm, methods, resp_cb)
 end
 
 function _M.handle(msg, methods, resp_cb)
-  if type(msg) ~= "string" then
-    error("JSONRPC: protocol message MUST be a string.")
-  end
-  if not methods then
-    error("JSONRPC: methods MUST be set.")
-  end
+  assert(type(msg) == "string", "JSONRPC: protocol message MUST be a string.")
+  assert(methods, "JSONRPC: methods MUST be set.")
   local dm, err = cjson.decode(msg)
   if err then
     return _M.fail_resp(cjson.null, -32700, "Parse error", {errmsg = err})

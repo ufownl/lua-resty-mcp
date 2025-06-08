@@ -53,9 +53,7 @@ function _MT.__index.read(self, uri, ctx)
     local result = {contents = setmetatable(contents, cjson.array_mt)}
     assert(mcp.validator.ReadResourceResult(result))
     for i, v in ipairs(contents) do
-      if self.mime and v.uri == uri and v.mimeType ~= self.mime then
-        error("resource MIME type mismatch")
-      end
+      assert(self.mime == nil or v.uri ~= uri or v.mimeType == self.mime, "resource MIME type mismatch")
     end
     return result
   end
@@ -67,9 +65,7 @@ function _MT.__index.read(self, uri, ctx)
 end
 
 function _MT.__index.complete(self, cbs)
-  if not cbs then
-    error("completion callbacks of resource template MUST be set.")
-  end
+  assert(cbs, "completion callbacks of resource template MUST be set.")
   self.completion_callbacks = {}
   for i, v in ipairs(self.uri_template.variables) do
     self.completion_callbacks[v] = cbs[v]
@@ -78,21 +74,11 @@ function _MT.__index.complete(self, cbs)
 end
 
 function _M.new(pattern, name, cb, desc, mime, annos)
-  if type(pattern) ~= "string" then
-    error("pattern of resource template MUST be a string.")
-  end
-  if type(name) ~= "string" then
-    error("name of resource template MUST be a string.")
-  end
-  if not cb then
-    error("callback of resource template MUST be set.")
-  end
-  if desc and type(desc) ~= "string" then
-    error("description of resource template MUST be a string.")
-  end
-  if mime and type(mime) ~= "string" then
-    error("MIME type of resource template MUST be a string.")
-  end
+  assert(type(pattern) == "string", "pattern of resource template MUST be a string.")
+  assert(type(name) == "string", "name of resource template MUST be a string.")
+  assert(cb, "callback of resource template MUST be set.")
+  assert(desc == nil or type(desc) == "string", "description of resource template MUST be a string.")
+  assert(mime == nil or type(mime) == "string", "MIME type of resource template MUST be a string.")
   local template = assert(mcp.utils.uri_template(pattern))
   return setmetatable({
     uri_template = template,

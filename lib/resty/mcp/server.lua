@@ -74,15 +74,9 @@ end
 
 local function push_progress(self, progress_token, rid)
   return function(progress, total, message)
-    if type(progress) ~= "number" then
-      error("progress MUST be a number")
-    end
-    if total and type(total) ~= "number" then
-      error("total MUST be a number")
-    end
-    if message and type(message) ~= "string" then
-      error("message MUST be a string")
-    end
+    assert(type(progress) == "number", "progress MUST be a number")
+    assert(total == nil or type(total) == "number", "total MUST be a number")
+    assert(message == nil or type(message) == "string", "message MUST be a string")
     if not self.processing_requests[rid] then
       return nil, "cancelled"
     end
@@ -652,9 +646,7 @@ function _MT.__index.unregister_tool(self, name, meta_fa)
 end
 
 function _MT.__index.replace_prompts(self, prompts, meta_fa)
-  if type(prompts) ~= "table" then
-    error("prompts MUST be a array-like table")
-  end
+  assert(type(prompts) == "table", "prompts MUST be a array-like table")
   local original_prompts = self.available_prompts
   self.available_prompts = nil
   for i, v in ipairs(prompts) do
@@ -701,9 +693,7 @@ function _MT.__index.replace_resources(self, resources, templates, meta_fa)
 end
 
 function _MT.__index.replace_tools(self, tools, meta_fa)
-  if type(tools) ~= "table" then
-    error("tools MUST be a array-like table")
-  end
+  assert(type(tools) == "table", "tools MUST be a array-like table")
   local original_tools = self.available_tools
   self.available_tools = nil
   for i, v in ipairs(tools) do

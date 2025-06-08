@@ -44,9 +44,7 @@ local _MT = {
 }
 
 function _MT.__index.send(self, msg, meta)
-  if type(msg) ~= "table" then
-    error("message MUST be a table.")
-  end
+  assert(type(msg) == "table", "message MUST be a table.")
   if not self.message_bus then
     return nil, "closed"
   end
@@ -93,12 +91,8 @@ function _MT.__index.close(self)
 end
 
 function _M.new(options)
-  if type(options) ~= "table" then
-    error("options of streamable http server transport MUST be a table.")
-  end
-  if type(options.session_id) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(options) == "table", "options of streamable http server transport MUST be a table.")
+  assert(type(options.session_id) == "string", "session ID MUST be a string")
   local bus_type = options.message_bus and options.message_bus.type or "builtin"
   local message_bus = require("resty.mcp.transport.streamable_http.message_bus."..bus_type)
   local bus, err = message_bus.new(options.message_bus)

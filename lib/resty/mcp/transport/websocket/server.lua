@@ -18,9 +18,7 @@ local _MT = {
 }
 
 function _MT.__index.send(self, msg, meta)
-  if type(msg) ~= "table" then
-    error("message MUST be a table.")
-  end
+  assert(type(msg) == "table", "message MUST be a table.")
   if msg.error and msg.error.code >= 0 then
     return true
   end

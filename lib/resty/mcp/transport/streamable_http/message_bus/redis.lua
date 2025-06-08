@@ -72,9 +72,7 @@ function _MT.__index.new_session(self)
 end
 
 function _MT.__index.del_session(self, sid)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   local conn, err = redis_conn(self)
   if not conn then
     ngx.log(ngx.ERR, "redis: ", err)
@@ -90,9 +88,7 @@ function _MT.__index.del_session(self, sid)
 end
 
 function _MT.__index.check_session(self, sid)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -107,12 +103,8 @@ function _MT.__index.check_session(self, sid)
 end
 
 function _MT.__index.push_smsg(self, sid, msg)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(msg) ~= "string" then
-    error("message MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(msg) == "string", "message MUST be a string")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -142,9 +134,7 @@ function _MT.__index.push_smsg(self, sid, msg)
 end
 
 function _MT.__index.pop_smsg(self, sid, timeout)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -183,12 +173,8 @@ function _MT.__index.pop_smsg(self, sid, timeout)
 end
 
 function _MT.__index.push_cmsg(self, sid, chk, msg)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(chk) ~= "string" then
-    error("channel key MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(chk) == "string", "channel key MUST be a string")
   local data = assert(cjson.encode(msg))
   local conn, err = redis_conn(self)
   if not conn then
@@ -210,12 +196,8 @@ function _MT.__index.push_cmsg(self, sid, chk, msg)
 end
 
 function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(chks) ~= "table" or #chks < 1 then
-    error("channel keys MUST be a non-empty array-like table")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(chks) == "table" and #chks > 0, "channel keys MUST be a non-empty array-like table")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -265,15 +247,9 @@ function _MT.__index.pop_cmsgs(self, sid, chks, timeout)
 end
 
 function _MT.__index.cache_event(self, sid, stream, data)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if type(stream) ~= "string" then
-    error("stream ID MUST be a string")
-  end
-  if type(data) ~= "string" then
-    error("data of event MUST be a string")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(type(stream) == "string", "stream ID MUST be a string")
+  assert(type(data) == "string", "data of event MUST be a string")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -323,12 +299,8 @@ function _MT.__index.cache_event(self, sid, stream, data)
 end
 
 function _MT.__index.replay_events(self, sid, last_event)
-  if type(sid) ~= "string" then
-    error("session ID MUST be a string")
-  end
-  if not tonumber(last_event) then
-    error("last event ID MUST be set")
-  end
+  assert(type(sid) == "string", "session ID MUST be a string")
+  assert(tonumber(last_event), "last event ID MUST be set")
   local conn, err = redis_conn(self)
   if not conn then
     return nil, err
@@ -378,17 +350,11 @@ end
 
 function _M.new(options)
   local mark_ttl = options and tonumber(options.mark_ttl) or 10
-  if mark_ttl <= 0 then
-    error("session mark TTL MUST be a positive number")
-  end
+  assert(mark_ttl > 0, "session mark TTL MUST be a positive number")
   local cache_ttl = options and tonumber(options.cache_ttl) or 90
-  if cache_ttl <= 0 then
-    error("cache TTL MUST be a positive number")
-  end
+  assert(cache_ttl > 0, "cache TTL MUST be a positive number")
   local event_capacity = options and tonumber(options.event_capacity) or 1024
-  if event_capacity <= 0 then
-    error("event capacity MUST be a positive integer")
-  end
+  assert(event_capacity > 0, "event capacity MUST be a positive integer")
   return setmetatable({
     redis_cfg = options and options.redis and {
       host = options.redis.host or "127.0.0.1",
