@@ -10,6 +10,7 @@ local _M = {
   _VERSION = mcp.version.module
 }
 
+local jsonschema = require("jsonschema")
 local ngx_semaphore = require("ngx.semaphore")
 
 local function push_progress(self, progress_token, rid)
@@ -99,6 +100,41 @@ local function define_methods(self)
         },
         model = "unknown"
       }
+    end or nil,
+    ["elicitation/create"] = self.elicitation_callback and function(params, rid)
+      if not rid then
+        return
+      end
+      local ok, err = mcp.validator.ElicitRequest(params)
+      if not ok then
+        return nil, -32602, "Invalid params", {errmsg = err}
+      end
+      local progress_token = type(params._meta) == "table" and params._meta.progressToken
+      if progress_token and type(progress_token) ~= "string" and (type(progress_token) ~= "number" or progress_token % 1 ~= 0) then
+        progress_token = nil
+      end
+      local content_validator = jsonschema.generate_validator(params.requestedSchema)
+      self.processing_requests[rid] = true
+      local content, err = self.elicitation_callback(params, {
+        session = self,
+        _meta = params._meta,
+        push_progress = push_progress(self, progress_token, rid),
+        cancelled = function()
+          return not self.processing_requests[rid]
+        end
+      })
+      if not self.processing_requests[rid] then
+        return
+      end
+      self.processing_requests[rid] = nil
+      if not content then
+        return err and {action = "cancel"} or {action = "decline"}
+      end
+      local ok, err = content_validator(content)
+      if not ok then
+        return {action = "cancel"}
+      end
+      return {action = "accept", content = content}
     end or nil,
     ["notifications/resources/updated"] = function(params)
       local ok, err = mcp.validator.ResourceUpdatedNotification(params)
@@ -218,8 +254,9 @@ function _MT.__index.initialize(self, options, timeout)
     expose_roots_impl(self, options.roots)
   end
   self.sampling_callback = options and options.sampling_callback
+  self.elicitation_callback = options and options.elicitation_callback
   mcp.session.initialize(self, define_methods(self))
-  local capabilities = {roots = true, sampling = self.sampling_callback}
+  local capabilities = {roots = true, sampling = self.sampling_callback, elicitation = self.elicitation_callback}
   local res, err, errobj = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
   if not res then
     self.conn:close()

@@ -13,6 +13,9 @@ assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabil
   if ctx.session.client.capabilities.sampling then
     table.insert(contents, {uri = uri.."/sampling", text = "true"})
   end
+  if ctx.session.client.capabilities.elicitation then
+    table.insert(contents, {uri = uri.."/elicitation", text = "true"})
+  end
   return contents
 end, "Capabilities of client.")))
 

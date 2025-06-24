@@ -56,6 +56,9 @@ local function context_session(server, rid)
     create_message = function(_, messages, max_tokens, options, timeout, progress_cb)
       return server:create_message(messages, max_tokens, options, timeout, progress_cb, meta_fa)
     end,
+    elicit = function(_, message, schema, timeout, progress_cb)
+      return server:elicit(message, schema, timeout, progress_cb, meta_fa)
+    end,
     log = function(_, level, data, logger)
       return server:log(level, data, logger, meta_fa)
     end,
@@ -763,6 +766,23 @@ function _MT.__index.create_message(self, messages, max_tokens, options, timeout
     meta = {progress_callback = progress_cb}
   end
   return mcp.session.send_request(self, "create_message", {messages, max_tokens, options}, tonumber(timeout), meta)
+end
+
+function _MT.__index.elicit(self, message, schema, timeout, progress_cb, meta_fa)
+  if not self.initialized then
+    return nil, "session has not been initialized"
+  end
+  if not self.client.capabilities.elicitation then
+    return nil, string.format("%s v%s has no elicitation capability", self.client.info.name, self.client.info.version)
+  end
+  local meta
+  if meta_fa then
+    meta = meta_fa()
+    meta.progress_callback = progress_cb
+  elseif progress_cb then
+    meta = {progress_callback = progress_cb}
+  end
+  return mcp.session.send_request(self, "elicit", {message, schema}, tonumber(timeout), meta)
 end
 
 function _MT.__index.log(self, level, data, logger, meta_fa)

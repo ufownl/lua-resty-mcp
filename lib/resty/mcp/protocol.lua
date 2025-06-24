@@ -21,6 +21,7 @@ function _M.request.initialize(capabilities, name, version)
       capabilities = capabilities and {
         roots = capabilities.roots and (type(capabilities.roots) == "table" and capabilities.roots or {listChanged = true}) or nil,
         sampling = capabilities.sampling and {} or nil,
+        elicitation = capabilities.elicitation and {} or nil,
         experimental = capabilities.experimental
       } or {},
       clientInfo = {
@@ -149,6 +150,16 @@ function _M.request.create_message(messages, max_tokens, options)
       metadata = options and options.metadata
     }),
     validator = mcp.validator.CreateMessageResult
+  }
+end
+
+function _M.request.elicit(message, schema)
+  return {
+    msg = mcp.rpc.request("elicitation/create", {
+      message = message,
+      requestedSchema = schema
+    }),
+    validator = mcp.validator.ElicitResult
   }
 end
 

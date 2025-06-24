@@ -20,6 +20,7 @@ Production ready.
   * [server:replace\_\*](#serverreplace_)
   * [server:list\_roots](#serverlist_roots)
   * [server:create\_message](#servercreate_message)
+  * [server:elicit](#serverelicit)
   * [server:log](#serverlog)
   * [server:ping](#serverping)
   * [server:wait\_background\_tasks](#serverwait_background_tasks)
@@ -749,6 +750,28 @@ end
 
 The returned message of this method is similar to the list elements passed in the `messages` argument, but has an additional `model` field containing the name of the model that generated the message, and an optional `stopReason` field containing the reason why sampling stopped, if known.
 
+### server:elicit
+
+`syntax: res, err, rpc_err = server:elicit(message, schema[, timeout[, progress_cb]])`
+
+Elicit additional information from the user via the client.
+
+A successful call returns a dict-like Lua table that contains the result of the elicitation. Otherwise, it returns `nil` and a string describing the error, along with an additional RPC error object if the error originated from the peer responding to the RPC request.
+
+The 2nd argument of this method `schema`, defines the structure of the expected response from the user using a restricted subset of JSON Schema. Only top-level properties are allowed, without nesting.
+
+The result of the elicitation may have the following structure:
+
+```lua
+{
+  action = "accept",
+  content = {
+    text = "Hello, world!",
+    seed = 42
+  }
+}
+```
+
 ### server:log
 
 `syntax: ok, err = server:log(level, data[, logger])`
@@ -972,6 +995,33 @@ Available options:
       },
       model = "gemma3-4b",
       stopReason = "endTurn"
+    }
+  end,
+
+  -- This callback will be called when MCP server requests elicitation
+  elicitation_callback = function(params, ctx)
+    local current_session = ctx.session
+    -- Interact with the current session or other services
+    local ok, err = ctx.push_progress(0.1, 1, "elicitation")
+    -- The 3 arguments stand for "progress", "total", and "message"
+    -- "progress" is required and the other 2 are optional
+    if not ok then
+      if err == "cancelled" then
+        -- Or you can also use `ctx.cancelled()` to check whether the current request is cancelled
+        return
+      end
+      error(err)
+    end
+    -- Continue interacting with the current session or other services
+    if error_occurred then
+      return nil, "an error occured"
+    end
+    if user_declined then
+      return
+    end
+    return {
+      -- Content that conform to `params.requestedSchema`
+      ...
     }
   end,
 

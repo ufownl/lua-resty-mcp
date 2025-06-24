@@ -19,28 +19,25 @@ assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabil
   return contents
 end, "Capabilities of client.")))
 
-assert(server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
-  local roots, err = ctx.session:list_roots()
-  if not roots then
+assert(server:register(mcp.tool("simple_elicit", function(args, ctx)
+  local res, err = ctx.session:elicit("Hello, world!", {
+    type = "object",
+    properties = {
+      text = {type = "string"},
+      seed = {type = "integer"}
+    },
+    required = {"text", "seed"}
+  })
+  if not res then
     return nil, err
   end
-  local contents = {}
-  for i, v in ipairs(roots) do
-    table.insert(contents, {uri = v.uri, text = v.name or ""})
-  end
-  return contents
-end, "Discovered roots from client.")))
+  return res
+end, "Elicit from client without arguments.", nil, {type = "object"})))
 
 server:run({
   capabilities = {
     prompts = false,
-    tools = false,
     completions = false,
     logging = false
-  },
-  event_handlers = {
-    ["roots/list_changed"] = function(params, ctx)
-      assert(ctx.session:resource_updated("mock://discovered_roots"))
-    end
   }
 })

@@ -1196,3 +1196,59 @@ nil
 nil
 --- no_error_log
 [error]
+
+
+=== TEST 16: elicitation
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local mcp = require("resty.mcp")
+    local client = assert(mcp.client(mcp.transport.stdio, {
+      command = "/usr/local/openresty/bin/resty -I lib t/mock/elicitation.lua 2>> error.log"
+    }))
+    local round = 0
+    assert(client:initialize({
+      elicitation_callback = function(params)
+        round = round + 1
+        if round == 1 then
+          return {text = "Hello, world!", seed = 42}
+        elseif round == 2 then
+          return {text = "Hello, world!"}
+        end
+      end
+    }))
+    local res = assert(client:read_resource("mock://client_capabilities"))
+    for i, v in ipairs(res.contents) do
+      ngx.say(v.uri)
+      ngx.say(v.text)
+    end
+    local res = assert(client:call_tool("simple_elicit"))
+    ngx.say(res.structuredContent.action)
+    ngx.say(res.structuredContent.content.text)
+    ngx.say(res.structuredContent.content.seed)
+    local res = assert(client:call_tool("simple_elicit"))
+    ngx.say(res.structuredContent.action)
+    local res = assert(client:call_tool("simple_elicit"))
+    ngx.say(res.structuredContent.action)
+    client:shutdown()
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+mock://client_capabilities/roots
+true
+mock://client_capabilities/roots/listChanged
+true
+mock://client_capabilities/elicitation
+true
+accept
+Hello, world!
+42
+cancel
+decline
+--- no_error_log
+[error]
