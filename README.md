@@ -954,7 +954,7 @@ Available options:
     end
     -- Continue interacting with the current session or other services
     if error_occurred then
-      return nil, -1, "an error occured", opt_extra_err_info
+      return nil, "an error occured"
     end
     return "Mock sampling text." or {
       role = "assistant",

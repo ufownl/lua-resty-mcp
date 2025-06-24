@@ -66,7 +66,7 @@ local function define_methods(self)
         progress_token = nil
       end
       self.processing_requests[rid] = true
-      local result, code, message, data = self.sampling_callback(params, {
+      local result, err = self.sampling_callback(params, {
         session = self,
         _meta = params._meta,
         push_progress = push_progress(self, progress_token, rid),
@@ -79,7 +79,7 @@ local function define_methods(self)
       end
       self.processing_requests[rid] = nil
       if not result then
-        return nil, code, message, data
+        return nil, -1, err
       end
       if type(result) == "table" then
         if not result.role then
