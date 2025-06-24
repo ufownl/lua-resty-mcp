@@ -537,7 +537,7 @@ The argument of `complete` method, `callbacks` should be a dict-like Lua table t
 
 #### mcp.tool
 
-`syntax: component = mcp.tool(name, callback[, desc[, input_schema[, annos]]])`
+`syntax: component = mcp.tool(name, callback[, desc[, input_schema[, output_schema[, annos]]]])`
 
 Create a tool.
 
@@ -565,11 +565,17 @@ function callback(args, ctx)
       {type = "text", text = "an error occured"},
       {type = "audio", data = "...", mimeType = "audio/mpeg"},
       ...
+    } or {
+      -- structured-error that conform to the output schema
+      ...
     }
   end
   return "result of this tool calling" or {
     {type = "text", text = "result of this tool calling"},
     {type = "image", data = "...", mimeType = "image/jpeg"},
+    ...
+  } or {
+    -- structured-content that conform to the output schema
     ...
   }
 end
@@ -577,7 +583,9 @@ end
 
 The 4th argument `input_schema`, is a JSON Schema object defining the expected arguments for the tool.
 
-The 5th argument `annos`, is optional additional tool information. It should be a table and could be defined as follows:
+The 5th argument `output_schema`, is a JSON Schema object defining the expected output of the structured content for the tool. If this argument is given, the callback **MUST** return structured results (either content or error) that conform to this schema.
+
+The 6th argument `annos`, is optional additional tool information. It should be a table and could be defined as follows:
 
 ```lua
 {
@@ -1255,9 +1263,10 @@ function progress_cb(progress, total, message)
 end
 ```
 
-The result of the tool calling may have the following structure:
+The result of the tool calling may have the following structures:
 
 ```lua
+-- Without structured content
 {
   content = {
     {
@@ -1265,6 +1274,24 @@ The result of the tool calling may have the following structure:
       text = "Current weather in New York:\nTemperature: 72°F\nConditions: Partly cloudy"
     },
     ...
+  },
+  isError = false
+}
+```
+
+```lua
+-- With structured content
+{
+  content = {
+    {
+      "type": "text",
+      "text": "{\"temperature\": 22.5, \"conditions\": \"Partly cloudy\", \"humidity\": 65}"
+    }
+  },
+  structuredContent = {
+    temperature = 22.5,
+    conditions = "Partly cloudy",
+    humidity = 65
   },
   isError = false
 }

@@ -25,7 +25,7 @@ location = /t {
         }
       },
       required = {"a", "b"}
-    }, {
+    }, nil, {
       title = "Mock Tool Annotations",
       readOnlyHint = false,
       destructiveHint = true,
@@ -255,5 +255,79 @@ resource
 mock://multi-content/resource/blob
 blob resource content
 application/octet-stream
+--- no_error_log
+[error]
+
+
+=== TEST 4: structured-content tool definition and calling
+--- http_config
+lua_package_path 'lib/?.lua;;';
+--- config
+location = /t {
+  content_by_lua_block {
+    local cjson = require("cjson")
+    local tool = require("resty.mcp.tool")
+    local fn = tool.new("structured_content", function(args)
+      return args
+    end, "Return structured-content.", {type = "object"}, {
+      type = "object",
+      properties = {
+        foo = {type = "string"},
+        bar = {type = "integer"}
+      },
+      required = {"foo"}
+    })
+    local ok, _ = pcall(fn, {})
+    ngx.say(ok)
+    local ok, _ = pcall(fn, {foo = 1})
+    ngx.say(ok)
+    local ok, _ = pcall(fn, {foo = "Hello, world!", bar = "Foobar"})
+    ngx.say(ok)
+    local res = fn({foo = "Hello, world!", bar = 0})
+    ngx.say(res.structuredContent.foo)
+    ngx.say(res.structuredContent.bar)
+    ngx.say(#res.content)
+    ngx.say(res.content[1].type)
+    local content = cjson.decode(res.content[1].text)
+    ngx.say(content.foo)
+    ngx.say(content.bar)
+    local fn = tool.new("unstructured_content", function(args)
+      return args
+    end, "Return unstructured-content.")
+    local ok, _ = pcall(fn, {foo = "Hello, world!", bar = 0})
+    ngx.say(ok)
+    local res = fn({})
+    ngx.say(res.structuredContent)
+    ngx.say(#res.content)
+    local fn = tool.new("another_structured_content", function(args)
+      return args
+    end, "Return structured-content.", {type = "object"}, {type = "object"})
+    local res = fn({})
+    ngx.say(type(res.structuredContent))
+    ngx.say(#res.content)
+    ngx.say(res.content[1].type)
+    ngx.say(res.content[1].text)
+  }
+}
+--- request
+GET /t
+--- error_code: 200
+--- response_body
+false
+false
+false
+Hello, world!
+0
+1
+text
+Hello, world!
+0
+false
+nil
+0
+table
+1
+text
+{}
 --- no_error_log
 [error]

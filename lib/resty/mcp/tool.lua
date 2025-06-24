@@ -24,6 +24,7 @@ function _MT.__index.to_mcp(self)
     name = self.name,
     description = self.description,
     inputSchema = self.input_schema or {type = "object"},
+    outputSchema = self.output_schema,
     annotations = self.annotations
   }
 end
@@ -36,8 +37,21 @@ function _MT.__call(self, args, ctx)
   local content, err = self.callback(args, ctx)
   local is_error
   if content == nil then
+    if err == nil then
+      return
+    end
     content = err
     is_error = true
+  end
+  if self.ret_validator then
+    assert(self.ret_validator(content))
+    return {
+      content = {
+        {type = "text", text = assert(cjson.encode(content))}
+      },
+      structuredContent = content,
+      isError = is_error
+    }
   end
   if type(content) == "table" then
     local result = {
@@ -55,13 +69,14 @@ function _MT.__call(self, args, ctx)
   }
 end
 
-function _M.new(name, cb, desc, input_schema, annos)
+function _M.new(name, cb, desc, input_schema, output_schema, annos)
   assert(cb, "callback of tool MUST be set.")
   local annotations = annos and mcp.protocol.tool_annotations(annos) or nil
   assert(mcp.validator.Tool({
     name = name,
     description = desc,
     inputSchema = input_schema or {type = "object"},
+    outputSchema = output_schema,
     annotations = annotations
   }))
   return setmetatable({
@@ -72,6 +87,8 @@ function _M.new(name, cb, desc, input_schema, annos)
       return true
     end,
     input_schema = input_schema,
+    ret_validator = output_schema and jsonschema.generate_validator(output_schema),
+    output_schema = output_schema,
     annotations = annotations
   }, _MT)
 end
