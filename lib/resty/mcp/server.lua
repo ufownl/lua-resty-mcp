@@ -166,7 +166,9 @@ local function define_methods(self)
         end
         self.semaphores = {discovered_roots = sema}
       end
-      return mcp.protocol.result.initialize(self.client.protocol, self.capabilities, self.options.name, self.options.version, self.instructions)
+      local res = mcp.protocol.result.initialize(self.client.protocol, self.capabilities, self.options.name, self.options.version, self.instructions)
+      self.conn.negotiated_protocol = res.protocolVersion
+      return res
     end,
     ["notifications/initialized"] = function(params)
       if not self.client or self.initialized then

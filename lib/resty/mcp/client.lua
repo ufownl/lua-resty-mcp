@@ -266,6 +266,7 @@ function _MT.__index.initialize(self, options, timeout)
     self.conn:close()
     return nil, string.format("Uncompatible server protocol: %s", res.protocolVersion)
   end
+  self.conn.negotiated_protocol = res.protocolVersion
   self.server = {
     protocol = res.protocolVersion,
     capabilities = res.capabilities,
