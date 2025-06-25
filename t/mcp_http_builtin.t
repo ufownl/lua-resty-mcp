@@ -49,6 +49,7 @@ location = /t {
     ngx.say(resp_body.result.serverInfo.name)
     ngx.say(resp_body.result.serverInfo.version)
     ngx.say(resp_body.result.instructions)
+    ngx.req.set_header("Mcp-Protocol-Version", resp_body.result.serverInfo.version)
     ngx.req.set_header("Mcp-Session-Id", session_id)
     local resp = ngx.location.capture("/mcp", {
       method = ngx.HTTP_POST,
@@ -190,6 +191,7 @@ location = /t {
     local session_id = resp.header["Mcp-Session-Id"]
     local resp_body = cjson.decode(resp.body)
     assert(init_req.validator(resp_body.result))
+    ngx.req.set_header("Mcp-Protocol-Version", resp_body.result.serverInfo.version)
     ngx.req.set_header("Mcp-Session-Id", session_id)
     local resp = ngx.location.capture("/mcp", {
       method = ngx.HTTP_POST,

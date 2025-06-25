@@ -56,6 +56,7 @@ local function initiate_get(self, last_event)
     headers = {
       ["Authorization"] = self.endpoint.authorization,
       ["Accept"] = "text/event-stream",
+      ["MCP-Protocol-Version"] = self.negotiated_protocol,
       ["Mcp-Session-Id"] = self.session_id,
       ["Last-Event-ID"] = last_event
     }
@@ -191,6 +192,7 @@ function _MT.__index.send(self, msg, meta)
       ["Content-Type"] = "application/json",
       ["Content-Length"] = #data,
       ["Accept"] = "application/json, text/event-stream",
+      ["MCP-Protocol-Version"] = self.negotiated_protocol,
       ["Mcp-Session-Id"] = self.session_id
     },
     body = data
@@ -302,6 +304,7 @@ function _MT.__index.close(self)
     query = self.endpoint.query,
     headers = {
       ["Authorization"] = self.endpoint.authorization,
+      ["MCP-Protocol-Version"] = self.negotiated_protocol,
       ["Mcp-Session-Id"] = self.session_id
     },
     body = data
