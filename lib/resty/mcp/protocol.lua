@@ -87,7 +87,7 @@ function _M.request.call_tool(name, args)
   }
 end
 
-function _M.request.prompt_complete(name, arg_name, arg_value)
+function _M.request.prompt_complete(name, arg_name, arg_value, prev_args)
   return {
     msg = mcp.rpc.request("completion/complete", {
       ref = {
@@ -97,13 +97,16 @@ function _M.request.prompt_complete(name, arg_name, arg_value)
       argument = {
         name = arg_name,
         value = arg_value
-      }
+      },
+      context = type(prev_args) == "table" and {
+        arguments = prev_args
+      } or nil
     }),
     validator = mcp.validator.CompleteResult
   }
 end
 
-function _M.request.resource_complete(uri, arg_name, arg_value)
+function _M.request.resource_complete(uri, arg_name, arg_value, prev_args)
   return {
     msg = mcp.rpc.request("completion/complete", {
       ref = {
@@ -113,7 +116,10 @@ function _M.request.resource_complete(uri, arg_name, arg_value)
       argument = {
         name = arg_name,
         value = arg_value
-      }
+      },
+      context = type(prev_args) == "table" and {
+        arguments = prev_args
+      } or nil
     }),
     validator = mcp.validator.CompleteResult
   }

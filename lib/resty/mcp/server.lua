@@ -102,7 +102,7 @@ local function paginate(cursor, page_size, total_size)
   return i, math.min(i + page_size - 1, total_size)
 end
 
-local function complete(cbs, name, value)
+local function complete(cbs, name, value, prev_args)
   local cb = cbs and cbs[name]
   if not cb then
     return {
@@ -111,7 +111,7 @@ local function complete(cbs, name, value)
       }
     }
   end
-  local values, total, has_more = cb(value)
+  local values, total, has_more = cb(value, prev_args)
   if values then
     while #values > 100 do
       table.remove(values)
@@ -437,12 +437,12 @@ local function define_methods(self)
         if not prompt then
           return nil, -32602, "Invalid prompt name", {name = params.ref.name}
         end
-        return complete(prompt.completion_callbacks, params.argument.name, params.argument.value)
+        return complete(prompt.completion_callbacks, params.argument.name, params.argument.value, params.context and params.context.arguments)
       elseif params.ref.type == "ref/resource" then
         if self.available_resource_templates then
           for i, resource_template in ipairs(self.available_resource_templates) do
             if resource_template.uri_template.pattern == params.ref.uri then
-              return complete(resource_template.completion_callbacks, params.argument.name, params.argument.value)
+              return complete(resource_template.completion_callbacks, params.argument.name, params.argument.value, params.context and params.context.arguments)
             end
           end
         end

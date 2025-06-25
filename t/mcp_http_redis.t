@@ -2021,7 +2021,10 @@ location = /mcp {
         temperature = {description = "Temperature setting.", required = true},
         style = {description = "Output style."}
       }):complete({
-        style = function(value)
+        style = function(value, prev_args)
+          if prev_args and prev_args.style then
+            return {prev_args.style}
+          end
           local available_values = {"a01", "a02"}
           for i = 0, 99 do
             table.insert(available_values, string.format("b%02d", i))
@@ -2053,7 +2056,10 @@ location = /mcp {
           {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
         }
       end, "Dynamic text resource.", "text/plain"):complete({
-        id = function(value)
+        id = function(value, prev_args)
+          if prev_args and prev_args.id then
+            return {prev_args.id}
+          end
           local available_values = {"a01", "a02"}
           for i = 0, 99 do
             table.insert(available_values, string.format("b%02d", i))
@@ -2115,6 +2121,16 @@ location = /t {
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
+    local res = assert(client:prompt_complete("complex_prompt", "style", "", {style = "foobar"}))
+    ngx.say(#res.completion.values)
+    ngx.say(res.completion.values[1])
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res = assert(client:resource_complete("mock://dynamic/text/{id}", "id", "", {id = "foobar"}))
+    ngx.say(#res.completion.values)
+    ngx.say(res.completion.values[1])
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
     client:shutdown()
   }
 }
@@ -2141,6 +2157,14 @@ nil
 nil
 true
 2
+nil
+nil
+1
+foobar
+nil
+nil
+1
+foobar
 nil
 nil
 --- no_error_log

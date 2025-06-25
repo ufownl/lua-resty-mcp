@@ -435,8 +435,9 @@ The argument of `complete` method, `callbacks` should be a dict-like Lua table t
 
 ```lua
 {
-  arg_name = function(value)
+  arg_name = function(value, prev_args)
     -- Query the suggested values based on `value`
+    -- If `prev_args` is set, it will contain the previously resolved variables passed from the client
     return values, total, has_more  -- All of these are optional
   end,
   ...
@@ -1349,7 +1350,7 @@ The result of the tool calling may have the following structures:
 
 ### client:prompt\_complete
 
-`syntax: res, err, rpc_err = client:prompt_complete(name, arg_name, arg_value)`
+`syntax: res, err, rpc_err = client:prompt_complete(name, arg_name, arg_value[, prev_args])`
 
 Request to complete an argument of a prompt.
 
@@ -1374,7 +1375,7 @@ The result of the argument completion may have the following structure:
 
 ### client:resource\_complete
 
-`syntax: res, err, rpc_err = client:resource_complete(uri, arg_name, arg_value)`
+`syntax: res, err, rpc_err = client:resource_complete(uri, arg_name, arg_value[, prev_args])`
 
 Request to complete an argument of a resource template.
 

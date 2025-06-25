@@ -437,24 +437,24 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
   return mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), meta)
 end
 
-function _MT.__index.prompt_complete(self, name, arg_name, arg_value, timeout)
+function _MT.__index.prompt_complete(self, name, arg_name, arg_value, prev_args, timeout)
   assert(type(name) == "string", "prompt name MUST be a string.")
   assert(type(arg_name) == "string", "argument name MUST be a string.")
   assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
     return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
   end
-  return mcp.session.send_request(self, "prompt_complete", {name, arg_name, arg_value}, tonumber(timeout))
+  return mcp.session.send_request(self, "prompt_complete", {name, arg_name, arg_value, prev_args}, tonumber(timeout))
 end
 
-function _MT.__index.resource_complete(self, uri, arg_name, arg_value, timeout)
+function _MT.__index.resource_complete(self, uri, arg_name, arg_value, prev_args, timeout)
   assert(type(uri) == "string", "resource URI MUST be a string.")
   assert(type(arg_name) == "string", "argument name MUST be a string.")
   assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
     return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
   end
-  return mcp.session.send_request(self, "resource_complete", {uri, arg_name, arg_value}, tonumber(timeout))
+  return mcp.session.send_request(self, "resource_complete", {uri, arg_name, arg_value, prev_args}, tonumber(timeout))
 end
 
 function _MT.__index.set_log_level(self, level, timeout)

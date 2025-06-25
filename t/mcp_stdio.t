@@ -1166,6 +1166,16 @@ location = /t {
     ngx.say(#res.completion.values)
     ngx.say(tostring(res.completion.total))
     ngx.say(tostring(res.completion.hasMore))
+    local res = assert(client:prompt_complete("complex_prompt", "style", "", {style = "foobar"}))
+    ngx.say(#res.completion.values)
+    ngx.say(res.completion.values[1])
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
+    local res = assert(client:resource_complete("mock://dynamic/text/{id}", "id", "", {id = "foobar"}))
+    ngx.say(#res.completion.values)
+    ngx.say(res.completion.values[1])
+    ngx.say(tostring(res.completion.total))
+    ngx.say(tostring(res.completion.hasMore))
     client:shutdown()
   }
 }
@@ -1192,6 +1202,14 @@ nil
 nil
 true
 2
+nil
+nil
+1
+foobar
+nil
+nil
+1
+foobar
 nil
 nil
 --- no_error_log

@@ -15,7 +15,10 @@ end, "A prompt with arguments.", {
   temperature = {description = "Temperature setting.", required = true},
   style = {description = "Output style."}
 }):complete({
-  style = function(value)
+  style = function(value, prev_args)
+    if prev_args and prev_args.style then
+      return {prev_args.style}
+    end
     local available_values = {"a01", "a02"}
     for i = 0, 99 do
       table.insert(available_values, string.format("b%02d", i))
@@ -47,7 +50,10 @@ assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "Dynami
     {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
   }
 end, "Dynamic text resource.", "text/plain"):complete({
-  id = function(value)
+  id = function(value, prev_args)
+    if prev_args and prev_args.id then
+      return {prev_args.id}
+    end
     local available_values = {"a01", "a02"}
     for i = 0, 99 do
       table.insert(available_values, string.format("b%02d", i))
