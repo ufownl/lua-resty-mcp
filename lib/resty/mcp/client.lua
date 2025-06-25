@@ -262,6 +262,10 @@ function _MT.__index.initialize(self, options, timeout)
     self.conn:close()
     return nil, err, errobj
   end
+  if res.protocolVersion ~= mcp.version.protocol and not mcp.version.compatible_protocols[res.protocolVersion] then
+    self.conn:close()
+    return nil, string.format("Uncompatible server protocol: %s", res.protocolVersion)
+  end
   self.server = {
     protocol = res.protocolVersion,
     capabilities = res.capabilities,
