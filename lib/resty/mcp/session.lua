@@ -153,6 +153,13 @@ local function request_sync_nonblocking(self, req, timeout, meta, cleanup)
 end
 
 function _M.new(conn, options, mt)
+  if type(options) == "table" then
+    assert(options.name == nil or type(options.name) == "string", "name of session MUST be a string")
+    assert(options.title == nil or type(options.title) == "string", "title of session MUST be a string")
+    assert(options.version == nil or type(options.version) == "string", "version of session MUST be a string")
+  else
+    options = {}
+  end
   local bg_tasks
   if not conn.blocking_io then
     local sema, err = ngx_semaphore.new()
@@ -168,7 +175,7 @@ function _M.new(conn, options, mt)
   end
   return setmetatable({
     conn = conn,
-    options = type(options) == "table" and options or {},
+    options = options,
     pending_requests = {},
     processing_requests = {},
     monitoring_progress = {},
