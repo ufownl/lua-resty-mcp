@@ -17,6 +17,7 @@ location = /t {
     assert(client:initialize())
     client:shutdown()
     ngx.say(client.server.info.name)
+    ngx.say(client.server.info.title)
     ngx.say(client.server.info.version)
     ngx.say(client.server.instructions)
   }
@@ -25,6 +26,7 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
+handshake
 MCP Handshake
 1.0_alpha
 Hello, MCP!
@@ -116,7 +118,8 @@ location = /t {
   content_by_lua_block {
     local mcp = require("resty.mcp")
     local client = assert(mcp.client(mcp.transport.stdio, {
-      name = "MCP Tools",
+      name = "test_tools",
+      title = "MCP Tools",
       version = "1.0_alpha",
       command = "/usr/local/openresty/bin/resty -I lib t/mock/tools.lua 2>> error.log"
     }))
@@ -133,6 +136,11 @@ location = /t {
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
+    local res = assert(client:call_tool("client_info"))
+    ngx.say(tostring(res.isError))
+    ngx.say(res.structuredContent.name)
+    ngx.say(res.structuredContent.title)
+    ngx.say(res.structuredContent.version)
     local res = assert(client:call_tool("add", {a = 1, b = 2}))
     ngx.say(tostring(res.isError))
     for i, v in ipairs(res.content) do
@@ -188,7 +196,13 @@ enable_echo
 Enables the echo tool.
 disable_echo
 Disables the echo tool.
+client_info
+Query the client information.
 true
+nil
+test_tools
+MCP Tools
+1.0_alpha
 nil
 text 3
 -32602 Unknown tool {"name":"echo"}
@@ -201,11 +215,13 @@ enable_echo
 Enables the echo tool.
 disable_echo
 Disables the echo tool.
+client_info
+Query the client information.
 echo
 Echoes back the input.
 true
 nil
-text MCP Tools v1.0_alpha say: Hello, world!
+text test_tools MCP Tools v1.0_alpha say: Hello, world!
 true
 text tool (name: echo) had been registered
 true
@@ -219,6 +235,8 @@ enable_echo
 Enables the echo tool.
 disable_echo
 Disables the echo tool.
+client_info
+Query the client information.
 --- no_error_log
 [error]
 

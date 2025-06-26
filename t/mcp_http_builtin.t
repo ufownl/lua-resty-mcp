@@ -24,7 +24,8 @@ location = /mcp {
         instructions = "Hello, MCP!"
       })
     end, {
-      name = "MCP Handshake Streamable HTTP",
+      name = "handshake_http_builtin",
+      title = "MCP Handshake Streamable HTTP",
       version = "1.0_alpha"
     })
   }
@@ -47,6 +48,7 @@ location = /t {
     local resp_body = cjson.decode(resp.body)
     assert(init_req.validator(resp_body.result))
     ngx.say(resp_body.result.serverInfo.name)
+    ngx.say(resp_body.result.serverInfo.title)
     ngx.say(resp_body.result.serverInfo.version)
     ngx.say(resp_body.result.instructions)
     ngx.req.set_header("Mcp-Protocol-Version", resp_body.result.serverInfo.version)
@@ -66,6 +68,7 @@ GET /t
 --- response_body
 200
 application/json
+handshake_http_builtin
 MCP Handshake Streamable HTTP
 1.0_alpha
 Hello, MCP!

@@ -13,7 +13,8 @@ location = /ws_mcp {
     local mcp = require("resty.mcp")
 
     local server = assert(mcp.server(mcp.transport.websocket, {
-      name = "MCP Handshake",
+      name = "handshake_ws",
+      title = "MCP Handshake WebSocket",
       version = "1.0_alpha"
     }))
     server:run({
@@ -39,6 +40,7 @@ location = /t {
     assert(client:initialize())
     client:shutdown()
     ngx.say(client.server.info.name)
+    ngx.say(client.server.info.title)
     ngx.say(client.server.info.version)
     ngx.say(client.server.instructions)
   }
@@ -47,7 +49,8 @@ location = /t {
 GET /t
 --- error_code: 200
 --- response_body
-MCP Handshake
+handshake_ws
+MCP Handshake WebSocket
 1.0_alpha
 Hello, MCP!
 --- no_error_log

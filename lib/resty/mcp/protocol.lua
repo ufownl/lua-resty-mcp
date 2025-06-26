@@ -14,7 +14,7 @@ local _M = {
 
 local cjson = require("cjson.safe")
 
-function _M.request.initialize(capabilities, name, version)
+function _M.request.initialize(capabilities, name, title, version)
   return {
     msg = mcp.rpc.request("initialize", {
       protocolVersion = mcp.version.protocol,
@@ -26,6 +26,7 @@ function _M.request.initialize(capabilities, name, version)
       } or {},
       clientInfo = {
         name = name or "lua-resty-mcp",
+        title = title,
         version = version or mcp.version.module
       }
     }),
@@ -205,7 +206,7 @@ function _M.notification.message(level, data, logger)
   })
 end
 
-function _M.result.initialize(client_protocol, capabilities, name, version, instructions)
+function _M.result.initialize(client_protocol, capabilities, name, title, version, instructions)
   local protocol = mcp.version.protocol
   if client_protocol ~= protocol and mcp.version.compatible_protocols[client_protocol] then
     protocol = client_protocol
@@ -222,6 +223,7 @@ function _M.result.initialize(client_protocol, capabilities, name, version, inst
     } or {},
     serverInfo = {
       name = name or "lua-resty-mcp",
+      title = title,
       version = version or mcp.version.module
     },
     instructions = instructions

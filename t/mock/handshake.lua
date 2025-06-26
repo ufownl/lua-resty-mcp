@@ -1,6 +1,7 @@
 local mcp = require("resty.mcp")
 local server = assert(mcp.server(mcp.transport.stdio, {
-  name = "MCP Handshake",
+  name = "handshake",
+  title = "MCP Handshake",
   version = "1.0_alpha"
 }))
 server:run({

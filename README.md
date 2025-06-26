@@ -127,6 +127,7 @@ Available options:
 {
   -- Common options
   name = "lua-resty-mcp",  -- Name of this session (optional)
+  title = "lua-resty-mcp",  -- Title of this session (optional)
   version = "1.0",  -- Version of this session (optional)
 
   -- Options for WebSocket connections (optional)
@@ -139,8 +140,9 @@ Available options:
 ```
 
 > [!NOTE]
-> 1. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#new);
-> 2. WebSocket transport for the server should only be used in `content_by_lua*` directives.
+> 1. The optional field `title` is intended for UI and end-user contexts — optimized to be human-readable and easily understood, even by those unfamiliar with domain-specific terminology. If not provided, the name should be used for display;
+> 2. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#new);
+> 3. WebSocket transport for the server should only be used in `content_by_lua*` directives.
 
 A simple echo demo server configuration that uses WebSocket transport:
 
@@ -883,6 +885,7 @@ Available options:
 {
   -- Common options
   name = "lua-resty-mcp",  -- Name of this session (optional)
+  title = "lua-resty-mcp",  -- Title of this session (optional)
   version = "1.0",  -- Version of this session (optional)
 
   -- Options for stdio transport
@@ -948,8 +951,9 @@ Available options:
 ```
 
 > [!NOTE]
-> 1. Available options for HTTP connections can be viewed [here](https://github.com/ledgetech/lua-resty-http?tab=readme-ov-file#connect). Note that `scheme`, `host`, and `port` will be parsed according to `endpoint_url` automatically, so setting them in `http_opts` will be ignored;
-> 2. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#clientnew), it combines the available options for `client:new` and `client:connect` methods. Note that the subprotocol will always be set to `"mcp"`, so setting `protocols` in `websocket_opts` will be ignored.
+> 1. The optional field `title` is intended for UI and end-user contexts — optimized to be human-readable and easily understood, even by those unfamiliar with domain-specific terminology. If not provided, the name should be used for display;
+> 2. Available options for HTTP connections can be viewed [here](https://github.com/ledgetech/lua-resty-http?tab=readme-ov-file#connect). Note that `scheme`, `host`, and `port` will be parsed according to `endpoint_url` automatically, so setting them in `http_opts` will be ignored;
+> 3. Available options for WebSocket connections can be viewed [here](https://github.com/openresty/lua-resty-websocket/tree/master?tab=readme-ov-file#clientnew), it combines the available options for `client:new` and `client:connect` methods. Note that the subprotocol will always be set to `"mcp"`, so setting `protocols` in `websocket_opts` will be ignored.
 
 ### client:initialize
 

@@ -166,7 +166,7 @@ local function define_methods(self)
         end
         self.semaphores = {discovered_roots = sema}
       end
-      local res = mcp.protocol.result.initialize(self.client.protocol, self.capabilities, self.options.name, self.options.version, self.instructions)
+      local res = mcp.protocol.result.initialize(self.client.protocol, self.capabilities, self.options.name, self.options.title, self.options.version, self.instructions)
       self.conn.negotiated_protocol = res.protocolVersion
       return res
     end,
@@ -718,7 +718,7 @@ function _MT.__index.list_roots(self, timeout, meta_fa)
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.roots then
-    return nil, string.format("%s v%s has no roots capability", self.client.info.name, self.client.info.version)
+    return nil, string.format("%s v%s has no roots capability", self.client.info.title or self.client.info.name, self.client.info.version)
   end
   if not self.client.capabilities.roots.listChanged then
     local res, err, errobj = mcp.session.send_request(self, "list", {"roots"}, tonumber(timeout), meta_fa and meta_fa() or nil)
@@ -758,7 +758,7 @@ function _MT.__index.create_message(self, messages, max_tokens, options, timeout
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.sampling then
-    return nil, string.format("%s v%s has no sampling capability", self.client.info.name, self.client.info.version)
+    return nil, string.format("%s v%s has no sampling capability", self.client.info.title or self.client.info.name, self.client.info.version)
   end
   local meta
   if meta_fa then
@@ -775,7 +775,7 @@ function _MT.__index.elicit(self, message, schema, timeout, progress_cb, meta_fa
     return nil, "session has not been initialized"
   end
   if not self.client.capabilities.elicitation then
-    return nil, string.format("%s v%s has no elicitation capability", self.client.info.name, self.client.info.version)
+    return nil, string.format("%s v%s has no elicitation capability", self.client.info.title or self.client.info.name, self.client.info.version)
   end
   local meta
   if meta_fa then

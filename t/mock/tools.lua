@@ -15,7 +15,7 @@ end, "Adds two numbers.", {
 
 assert(server:register(mcp.tool("enable_echo", function(args, ctx)
   local ok, err = ctx.session:register(mcp.tool("echo", function(args)
-    return string.format("%s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.version, args.message)
+    return string.format("%s %s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.title, ctx.session.client.info.version, args.message)
   end, "Echoes back the input.", {
     type = "object",
     properties = {
@@ -39,6 +39,18 @@ assert(server:register(mcp.tool("disable_echo", function(args, ctx)
   end
   return {}
 end, "Disables the echo tool.")))
+
+assert(server:register(mcp.tool("client_info", function(args, ctx)
+  return ctx.session.client.info
+end, "Query the client information.", nil, {
+  type = "object",
+  properties = {
+    name = {type = "string"},
+    title = {type = "string"},
+    version = {type = "string"}
+  },
+  required = {"name", "version"}
+})))
 
 server:run({
   capabilities = {

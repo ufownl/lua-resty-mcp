@@ -197,7 +197,7 @@ end
 
 local function list_impl(self, category, timeout)
   if not self.server.capabilities[category] then
-    return nil, string.format("%s v%s has no %s capability", self.server.info.name, self.server.info.version, category)
+    return nil, string.format("%s v%s has no %s capability", self.server.info.title or self.server.info.name, self.server.info.version, category)
   end
   if not self.server.capabilities[category].listChanged then
     return get_list(self, category, timeout)
@@ -257,7 +257,7 @@ function _MT.__index.initialize(self, options, timeout)
   self.elicitation_callback = options and options.elicitation_callback
   mcp.session.initialize(self, define_methods(self))
   local capabilities = {roots = true, sampling = self.sampling_callback, elicitation = self.elicitation_callback}
-  local res, err, errobj = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.version}, tonumber(timeout))
+  local res, err, errobj = mcp.session.send_request(self, "initialize", {capabilities, self.options.name, self.options.title, self.options.version}, tonumber(timeout))
   if not res then
     self.conn:close()
     return nil, err, errobj
@@ -329,7 +329,7 @@ function _MT.__index.get_prompt(self, name, args, timeout, progress_cb)
   assert(type(name) == "string", "prompt name MUST be a string.")
   assert(args == nil or type(args) == "table" and #args == 0, "arguments of prompt MUST be a dict.")
   if not self.server.capabilities.prompts then
-    return nil, string.format("%s v%s has no prompts capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no prompts capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   local meta = progress_cb and {progress_callback = progress_cb} or nil
   return mcp.session.send_request(self, "get_prompt", {name, args}, tonumber(timeout), meta)
@@ -341,7 +341,7 @@ end
 
 function _MT.__index.list_resource_templates(self, timeout)
   if not self.server.capabilities.resources then
-    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resources capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   if not self.server.capabilities.resources.listChanged then
     return get_list(self, "resources/templates", timeout, "resourceTemplates")
@@ -375,7 +375,7 @@ end
 function _MT.__index.read_resource(self, uri, timeout, progress_cb)
   assert(type(uri) == "string", "resource uri MUST be a string.")
   if not self.server.capabilities.resources then
-    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resources capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   local meta = progress_cb and {progress_callback = progress_cb} or nil
   return mcp.session.send_request(self, "read_resource", {uri}, tonumber(timeout), meta)
@@ -385,10 +385,10 @@ function _MT.__index.subscribe_resource(self, uri, cb, timeout)
   assert(type(uri) == "string", "resource uri MUST be a string.")
   assert(cb, "callback of subscribed resource MUST be set")
   if not self.server.capabilities.resources then
-    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resources capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   if not self.server.capabilities.resources.subscribe then
-    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   if self.subscribed_resources and self.subscribed_resources[uri] then
     return nil, string.format("resource %s had been subscribed", uri)
@@ -408,10 +408,10 @@ end
 function _MT.__index.unsubscribe_resource(self, uri, timeout)
   assert(type(uri) == "string", "resource uri MUST be a string.")
   if not self.server.capabilities.resources then
-    return nil, string.format("%s v%s has no resources capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resources capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   if not self.server.capabilities.resources.subscribe then
-    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no resource subscription capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   local res, err, errobj = mcp.session.send_request(self, "unsubscribe_resource", {uri}, tonumber(timeout))
   if not res then
@@ -431,7 +431,7 @@ function _MT.__index.call_tool(self, name, args, timeout, progress_cb)
   assert(type(name) == "string", "tool name MUST be a string.")
   assert(args == nil or type(args) == "table" and #args == 0, "arguments of tool calling MUST be a dict.")
   if not self.server.capabilities.tools then
-    return nil, string.format("%s v%s has no tools capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no tools capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   local meta = progress_cb and {progress_callback = progress_cb} or nil
   return mcp.session.send_request(self, "call_tool", {name, args}, tonumber(timeout), meta)
@@ -442,7 +442,7 @@ function _MT.__index.prompt_complete(self, name, arg_name, arg_value, prev_args,
   assert(type(arg_name) == "string", "argument name MUST be a string.")
   assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
-    return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no completions capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   return mcp.session.send_request(self, "prompt_complete", {name, arg_name, arg_value, prev_args}, tonumber(timeout))
 end
@@ -452,7 +452,7 @@ function _MT.__index.resource_complete(self, uri, arg_name, arg_value, prev_args
   assert(type(arg_name) == "string", "argument name MUST be a string.")
   assert(type(arg_value) == "string", "argument value MUST be a string.")
   if not self.server.capabilities.completions then
-    return nil, string.format("%s v%s has no completions capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no completions capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   return mcp.session.send_request(self, "resource_complete", {uri, arg_name, arg_value, prev_args}, tonumber(timeout))
 end
@@ -460,7 +460,7 @@ end
 function _MT.__index.set_log_level(self, level, timeout)
   assert(type(level) == "string", "log level MUST be a string.")
   if not self.server.capabilities.logging then
-    return nil, string.format("%s v%s has no logging capability", self.server.info.name, self.server.info.version)
+    return nil, string.format("%s v%s has no logging capability", self.server.info.title or self.server.info.name, self.server.info.version)
   end
   return mcp.session.send_request(self, "set_log_level", {level}, tonumber(timeout))
 end
