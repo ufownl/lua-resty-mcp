@@ -360,8 +360,8 @@ location = /ws_mcp {
         {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
       }
     end, "A prompt with arguments.", {
-      temperature = {description = "Temperature setting.", required = true},
-      style = {description = "Output style."}
+      temperature = {title = "Temperature", description = "Temperature setting.", required = true},
+      style = {title = "Style", description = "Output style."}
     })))
 
     assert(server:register(mcp.tool("enable_mock_error", function(args, ctx)

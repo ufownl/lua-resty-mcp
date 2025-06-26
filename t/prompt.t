@@ -23,6 +23,7 @@ location = /t {
       return text
     end, "Demo prompt definition and getting.", {
       a = {
+        title = "AAA",
         description = "First argument?"
       },
       b = {
@@ -36,6 +37,7 @@ location = /t {
     ngx.say(schema.description)
     for i, v in ipairs(schema.arguments) do
       ngx.say(v.name)
+      ngx.say(tostring(v.title))
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.required))
     end
@@ -72,12 +74,15 @@ GET /t
 foobar
 Demo prompt definition and getting.
 b
+nil
 Second argument?
 true
 a
+AAA
 First argument?
 nil
 c
+nil
 nil
 nil
 Demo prompt definition and getting.

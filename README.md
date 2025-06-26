@@ -426,6 +426,7 @@ The 4th argument of this method `args`, is used to declare the expected argument
 ```lua
 {
   arg_name = {
+    title = "Argument Title",
     description = "What is this argument.",
     required = true
   },
