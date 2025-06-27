@@ -44,6 +44,7 @@ function _MT.__index.to_mcp(self)
   end
   return {
     name = self.name,
+    title = self.title,
     description = self.description,
     arguments = arguments
   }
@@ -96,25 +97,36 @@ function _MT.__index.get(self, args, ctx)
   }
 end
 
-function _MT.__index.complete(self, cbs)
-  assert(cbs, "completion callbacks of prompt MUST be set.")
-  self.completion_callbacks = {}
-  for k, v in pairs(self.expected_args) do
-    self.completion_callbacks[k] = cbs[k]
-  end
-  return self
-end
-
-function _M.new(name, cb, desc, args)
+function _M.new(name, cb, options)
   assert(type(name) == "string", "prompt name MUST be a string.")
   assert(cb, "callback of prompt MUST be set.")
-  assert(desc == nil or type(desc) == "string", "description of prompt MUST be a string.")
-  assert(args == nil or type(args) == "table" and #args == 0, "expected arguments of prompt MUST be a dict.")
+  local args = {}
+  local title, desc, comp_cbs
+  if options then
+    assert(type(options) == "table", "options of prompt MUST be a dict.")
+    assert(options.title == nil or type(options.title) == "string", "title of prompt MUST be a string.")
+    assert(options.description == nil or type(options.description) == "string", "description of prompt MUST be a string.")
+    assert(options.arguments == nil or type(options.arguments) == "table", "expected arguments of prompt MUST be a dict.")
+    title = options.title
+    desc = options.description
+    if options.arguments then
+      args = options.arguments
+      if options.completions then
+        assert(type(options.completions) == "table", "completions of prompt arguments MUST be a dict.")
+        comp_cbs = {}
+        for k, v in pairs(args) do
+          comp_cbs[k] = options.completions[k]
+        end
+      end
+    end
+  end
   return setmetatable({
     name = name,
     callback = cb,
+    title = title,
     description = desc,
-    expected_args = args or {}
+    expected_args = args,
+    completion_callbacks = comp_cbs
   }, _MT)
 end
 

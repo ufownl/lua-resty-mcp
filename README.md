@@ -84,7 +84,12 @@ local server = assert(mcp.server(mcp.transport.stdio, {}))
 -- Register a prompt
 assert(server:register(mcp.prompt("echo", function(args)
   return "Please process this message: "..args.message
-end, "Create an echo prompt", {message = {required = true}})))
+end, {
+  description = "Create an echo prompt",
+  arguments = {
+    message = {required = true}
+  }
+})))
 
 -- Register a resource template
 assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
@@ -386,9 +391,7 @@ Available context components:
 
 #### mcp.prompt
 
-`syntax: component = mcp.prompt(name, callback[, desc[, args]])`
-
-`syntax: component = mcp.prompt(name, callback[, desc[, args]]):complete(callbacks)`
+`syntax: component = mcp.prompt(name, callback[, options])`
 
 Create a prompt or prompt template.
 
@@ -421,29 +424,28 @@ function callback(args, ctx)
 end
 ```
 
-The 4th argument of this method `args`, is used to declare the expected arguments that will be passed into `callback`. It should be a table and could be defined as follows:
+The 3rd argument of this method `options`, should be a dict-like Lua table that contains the optional options of this prompt, and it could be defined as follows:
 
 ```lua
 {
-  arg_name = {
-    title = "Argument Title",
-    description = "What is this argument.",
-    required = true
+  title = "Prompt Title",
+  description = "Description of prompt.",
+  arguments = {
+    arg_name = {
+      title = "Argument Title",
+      description = "What is this argument.",
+      required = true
+    },
+    ...
   },
-  ...
-}
-```
-
-The argument of `complete` method, `callbacks` should be a dict-like Lua table that contains the completion callbacks of corresponding prompt arguments. The keys of the items in this table should match the argument names declared in `args`. This table and the callbacks within it could be defined as follows:
-
-```lua
-{
-  arg_name = function(value, prev_args)
-    -- Query the suggested values based on `value`
-    -- If `prev_args` is set, it will contain the previously resolved variables passed from the client
-    return values, total, has_more  -- All of these are optional
-  end,
-  ...
+  completions = {
+    arg_name = function(value, prev_args)
+      -- Query the suggested values based on `value`
+      -- If `prev_args` is set, it will contain the previously resolved variables passed from the client
+      return values, total, has_more  -- All of these are optional
+    end,
+    ...
+  }
 }
 ```
 

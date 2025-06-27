@@ -261,6 +261,7 @@ location = /t {
     local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
@@ -288,6 +289,7 @@ location = /t {
     local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
@@ -309,6 +311,7 @@ location = /t {
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     client:shutdown()
@@ -319,8 +322,10 @@ GET /t
 --- error_code: 200
 --- response_body
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 true
 A prompt without arguments.
@@ -333,10 +338,13 @@ prompts/list_changed
 nil
 false
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 mock_error
+Mock Error
 Mock error message.
 true
 -32603 Internal errors {"errmsg":"mock error"}
@@ -348,8 +356,10 @@ nil
 false
 true
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 --- no_error_log
 [error]

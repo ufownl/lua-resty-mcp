@@ -21,21 +21,26 @@ location = /t {
         text = text..string.format("\nc=%s", args.c)
       end
       return text
-    end, "Demo prompt definition and getting.", {
-      a = {
-        title = "AAA",
-        description = "First argument?"
-      },
-      b = {
-        description = "Second argument?",
-        required = true
-      },
-      c = {}
+    end, {
+      title = "Foobar",
+      description = "Demo prompt definition and getting.",
+      arguments = {
+        a = {
+          title = "AAA",
+          description = "First argument?"
+        },
+        b = {
+          description = "Second argument?",
+          required = true
+        },
+        c = {}
+      }
     })
-    local schema = pt:to_mcp()
-    ngx.say(schema.name)
-    ngx.say(schema.description)
-    for i, v in ipairs(schema.arguments) do
+    local decl = pt:to_mcp()
+    ngx.say(decl.name)
+    ngx.say(decl.title)
+    ngx.say(decl.description)
+    for i, v in ipairs(decl.arguments) do
       ngx.say(v.name)
       ngx.say(tostring(v.title))
       ngx.say(tostring(v.description))
@@ -72,6 +77,7 @@ GET /t
 --- error_code: 200
 --- response_body
 foobar
+Foobar
 Demo prompt definition and getting.
 b
 nil
@@ -122,8 +128,11 @@ location = /t {
         })
       end
       return messages
-    end, "Demo multi-turns prompt.", {
-      n = {required = true}
+    end, {
+      description = "Demo multi-turns prompt.",
+      arguments = {
+        n = {required = true}
+      }
     })
     local result, code, message, data = pt:get({n = "3"})
     if not result then
@@ -164,7 +173,7 @@ location = /t {
     local prompt = require("resty.mcp.prompt")
     local pt = prompt.new("foobar", function(args)
       return nil, "mock error"
-    end, "Demo handling errors return by callback.")
+    end, {description = "Demo handling errors return by callback."})
     local _, code, message, data = pt:get()
     ngx.say(string.format("%d %s %s", code, message, data.errmsg))
   }

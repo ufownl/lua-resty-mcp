@@ -29,7 +29,7 @@ assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments.")))
+end, {description = "Sampling prompt from client without arguments."})))
 
 server:run({
   capabilities = {

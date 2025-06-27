@@ -4,7 +4,12 @@ local server = assert(mcp.server(mcp.transport.stdio))
 
 assert(server:register(mcp.prompt("echo", function(args)
   return "Please process this message: "..args.message
-end, "Create an echo prompt", {message = {required = true}})))
+end, {
+  description = "Create an echo prompt",
+  arguments = {
+    message = {required = true}
+  }
+})))
 
 assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)

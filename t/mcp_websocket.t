@@ -352,22 +352,32 @@ location = /ws_mcp {
 
     assert(server:register(mcp.prompt("simple_prompt", function(args)
       return "This is a simple prompt without arguments."
-    end, "A prompt without arguments.")))
+    end, {
+      title = "Simple Prompt",
+      description = "A prompt without arguments."
+    })))
 
     assert(server:register(mcp.prompt("complex_prompt", function(args)
       return {
         {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
         {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
       }
-    end, "A prompt with arguments.", {
-      temperature = {title = "Temperature", description = "Temperature setting.", required = true},
-      style = {title = "Style", description = "Output style."}
+    end, {
+      title = "Complex Prompt",
+      description = "A prompt with arguments.",
+      arguments = {
+        temperature = {title = "Temperature", description = "Temperature setting.", required = true},
+        style = {title = "Style", description = "Output style."}
+      }
     })))
 
     assert(server:register(mcp.tool("enable_mock_error", function(args, ctx)
       local ok, err = ctx.session:register(mcp.prompt("mock_error", function(args)
         return nil, "mock error"
-      end, "Mock error message."))
+      end, {
+        title = "Mock Error",
+        description = "Mock error message."
+      }))
       if not ok then
         return nil, err
       end
@@ -409,6 +419,7 @@ location = /t {
     local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
@@ -436,6 +447,7 @@ location = /t {
     local prompts = assert(client:list_prompts())
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_prompts == prompts))
@@ -457,6 +469,7 @@ location = /t {
     ngx.say(tostring(client.server.discovered_prompts == prompts))
     for i, v in ipairs(prompts) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     client:shutdown()
@@ -467,8 +480,10 @@ GET /t
 --- error_code: 200
 --- response_body
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 true
 A prompt without arguments.
@@ -481,10 +496,13 @@ prompts/list_changed
 nil
 false
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 mock_error
+Mock Error
 Mock error message.
 true
 -32603 Internal errors {"errmsg":"mock error"}
@@ -496,8 +514,10 @@ nil
 false
 true
 simple_prompt
+Simple Prompt
 A prompt without arguments.
 complex_prompt
+Complex Prompt
 A prompt with arguments.
 --- no_error_log
 [error]
@@ -1057,7 +1077,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     server:run({
       capabilities = {
@@ -1145,7 +1165,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     server:run({
       capabilities = {
@@ -1221,7 +1241,12 @@ location = /ws_mcp {
         end
       end
       return "Please process this message: "..args.message
-    end, "Create an echo prompt", {message = {required = true}})))
+    end, {
+      description = "Create an echo prompt",
+      arguments = {
+        message = {required = true}
+      }
+    })))
 
     assert(server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -1278,7 +1303,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     assert(server:register(mcp.prompt("cancel_sampling", function(args, ctx)
       local messages =  {
@@ -1299,7 +1324,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     server:run()
   }
@@ -1413,7 +1438,12 @@ location = /ws_mcp {
         end
       end
       return "Please process this message: "..args.message
-    end, "Create an echo prompt", {message = {required = true}})))
+    end, {
+      description = "Create an echo prompt",
+      arguments = {
+        message = {required = true}
+      }
+    })))
 
     assert(server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -1470,7 +1500,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     assert(server:register(mcp.prompt("cancel_sampling", function(args, ctx)
       local messages =  {
@@ -1491,7 +1521,7 @@ location = /ws_mcp {
       end
       table.insert(messages, res)
       return messages
-    end, "Sampling prompt from client without arguments.")))
+    end, {description = "Sampling prompt from client without arguments."})))
 
     server:run()
   }
@@ -1854,30 +1884,34 @@ location = /ws_mcp {
 
     assert(server:register(mcp.prompt("simple_prompt", function(args)
       return "This is a simple prompt without arguments."
-    end, "A prompt without arguments.")))
+    end, {description = "A prompt without arguments."})))
 
     assert(server:register(mcp.prompt("complex_prompt", function(args)
       return {
         {role = "user", content = {type = "text", text = string.format("This is a complex prompt with arguments: temperature=%s, style=%s", args.temperature, tostring(args.style))}},
         {role = "assistant", content = {type = "text", text = string.format("Assistant reply: temperature=%s, style=%s", args.temperature, tostring(args.style))}}
       }
-    end, "A prompt with arguments.", {
-      temperature = {description = "Temperature setting.", required = true},
-      style = {description = "Output style."}
-    }):complete({
-      style = function(value)
-        local available_values = {"a01", "a02"}
-        for i = 0, 99 do
-          table.insert(available_values, string.format("b%02d", i))
-        end
-        local values = {}
-        for i, v in ipairs(available_values) do
-          if string.find(v, value, 1, true) then
-            table.insert(values, v)
+    end, {
+      description = "A prompt with arguments.",
+      arguments = {
+        temperature = {description = "Temperature setting.", required = true},
+        style = {description = "Output style."}
+      },
+      completions = {
+        style = function(value)
+          local available_values = {"a01", "a02"}
+          for i = 0, 99 do
+            table.insert(available_values, string.format("b%02d", i))
           end
+          local values = {}
+          for i, v in ipairs(available_values) do
+            if string.find(v, value, 1, true) then
+              table.insert(values, v)
+            end
+          end
+          return values, #values
         end
-        return values, #values
-      end
+      }
     })))
 
     assert(server:register(mcp.resource_template("mock://no_completion/text/{id}", "NoCompletion", function(uri, vars)

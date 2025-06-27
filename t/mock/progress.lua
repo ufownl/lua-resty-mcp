@@ -10,7 +10,12 @@ assert(server:register(mcp.prompt("echo", function(args, ctx)
     end
   end
   return "Please process this message: "..args.message
-end, "Create an echo prompt", {message = {required = true}})))
+end, {
+  description = "Create an echo prompt",
+  arguments = {
+    message = {required = true}
+  }
+})))
 
 assert(server:register(mcp.resource("echo://static", "echo static", function(uri, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do
@@ -67,7 +72,7 @@ assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments.")))
+end, {description = "Sampling prompt from client without arguments."})))
 
 assert(server:register(mcp.prompt("cancel_sampling", function(args, ctx)
   local messages =  {
@@ -88,6 +93,6 @@ assert(server:register(mcp.prompt("cancel_sampling", function(args, ctx)
   end
   table.insert(messages, res)
   return messages
-end, "Sampling prompt from client without arguments.")))
+end, {description = "Sampling prompt from client without arguments."})))
 
 server:run()
