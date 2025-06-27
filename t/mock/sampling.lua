@@ -17,7 +17,7 @@ assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabil
     table.insert(contents, {uri = uri.."/elicitation", text = "true"})
   end
   return contents
-end, "Capabilities of client.")))
+end, {description = "Capabilities of client."})))
 
 assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
   local messages =  {

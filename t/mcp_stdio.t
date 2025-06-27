@@ -386,6 +386,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -420,6 +421,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -525,6 +527,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -537,10 +540,12 @@ GET /t
 --- response_body
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 true
@@ -562,14 +567,17 @@ content of hidden resource
 false
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 mock://static/hidden
 HiddenResource
+Hidden Resource
 Hidden blob resource.
 nil
 true
@@ -643,10 +651,12 @@ false
 true
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 --- no_error_log

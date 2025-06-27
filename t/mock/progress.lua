@@ -25,7 +25,7 @@ assert(server:register(mcp.resource("echo://static", "echo static", function(uri
     end
   end
   return "Resource echo: static"
-end, "Echo a static message as a resource", "text/plain")))
+end, {description = "Echo a static message as a resource", mime = "text/plain"})))
 
 assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do

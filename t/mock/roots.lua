@@ -17,7 +17,7 @@ assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabil
     table.insert(contents, {uri = uri.."/elicitation", text = "true"})
   end
   return contents
-end, "Capabilities of client.")))
+end, {description = "Capabilities of client."})))
 
 assert(server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
   local roots, err = ctx.session:list_roots()
@@ -29,7 +29,7 @@ assert(server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots"
     table.insert(contents, {uri = v.uri, text = v.name or ""})
   end
   return contents
-end, "Discovered roots from client.")))
+end, {description = "Discovered roots from client."})))
 
 server:run({
   capabilities = {

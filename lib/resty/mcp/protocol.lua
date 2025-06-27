@@ -257,6 +257,7 @@ function _M.annotations(annos)
   if tonumber(annos.priority) then
     annotations.priority = math.min(math.max(tonumber(annos.priority), 0), 1)
   end
+  annotations.lastModified = annos.last_modified
   return annotations
 end
 

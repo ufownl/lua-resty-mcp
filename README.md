@@ -429,7 +429,7 @@ The 3rd argument of this method `options`, should be a dict-like Lua table that 
 ```lua
 {
   title = "Prompt Title",
-  description = "Description of prompt.",
+  description = "Description of this prompt.",
   arguments = {
     arg_name = {
       title = "Argument Title",
@@ -451,7 +451,7 @@ The 3rd argument of this method `options`, should be a dict-like Lua table that 
 
 #### mcp.resource
 
-`syntax: component = mcp.resource(uri, name, callback[, desc[, mime[, annos[, size]]]])`
+`syntax: component = mcp.resource(uri, name, callback[, options])`
 
 Create a resource.
 
@@ -484,16 +484,25 @@ function callback(uri, ctx)
 end
 ```
 
-The 6th argument of this method `annos`, is optional annotations for the client. It should be a table and could be defined as follows:
+The 4th argument of this method `options`, should be a dict-like Lua table that contains the optional options of this resource, and it could be defined as follows:
 
 ```lua
 {
-  -- Describes who the intended customer of this object or data is
-  audience = {"user", "assistant"},
+  title = "Resource Title",
+  description = "Description of this resource.",
+  mime = "text/plain",  -- MIME type of this resource
+  annotations = {
+    -- Describes who the intended customer of this object or data is
+    audience = {"user", "assistant"},
 
-  -- Describes how important this data is for operating the server
-  -- The value will be clipped to the range [0, 1]
-  priority = 0.42
+    -- Describes how important this data is for operating the server
+    -- The value will be clipped to the range [0, 1]
+    priority = 0.42,
+
+    -- The moment the resource was last modified, as an ISO 8601 formatted string
+    last_modified = "2025-06-18T08:00:00Z"
+  },
+  size = 1024  -- Size of this resource
 }
 ```
 

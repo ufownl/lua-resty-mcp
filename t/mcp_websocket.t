@@ -537,13 +537,21 @@ location = /ws_mcp {
       return {
         {text = "Hello, world!"}
       }
-    end, "Static text resource.", "text/plain")))
+    end, {
+      title = "Text Resource",
+      description = "Static text resource.",
+      mime = "text/plain"
+    })))
 
     assert(server:register(mcp.resource("mock://static/blob", "BlobResource", function(uri)
       return {
         {blob = ngx.encode_base64("Hello, world!")}
       }
-    end, "Static blob resource.", "application/octet-stream")))
+    end, {
+      title = "Blob Resource",
+      description = "Static blob resource.",
+      mime = "application/octet-stream"
+    })))
 
     assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
       if vars.id == "" then
@@ -568,7 +576,7 @@ location = /ws_mcp {
         return {
           {blob = ngx.encode_base64("content of hidden resource"), mimeType = "application/octet-stream"}
         }
-      end, "Hidden blob resource."))
+      end, {title = "Hidden Resource", description = "Hidden blob resource."}))
       if not ok then
         return nil, err
       end
@@ -649,6 +657,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -683,6 +692,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -788,6 +798,7 @@ location = /t {
     for i, v in ipairs(resources) do
       ngx.say(v.uri)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -800,10 +811,12 @@ GET /t
 --- response_body
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 true
@@ -825,14 +838,17 @@ content of hidden resource
 false
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 mock://static/hidden
 HiddenResource
+Hidden Resource
 Hidden blob resource.
 nil
 true
@@ -906,10 +922,12 @@ false
 true
 mock://static/text
 TextResource
+Text Resource
 Static text resource.
 text/plain
 mock://static/blob
 BlobResource
+Blob Resource
 Static blob resource.
 application/octet-stream
 --- no_error_log
@@ -941,7 +959,7 @@ location = /ws_mcp {
         table.insert(contents, {uri = uri.."/elicitation", text = "true"})
       end
       return contents
-    end, "Capabilities of client.")))
+    end, {description = "Capabilities of client."})))
 
     assert(server:register(mcp.resource("mock://discovered_roots", "DiscoveredRoots", function(uri, ctx)
       local roots, err = ctx.session:list_roots()
@@ -953,7 +971,7 @@ location = /ws_mcp {
         table.insert(contents, {uri = v.uri, text = v.name or ""})
       end
       return contents
-    end, "Discovered roots from client.")))
+    end, {description = "Discovered roots from client."})))
 
     server:run({
       capabilities = {
@@ -1065,7 +1083,7 @@ location = /ws_mcp {
         table.insert(contents, {uri = uri.."/elicitation", text = "true"})
       end
       return contents
-    end, "Capabilities of client.")))
+    end, {description = "Capabilities of client."})))
 
     assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
       local messages =  {
@@ -1153,7 +1171,7 @@ location = /ws_mcp {
         table.insert(contents, {uri = uri.."/elicitation", text = "true"})
       end
       return contents
-    end, "Capabilities of client.")))
+    end, {description = "Capabilities of client."})))
 
     assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
       local messages =  {
@@ -1256,7 +1274,7 @@ location = /ws_mcp {
         end
       end
       return "Resource echo: static"
-    end, "Echo a static message as a resource", "text/plain")))
+    end, {description = "Echo a static message as a resource", mime = "text/plain"})))
 
     assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -1453,7 +1471,7 @@ location = /ws_mcp {
         end
       end
       return "Resource echo: static"
-    end, "Echo a static message as a resource", "text/plain")))
+    end, {description = "Echo a static message as a resource", mime = "text/plain"})))
 
     assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -2045,7 +2063,7 @@ location = /ws_mcp {
         table.insert(contents, {uri = uri.."/elicitation", text = "true"})
       end
       return contents
-    end, "Capabilities of client.")))
+    end, {description = "Capabilities of client."})))
 
     assert(server:register(mcp.tool("simple_elicit", function(args, ctx)
       local res, err = ctx.session:elicit("Hello, world!", {

@@ -22,6 +22,7 @@ function _MT.__index.to_mcp(self)
   return {
     uri = self.uri,
     name = self.name,
+    title = self.title,
     description = self.description,
     mimeType = self.mime,
     annotations = self.annotations,
@@ -53,20 +54,32 @@ function _MT.__index.read(self, ctx)
   }
 end
 
-function _M.new(uri, name, cb, desc, mime, annos, size)
+function _M.new(uri, name, cb, options)
   assert(type(uri) == "string", "resource uri MUST be a string.")
   assert(type(name) == "string", "resource name MUST be a string.")
   assert(cb, "callback of resource MUST be set.")
-  assert(desc == nil or type(desc) == "string", "description of resource MUST be a string.")
-  assert(mime == nil or type(mime) == "string", "MIME type of resource MUST be a string.")
+  local title, desc, mime, annos, size
+  if options then
+    assert(type(options) == "table", "options of resource MUST be a dict.")
+    assert(options.title == nil or type(options.title) == "string", "title of resource MUST be a string.")
+    assert(options.description == nil or type(options.description) == "string", "description of resource MUST be a string.")
+    assert(options.mime == nil or type(options.mime) == "string", "MIME type of resource MUST be a string.")
+    assert(options.annotations == nil or type(options.annotations) == "table", "annotations of resource MUST be a dict.")
+    title = options.title
+    desc = options.description
+    mime = options.mime
+    annos = options.annotations and mcp.protocol.annotations(options.annotations)
+    size = tonumber(options.size)
+  end
   return setmetatable({
     uri = uri,
     name = name,
     callback = cb,
+    title = title,
     description = desc,
     mime = mime,
-    annotations = annos and mcp.protocol.annotations(annos) or nil,
-    size = tonumber(size)
+    annotations = annos,
+    size = size
   }, _MT)
 end
 

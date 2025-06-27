@@ -17,7 +17,7 @@ assert(server:register(mcp.resource("mock://client_capabilities", "ClientCapabil
     table.insert(contents, {uri = uri.."/elicitation", text = "true"})
   end
   return contents
-end, "Capabilities of client.")))
+end, {description = "Capabilities of client."})))
 
 assert(server:register(mcp.tool("simple_elicit", function(args, ctx)
   local res, err = ctx.session:elicit("Hello, world!", {
