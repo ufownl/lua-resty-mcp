@@ -29,7 +29,11 @@ assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "Dynami
   return true, {
     {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
   }
-end, "Dynamic text resource.", "text/plain")))
+end, {
+  title = "Dynamic Text",
+  description = "Dynamic text resource.",
+  mime = "text/plain"
+})))
 
 assert(server:register(mcp.resource_template("mock://dynamic/blob/{id}", "DynamicBlob", function(uri, vars)
   if vars.id == "" then
@@ -38,7 +42,11 @@ assert(server:register(mcp.resource_template("mock://dynamic/blob/{id}", "Dynami
   return true, {
     {blob = ngx.encode_base64(string.format("content of dynamic blob resource %s, id=%s", uri, vars.id))},
   }
-end, "Dynamic blob resource.", "application/octet-stream")))
+end, {
+  title = "Dynamic Blob",
+  description = "Dynamic blob resource.",
+  mime = "application/octet-stream"
+})))
 
 assert(server:register(mcp.tool("enable_hidden_resource", function(args, ctx)
   local ok, err = ctx.session:register(mcp.resource("mock://static/hidden", "HiddenResource", function(uri)
@@ -66,7 +74,7 @@ assert(server:register(mcp.tool("enable_hidden_template", function(args, ctx)
       return false
     end
     return true, string.format("content of dynamic hidden resource %s, id=%s", uri, vars.id)
-  end, "Dynamic hidden resource.", "text/plain"))
+  end, {description = "Dynamic hidden resource.", mime = "text/plain"}))
   if not ok then
     return nil, err
   end

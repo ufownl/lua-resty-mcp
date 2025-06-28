@@ -35,7 +35,7 @@ assert(server:register(mcp.resource_template("echo://{message}", "echo", functio
     end
   end
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-end, "Echo a message as a resource", "text/plain")))
+end, {description = "Echo a message as a resource", mime = "text/plain"})))
 
 assert(server:register(mcp.tool("echo", function(args, ctx)
   for i, v in ipairs({0.25, 0.5, 1}) do

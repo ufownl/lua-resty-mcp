@@ -94,7 +94,7 @@ end, {
 -- Register a resource template
 assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-end, "Echo a message as a resource", "text/plain")))
+end, {description = "Echo a message as a resource", mime = "text/plain"})))
 
 -- Register a tool
 assert(server:register(mcp.tool("echo", function(args)
@@ -508,9 +508,7 @@ The 4th argument of this method `options`, should be a dict-like Lua table that 
 
 #### mcp.resource\_template
 
-`syntax: component = mcp.resource_template(pattern, name, callback[, desc[, mime[, annos]]])`
-
-`syntax: component = mcp.resource_template(pattern, name, callback[, desc[, mime[, annos]]]):complete(callbacks)`
+`syntax: component = mcp.resource_template(pattern, name, callback[, options])`
 
 Create a resource template.
 
@@ -547,9 +545,34 @@ function callback(uri, vars, ctx)
 end
 ```
 
-The argument `annos` is the same as in [mcp.resource](#mcpresource).
+The 4th argument of this method `options`, should be a dict-like Lua table that contains the optional options of this resource template, and it could be defined as follows:
 
-The argument of `complete` method, `callbacks` should be a dict-like Lua table that contains the completion callbacks of corresponding resource template arguments. The keys of the items in this table should match the argument names defined in the URI pattern of this resource template. The structure of the table and the definition of the callbacks in it are the same as in [mcp.prompt](#mcpprompt).
+```lua
+{
+  title = "Resource Template Title",
+  description = "Description of this resource template.",
+  mime = "text/plain",  -- MIME type of this resource template
+  annotations = {
+    -- Describes who the intended customer of this object or data is
+    audience = {"user", "assistant"},
+
+    -- Describes how important this data is for operating the server
+    -- The value will be clipped to the range [0, 1]
+    priority = 0.42,
+
+    -- The moment the resource was last modified, as an ISO 8601 formatted string
+    last_modified = "2025-06-18T08:00:00Z"
+  },
+  completions = {
+    var_name = function(value, prev_vars)
+      -- Query the suggested values based on `value`
+      -- If `prev_vars` is set, it will contain the previously resolved variables passed from the client
+      return values, total, has_more  -- All of these are optional
+    end,
+    ...
+  }
+}
+```
 
 #### mcp.tool
 

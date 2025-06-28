@@ -560,7 +560,11 @@ location = /ws_mcp {
       return true, {
         {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
       }
-    end, "Dynamic text resource.", "text/plain")))
+    end, {
+      title = "Dynamic Text",
+      description = "Dynamic text resource.",
+      mime = "text/plain"
+    })))
 
     assert(server:register(mcp.resource_template("mock://dynamic/blob/{id}", "DynamicBlob", function(uri, vars)
       if vars.id == "" then
@@ -569,7 +573,11 @@ location = /ws_mcp {
       return true, {
         {blob = ngx.encode_base64(string.format("content of dynamic blob resource %s, id=%s", uri, vars.id))},
       }
-    end, "Dynamic blob resource.", "application/octet-stream")))
+    end, {
+      title = "Dynamic Blob",
+      description = "Dynamic blob resource.",
+      mime = "application/octet-stream"
+    })))
 
     assert(server:register(mcp.tool("enable_hidden_resource", function(args, ctx)
       local ok, err = ctx.session:register(mcp.resource("mock://static/hidden", "HiddenResource", function(uri)
@@ -597,7 +605,7 @@ location = /ws_mcp {
           return false
         end
         return true, string.format("content of dynamic hidden resource %s, id=%s", uri, vars.id)
-      end, "Dynamic hidden resource.", "text/plain"))
+      end, {title = "Dynamic Hidden", description = "Dynamic hidden resource.", mime = "text/plain"}))
       if not ok then
         return nil, err
       end
@@ -702,6 +710,7 @@ location = /t {
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -738,6 +747,7 @@ location = /t {
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -782,6 +792,7 @@ location = /t {
     for i, v in ipairs(templates) do
       ngx.say(v.uriTemplate)
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(tostring(v.description))
       ngx.say(tostring(v.mimeType))
     end
@@ -855,10 +866,12 @@ true
 true
 mock://dynamic/text/{id}
 DynamicText
+Dynamic Text
 Dynamic text resource.
 text/plain
 mock://dynamic/blob/{id}
 DynamicBlob
+Dynamic Blob
 Dynamic blob resource.
 application/octet-stream
 mock://dynamic/text/abc
@@ -881,14 +894,17 @@ false
 true
 mock://dynamic/text/{id}
 DynamicText
+Dynamic Text
 Dynamic text resource.
 text/plain
 mock://dynamic/blob/{id}
 DynamicBlob
+Dynamic Blob
 Dynamic blob resource.
 application/octet-stream
 mock://dynamic/hidden/{id}
 DynamicHidden
+Dynamic Hidden
 Dynamic hidden resource.
 text/plain
 nil
@@ -909,10 +925,12 @@ false
 true
 mock://dynamic/text/{id}
 DynamicText
+Dynamic Text
 Dynamic text resource.
 text/plain
 mock://dynamic/blob/{id}
 DynamicBlob
+Dynamic Blob
 Dynamic blob resource.
 application/octet-stream
 true
@@ -1284,7 +1302,7 @@ location = /ws_mcp {
         end
       end
       return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-    end, "Echo a message as a resource", "text/plain")))
+    end, {description = "Echo a message as a resource", mime = "text/plain"})))
 
     assert(server:register(mcp.tool("echo", function(args, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -1481,7 +1499,7 @@ location = /ws_mcp {
         end
       end
       return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-    end, "Echo a message as a resource", "text/plain")))
+    end, {description = "Echo a message as a resource", mime = "text/plain"})))
 
     assert(server:register(mcp.tool("echo", function(args, ctx)
       for i, v in ipairs({0.25, 0.5, 1}) do
@@ -1939,7 +1957,7 @@ location = /ws_mcp {
       return true, {
         {text = string.format("content of no_completion text resource %s, id=%s", uri, vars.id)},
       }
-    end, "No completion text resource.", "text/plain")))
+    end, {description = "No completion text resource.", mime = "text/plain"})))
 
     assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
       if vars.id == "" then
@@ -1948,20 +1966,24 @@ location = /ws_mcp {
       return true, {
         {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
       }
-    end, "Dynamic text resource.", "text/plain"):complete({
-      id = function(value)
-        local available_values = {"a01", "a02"}
-        for i = 0, 99 do
-          table.insert(available_values, string.format("b%02d", i))
-        end
-        local values = {}
-        for i, v in ipairs(available_values) do
-          if string.find(v, value, 1, true) then
-            table.insert(values, v)
+    end, {
+      description = "Dynamic text resource.",
+      mime = "text/plain",
+      completions = {
+        id = function(value)
+          local available_values = {"a01", "a02"}
+          for i = 0, 99 do
+            table.insert(available_values, string.format("b%02d", i))
           end
+          local values = {}
+          for i, v in ipairs(available_values) do
+            if string.find(v, value, 1, true) then
+              table.insert(values, v)
+            end
+          end
+          return values, nil, #values > 2
         end
-        return values, nil, #values > 2
-      end
+      }
     })))
 
     server:run({

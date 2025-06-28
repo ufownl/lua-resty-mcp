@@ -44,7 +44,7 @@ assert(server:register(mcp.resource_template("mock://no_completion/text/{id}", "
   return true, {
     {text = string.format("content of no_completion text resource %s, id=%s", uri, vars.id)},
   }
-end, "No completion text resource.", "text/plain")))
+end, {description = "No completion text resource.", mime = "text/plain"})))
 
 assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "DynamicText", function(uri, vars)
   if vars.id == "" then
@@ -53,23 +53,27 @@ assert(server:register(mcp.resource_template("mock://dynamic/text/{id}", "Dynami
   return true, {
     {text = string.format("content of dynamic text resource %s, id=%s", uri, vars.id)},
   }
-end, "Dynamic text resource.", "text/plain"):complete({
-  id = function(value, prev_args)
-    if prev_args and prev_args.id then
-      return {prev_args.id}
-    end
-    local available_values = {"a01", "a02"}
-    for i = 0, 99 do
-      table.insert(available_values, string.format("b%02d", i))
-    end
-    local values = {}
-    for i, v in ipairs(available_values) do
-      if string.find(v, value, 1, true) then
-        table.insert(values, v)
+end, {
+  desciption = "Dynamic text resource.",
+  mime = "text/plain",
+  completions = {
+    id = function(value, prev_args)
+      if prev_args and prev_args.id then
+        return {prev_args.id}
       end
+      local available_values = {"a01", "a02"}
+      for i = 0, 99 do
+        table.insert(available_values, string.format("b%02d", i))
+      end
+      local values = {}
+      for i, v in ipairs(available_values) do
+        if string.find(v, value, 1, true) then
+          table.insert(values, v)
+        end
+      end
+      return values, nil, #values > 2
     end
-    return values, nil, #values > 2
-  end
+  }
 })))
 
 server:run({

@@ -22,6 +22,7 @@ function _MT.__index.to_mcp(self)
   return {
     uriTemplate = self.uri_template.pattern,
     name = self.name,
+    title = self.title,
     description = self.description,
     mimeType = self.mime,
     annotations = self.annotations
@@ -64,29 +65,39 @@ function _MT.__index.read(self, uri, ctx)
   }
 end
 
-function _MT.__index.complete(self, cbs)
-  assert(cbs, "completion callbacks of resource template MUST be set.")
-  self.completion_callbacks = {}
-  for i, v in ipairs(self.uri_template.variables) do
-    self.completion_callbacks[v] = cbs[v]
-  end
-  return self
-end
-
-function _M.new(pattern, name, cb, desc, mime, annos)
+function _M.new(pattern, name, cb, options)
   assert(type(pattern) == "string", "pattern of resource template MUST be a string.")
   assert(type(name) == "string", "name of resource template MUST be a string.")
   assert(cb, "callback of resource template MUST be set.")
-  assert(desc == nil or type(desc) == "string", "description of resource template MUST be a string.")
-  assert(mime == nil or type(mime) == "string", "MIME type of resource template MUST be a string.")
   local template = assert(mcp.utils.uri_template(pattern))
+  local title, desc, mime, annos, comp_cbs
+  if options then
+    assert(type(options) == "table", "options of resource template MUST be a dict.")
+    assert(options.title == nil or type(options.title) == "string", "title of resource template MUST be a string.")
+    assert(options.description == nil or type(options.description) == "string", "description of resource template MUST be a string.")
+    assert(options.mime == nil or type(options.mime) == "string", "MIME type of resource template MUST be a string.")
+    assert(options.annotations == nil or type(options.annotations) == "table", "annotations of resource template MUST be a dict.")
+    title = options.title
+    desc = options.description
+    mime = options.mime
+    annos = options.annotations and mcp.protocol.annotations(options.annotations)
+    if options.completions then
+      assert(type(options.completions) == "table", "completions of prompt arguments MUST be a dict.")
+      comp_cbs = {}
+      for i, v in ipairs(template.variables) do
+        comp_cbs[v] = options.completions[v]
+      end
+    end
+  end
   return setmetatable({
     uri_template = template,
     name = name,
     callback = cb,
+    title = title,
     description = desc,
     mime = mime,
-    annotations = annos and mcp.protocol.annotations(annos) or nil
+    annotations = annos,
+    completion_callbacks = comp_cbs
   }, _MT)
 end
 
