@@ -108,6 +108,7 @@ local function do_POST(req_body, message_bus, session_id, options)
     local msgs, err = message_bus:pop_cmsgs(session_id, waiting_rids, tonumber(options.read_timeout) or 10)
     if msgs then
       for i, msg in ipairs(msgs) do
+        local errcode
         mcp.rpc.handle(msg, setmetatable({}, {
           __index = function(_, key)
             return function(params, rid)
@@ -121,14 +122,17 @@ local function do_POST(req_body, message_bus, session_id, options)
               break
             end
           end
+          errcode = errobj and errobj.code
         end)
-        local ok, err = deliver_event(message_bus, session_id, msg, stream)
-        if not ok then
-          ngx.log(ngx.ERR, err)
-          if ngx.headers_sent then
-            ngx.exit(ngx.ERROR)
-          else
-            ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+        if errcode == nil or errcode < 0 then
+          local ok, err = deliver_event(message_bus, session_id, msg, stream)
+          if not ok then
+            ngx.log(ngx.ERR, err)
+            if ngx.headers_sent then
+              ngx.exit(ngx.ERROR)
+            else
+              ngx.exit(err == "not found" and ngx.HTTP_NOT_FOUND or ngx.HTTP_INTERNAL_SERVER_ERROR)
+            end
           end
         end
       end
