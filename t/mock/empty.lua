@@ -4,7 +4,6 @@ local mcp = {
   },
   session = require("resty.mcp.session")
 }
-
 local conn = assert(mcp.transport.stdio.server())
 local sess = assert(mcp.session.new(conn))
 sess:initialize({})

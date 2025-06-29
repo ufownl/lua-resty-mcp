@@ -4,13 +4,4 @@ local server = assert(mcp.server(mcp.transport.stdio, {
   title = "MCP Handshake",
   version = "1.0_alpha"
 }))
-server:run({
-  capabilities = {
-    prompts = false,
-    resources = false,
-    tools = false,
-    completions = false,
-    logging = false
-  },
-  instructions = "Hello, MCP!"
-})
+require("t.mock").handshake(mcp, server)
