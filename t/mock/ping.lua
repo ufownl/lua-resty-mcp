@@ -8,7 +8,7 @@ assert(server:register(mcp.tool("ping", function(args, ctx)
     return nil, err
   end
   return {}
-end, "Send a ping request.")))
+end, {description = "Send a ping request."})))
 
 server:run({
   capabilities = {

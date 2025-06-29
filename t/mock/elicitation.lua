@@ -32,7 +32,10 @@ assert(server:register(mcp.tool("simple_elicit", function(args, ctx)
     return nil, err
   end
   return res
-end, "Elicit from client without arguments.", nil, {type = "object"})))
+end, {
+  description = "Elicit from client without arguments.",
+  output_schema = {type = "object"}
+})))
 
 server:run({
   capabilities = {

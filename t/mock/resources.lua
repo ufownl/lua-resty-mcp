@@ -58,7 +58,7 @@ assert(server:register(mcp.tool("enable_hidden_resource", function(args, ctx)
     return nil, err
   end
   return {}
-end, "Enable hidden resource.")))
+end, {description = "Enable hidden resource."})))
 
 assert(server:register(mcp.tool("disable_hidden_resource", function(args, ctx)
   local ok, err = ctx.session:unregister_resource("mock://static/hidden")
@@ -66,7 +66,7 @@ assert(server:register(mcp.tool("disable_hidden_resource", function(args, ctx)
     return nil, err
   end
   return {}
-end, "Disable hidden resource.")))
+end, {description = "Disable hidden resource."})))
 
 assert(server:register(mcp.tool("enable_hidden_template", function(args, ctx)
   local ok, err = ctx.session:register(mcp.resource_template("mock://dynamic/hidden/{id}", "DynamicHidden", function(uri, vars)
@@ -95,15 +95,18 @@ assert(server:register(mcp.tool("touch_resource", function(args, ctx)
     return nil, err
   end
   return {}
-end, "Trigger resource updated notification.", {
-  type = "object",
-  properties = {
-    uri = {
-      type = "string",
-      description = "URI of updated resource."
-    }
-  },
-  required = {"uri"}
+end, {
+  description = "Trigger resource updated notification.",
+  input_schema = {
+    type = "object",
+    properties = {
+      uri = {
+        type = "string",
+        description = "URI of updated resource."
+      }
+    },
+    required = {"uri"}
+  }
 })))
 
 server:run({

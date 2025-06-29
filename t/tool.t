@@ -14,44 +14,50 @@ location = /t {
     local fn = tool.new("add", function(args)
       local r = args.a + args.b
       return args.format and string.format(args.format, r) or r
-    end, "Adds two numbers.", {
-      type = "object",
-      properties = {
-        a = {type = "number"},
-        b = {type = "number"},
-        format = {
-          type = "string",
-          description = "Result format string."
-        }
+    end, {
+      title = "Add Tool",
+      description = "Adds two numbers.",
+      input_schema = {
+        type = "object",
+        properties = {
+          a = {type = "number"},
+          b = {type = "number"},
+          format = {
+            type = "string",
+            description = "Result format string."
+          }
+        },
+        required = {"a", "b"}
       },
-      required = {"a", "b"}
-    }, nil, {
-      title = "Mock Tool Annotations",
-      readOnlyHint = false,
-      destructiveHint = true,
-      idempotentHint = false,
-      openWorldHint = true
+      annotations = {
+        title = "Mock Tool Annotations",
+        readOnlyHint = false,
+        destructiveHint = true,
+        idempotentHint = false,
+        openWorldHint = true
+      }
     })
-    local schema = fn:to_mcp()
-    ngx.say(schema.name)
-    ngx.say(schema.description)
-    table.sort(schema.inputSchema.required)
-    for i, v in ipairs(schema.inputSchema.required) do
+    local decl = fn:to_mcp()
+    ngx.say(decl.name)
+    ngx.say(decl.title)
+    ngx.say(decl.description)
+    table.sort(decl.inputSchema.required)
+    for i, v in ipairs(decl.inputSchema.required) do
       ngx.say(string.format("%d %s", i, v))
     end
     local props = {}
-    for k, v in pairs(schema.inputSchema.properties) do
+    for k, v in pairs(decl.inputSchema.properties) do
       table.insert(props, k.." "..v.type..(v.description and " "..v.description or ""))
     end
     table.sort(props)
     for i, v in ipairs(props) do
       ngx.say(v)
     end
-    ngx.say(schema.annotations.title)
-    ngx.say(tostring(schema.annotations.readOnlyHint))
-    ngx.say(tostring(schema.annotations.destructiveHint))
-    ngx.say(tostring(schema.annotations.idempotentHint))
-    ngx.say(tostring(schema.annotations.openWorldHint))
+    ngx.say(decl.annotations.title)
+    ngx.say(tostring(decl.annotations.readOnlyHint))
+    ngx.say(tostring(decl.annotations.destructiveHint))
+    ngx.say(tostring(decl.annotations.idempotentHint))
+    ngx.say(tostring(decl.annotations.openWorldHint))
     local result, code, message, data = fn({a = 1, b = 2})
     if not result then
       error(string.format("%d %s", code, message))
@@ -79,6 +85,7 @@ GET /t
 --- error_code: 200
 --- response_body
 add
+Add Tool
 Adds two numbers.
 1 a
 2 b
@@ -112,13 +119,16 @@ location = /t {
         return nil, "ERROR: divisor cannot be 0!"
       end
       return args.a / args.b
-    end, "Calculate `a` divided by `b`.", {
-      type = "object",
-      properties = {
-        a = {type = "number"},
-        b = {type = "number"}
-      },
-      required = {"a", "b"}
+    end, {
+      description = "Calculate `a` divided by `b`.",
+      input_schema = {
+        type = "object",
+        properties = {
+          a = {type = "number"},
+          b = {type = "number"}
+        },
+        required = {"a", "b"}
+      }
     })
     local result, code, message, data = fn({a = 1, b = 2})
     if not result then
@@ -169,10 +179,13 @@ location = /t {
         return nil, result
       end
       return result
-    end, "Return multi-content.", {
-      type = "object",
-      properties = {
-        is_error = {type = "boolean"}
+    end, {
+      description = "Return multi-content.",
+      input_schema = {
+        type = "object",
+        properties = {
+          is_error = {type = "boolean"}
+        }
       }
     })
     local result, code, message, data = fn({})
@@ -269,13 +282,16 @@ location = /t {
     local tool = require("resty.mcp.tool")
     local fn = tool.new("structured_content", function(args)
       return args
-    end, "Return structured-content.", {type = "object"}, {
-      type = "object",
-      properties = {
-        foo = {type = "string"},
-        bar = {type = "integer"}
-      },
-      required = {"foo"}
+    end, {
+      description = "Return structured-content.",
+      output_schema = {
+        type = "object",
+        properties = {
+          foo = {type = "string"},
+          bar = {type = "integer"}
+        },
+        required = {"foo"}
+      }
     })
     local ok, _ = pcall(fn, {})
     ngx.say(ok)
@@ -293,7 +309,7 @@ location = /t {
     ngx.say(content.bar)
     local fn = tool.new("unstructured_content", function(args)
       return args
-    end, "Return unstructured-content.")
+    end, {description = "Return unstructured-content."})
     local ok, _ = pcall(fn, {foo = "Hello, world!", bar = 0})
     ngx.say(ok)
     local res = fn({})
@@ -301,7 +317,10 @@ location = /t {
     ngx.say(#res.content)
     local fn = tool.new("another_structured_content", function(args)
       return args
-    end, "Return structured-content.", {type = "object"}, {type = "object"})
+    end, {
+      description = "Return structured-content.",
+      output_schema = {type = "object"}
+    })
     local res = fn({})
     ngx.say(type(res.structuredContent))
     ngx.say(#res.content)

@@ -99,12 +99,15 @@ end, {description = "Echo a message as a resource", mime = "text/plain"})))
 -- Register a tool
 assert(server:register(mcp.tool("echo", function(args)
   return "Tool echo: "..args.message
-end, "Echo a message as a tool", {
-  type = "object",
-  properties = {
-    message = {type = "string"}
-  },
-  required = {"message"}
+end, {
+  description = "Echo a message as a tool",
+  input_schema = {
+    type = "object",
+    properties = {
+      message = {type = "string"}
+    },
+    required = {"message"}
+  }
 })))
 
 -- Launch the server session
@@ -167,12 +170,15 @@ http {
         local server = assert(mcp.server(mcp.transport.websocket))
         assert(server:register(mcp.tool("echo", function(args)
           return "Tool echo: "..args.message
-        end, "Echo a message as a tool", {
-          type = "object",
-          properties = {
-            message = {type = "string"}
-          },
-          required = {"message"}
+        end, {
+          description = "Echo a message as a tool",
+          input_schema = {
+            type = "object",
+            properties = {
+              message = {type = "string"}
+            },
+            required = {"message"}
+          }
         })))
         server:run()
       }
@@ -196,12 +202,15 @@ The 1st argument of this method `custom_fn`, will be called when the clients ini
 function custom_fn(mcp, server)
   assert(server:register(mcp.tool("echo", function(args)
     return "Tool echo: "..args.message
-  end, "Echo a message as a tool", {
-    type = "object",
-    properties = {
-      message = {type = "string"}
-    },
-    required = {"message"}
+  end, {
+    description = "Echo a message as a tool",
+    input_schema = {
+      type = "object",
+      properties = {
+        message = {type = "string"}
+      },
+      required = {"message"}
+    }
   })))
   server:run()
 end
@@ -287,12 +296,15 @@ http {
         require("resty.mcp").transport.streamable_http.endpoint(function(mcp, server)
           assert(server:register(mcp.tool("echo", function(args)
             return "Tool echo: "..args.message
-          end, "Echo a message as a tool", {
-            type = "object",
-            properties = {
-              message = {type = "string"}
-            },
-            required = {"message"}
+          end, {
+            description = "Echo a message as a tool",
+            input_schema = {
+              type = "object",
+              properties = {
+                message = {type = "string"}
+              },
+              required = {"message"}
+            }
           })))
           server:run()
         end)
@@ -576,7 +588,7 @@ The 4th argument of this method `options`, should be a dict-like Lua table that 
 
 #### mcp.tool
 
-`syntax: component = mcp.tool(name, callback[, desc[, input_schema[, output_schema[, annos]]]])`
+`syntax: component = mcp.tool(name, callback[, options])`
 
 Create a tool.
 
@@ -620,41 +632,60 @@ function callback(args, ctx)
 end
 ```
 
-The 4th argument `input_schema`, is a JSON Schema object defining the expected arguments for the tool.
-
-The 5th argument `output_schema`, is a JSON Schema object defining the expected output of the structured content for the tool. If this argument is given, the callback **MUST** return structured results (either content or error) that conform to this schema.
-
-The 6th argument `annos`, is optional additional tool information. It should be a table and could be defined as follows:
+The 3rd argument of this method `options`, should be a dict-like Lua table that contains the optional options of this tool, and it could be defined as follows:
 
 ```lua
 {
-  -- A human-readable title for the tool
-  title = "Foobar",
-  
-  -- If true, the tool does not modify its environment
-  -- Default: false
-  readOnlyHint = false,
+  title = "Tool Title",
+  description = "Description of this tool.",
 
-  -- If true, the tool may perform destructive updates to its environment
-  -- If false, the tool performs only additive updates
-  -- This property is meaningful only when `readOnlyHint == false`
-  -- Default: true
-  destructiveHint = true,
+  -- A JSONSchema-like Lua table that declares the input constraints of this tool
+  input_schema = {
+    type = "object",
+    properties = {
+      ...
+    },
+    required = {...}
+  },
 
-  -- If true, calling the tool repeatedly with the same arguments will have no additional effect on the its environment
-  -- This property is meaningful only when `readOnlyHint == false`
-  -- Default: false
-  idempotentHint = false,
+  -- A JSONSchema-like Lua table that declares the structure of the tool's output returned in `structuredContent` field
+  output_schema = {
+    type = "object",
+    properties = {
+      ...
+    },
+    required = {...}
+  },
 
-  -- If true, this tool may interact with an "open world" of external entities
-  -- If false, the tool's domain of interaction is closed
-  -- Default: true
-  openWorldHint = true
+  annotations = {
+    -- A human-readable title for the tool
+    title = "Foobar",
+    
+    -- If true, the tool does not modify its environment
+    -- Default: false
+    readOnlyHint = false,
+
+    -- If true, the tool may perform destructive updates to its environment
+    -- If false, the tool performs only additive updates
+    -- This property is meaningful only when `readOnlyHint == false`
+    -- Default: true
+    destructiveHint = true,
+
+    -- If true, calling the tool repeatedly with the same arguments will have no additional effect on the its environment
+    -- This property is meaningful only when `readOnlyHint == false`
+    -- Default: false
+    idempotentHint = false,
+
+    -- If true, this tool may interact with an "open world" of external entities
+    -- If false, the tool's domain of interaction is closed
+    -- Default: true
+    openWorldHint = true
+  }
 }
 ```
 
 > [!NOTE]
-> All of the above properties are **hints**. They are not guaranteed to provide a faithful description of tool behavior (including descriptive properties like `title`).
+> All of the properties in `annotations` field are **hints**. They are not guaranteed to provide a faithful description of tool behavior (including descriptive properties like `title`).
 
 > [!IMPORTANT]
 > 1. When you need to call server methods from callbacks (event handlers and context component callbacks), you **MUST** call them via the `ctx.session` field instead of via the server instance outside of the callback using closure upvalues. Because `ctx.session` is a wrapper of the server instance that contains the context required by the backend components, calling the server methods via the server instance outside of the callback will result in undefined behavior.

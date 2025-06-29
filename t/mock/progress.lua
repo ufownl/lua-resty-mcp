@@ -45,12 +45,15 @@ assert(server:register(mcp.tool("echo", function(args, ctx)
     end
   end
   return "Tool echo: "..args.message
-end, "Echo a message as a tool", {
-  type = "object",
-  properties = {
-    message = {type = "string"}
-  },
-  required = {"message"}
+end, {
+  description = "Echo a message as a tool",
+  input_schema = {
+    type = "object",
+    properties = {
+      message = {type = "string"}
+    },
+    required = {"message"}
+  }
 })))
 
 assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)

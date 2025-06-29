@@ -34,7 +34,7 @@ assert(server:register(mcp.tool("enable_mock_error", function(args, ctx)
     return nil, err
   end
   return {}
-end, "Enable mock error prompt.")))
+end, {description = "Enable mock error prompt."})))
 
 assert(server:register(mcp.tool("disable_mock_error", function(args, ctx)
   local ok, err = ctx.session:unregister_prompt("mock_error")

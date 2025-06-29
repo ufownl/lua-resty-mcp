@@ -287,33 +287,41 @@ location = /mcp {
     mcp.transport.streamable_http.endpoint(function(mcp, server)
       assert(server:register(mcp.tool("add", function(args)
         return args.a + args.b
-      end, "Adds two numbers.", {
-        type = "object",
-        properties = {
-          a = {type = "number"},
-          b = {type = "number"}
-        },
-        required = {"a", "b"}
+      end, {
+        title = "Add Tool",
+        description = "Adds two numbers.",
+        input_schema = {
+          type = "object",
+          properties = {
+            a = {type = "number"},
+            b = {type = "number"}
+          },
+          required = {"a", "b"}
+        }
       })))
 
       assert(server:register(mcp.tool("enable_echo", function(args, ctx)
         local ok, err = ctx.session:register(mcp.tool("echo", function(args)
           return string.format("%s v%s say: %s", ctx.session.client.info.name, ctx.session.client.info.version, args.message)
-        end, "Echoes back the input.", {
-          type = "object",
-          properties = {
-            message = {
-              type = "string",
-              description = "Message to echo."
-            }
-          },
-          required = {"message"}
+        end, {
+          title = "Echo Tool",
+          description = "Echoes back the input.",
+          input_schema = {
+            type = "object",
+            properties = {
+              message = {
+                type = "string",
+                description = "Message to echo."
+              }
+            },
+            required = {"message"}
+          }
         }))
         if not ok then
           return nil, err
         end
         return {}
-      end, "Enables the echo tool.")))
+      end, {title = "Enable Echo", description = "Enables the echo tool."})))
 
       assert(server:register(mcp.tool("disable_echo", function(args, ctx)
         local ok, err = ctx.session:unregister_tool("echo")
@@ -321,7 +329,7 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Disables the echo tool.")))
+      end, {title = "Disable Echo", description = "Disables the echo tool."})))
 
       server:run({
         capabilities = {
@@ -358,6 +366,7 @@ location = /t {
     local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
@@ -377,6 +386,7 @@ location = /t {
     local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
@@ -401,6 +411,7 @@ location = /t {
     ngx.say(tostring(client.server.discovered_tools == tools))
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     client:shutdown()
@@ -411,10 +422,13 @@ GET /t
 --- error_code: 200
 --- response_body
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 true
 nil
@@ -424,12 +438,16 @@ tools/list_changed
 nil
 false
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 echo
+Echo Tool
 Echoes back the input.
 true
 nil
@@ -442,10 +460,13 @@ nil
 false
 true
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 --- no_error_log
 [error]
@@ -491,7 +512,7 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Enable mock error prompt.")))
+      end, {description = "Enable mock error prompt."})))
 
       assert(server:register(mcp.tool("disable_mock_error", function(args, ctx)
         local ok, err = ctx.session:unregister_prompt("mock_error")
@@ -701,7 +722,7 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Enable hidden resource.")))
+      end, {description = "Enable hidden resource."})))
 
       assert(server:register(mcp.tool("disable_hidden_resource", function(args, ctx)
         local ok, err = ctx.session:unregister_resource("mock://static/hidden")
@@ -709,7 +730,7 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Disable hidden resource.")))
+      end, {description = "Disable hidden resource."})))
 
       assert(server:register(mcp.tool("enable_hidden_template", function(args, ctx)
         local ok, err = ctx.session:register(mcp.resource_template("mock://dynamic/hidden/{id}", "DynamicHidden", function(uri, vars)
@@ -738,15 +759,18 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Trigger resource updated notification.", {
-        type = "object",
-        properties = {
-          uri = {
-            type = "string",
-            description = "URI of updated resource."
-          }
-        },
-        required = {"uri"}
+      end, {
+        description = "Trigger resource updated notification.",
+        input_schema = {
+          type = "object",
+          properties = {
+            uri = {
+              type = "string",
+              description = "URI of updated resource."
+            }
+          },
+          required = {"uri"}
+        }
       })))
 
       server:run({
@@ -1437,12 +1461,15 @@ location = /mcp {
           end
         end
         return "Tool echo: "..args.message
-      end, "Echo a message as a tool", {
-        type = "object",
-        properties = {
-          message = {type = "string"}
-        },
-        required = {"message"}
+      end, {
+        description = "Echo a message as a tool",
+        input_schema = {
+          type = "object",
+          properties = {
+            message = {type = "string"}
+          },
+          required = {"message"}
+        }
       })))
 
       assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
@@ -1647,12 +1674,15 @@ location = /mcp {
         end
         error(err)
         return "Tool echo: "..args.message
-      end, "Echo a message as a tool", {
-        type = "object",
-        properties = {
-          message = {type = "string"}
-        },
-        required = {"message"}
+      end, {
+        description = "Echo a message as a tool",
+        input_schema = {
+          type = "object",
+          properties = {
+            message = {type = "string"}
+          },
+          required = {"message"}
+        }
       })))
 
       assert(server:register(mcp.prompt("simple_sampling", function(args, ctx)
@@ -1957,14 +1987,17 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Echo a message as log.", {
-        type = "object",
-        properties = {
-          level = {type = "string"},
-          data = {type = "string"},
-          logger = {type = "string"}
-        },
-        required = {"level", "data"}
+      end, {
+        description = "Echo a message as log.",
+        input_schema = {
+          type = "object",
+          properties = {
+            level = {type = "string"},
+            data = {type = "string"},
+            logger = {type = "string"}
+          },
+          required = {"level", "data"}
+        }
       })))
 
       server:run({
@@ -2031,7 +2064,7 @@ location = /mcp {
           return nil, err
         end
         return {}
-      end, "Send a ping request.")))
+      end, {description = "Send a ping request."})))
 
       server:run({
         capabilities = {
@@ -2286,7 +2319,7 @@ location = /mcp {
           return nil, err
         end
         return res
-      end, "Elicit from client without arguments.", nil, {type = "object"})))
+      end, {description = "Elicit from client without arguments.", output_schema = {type = "object"}})))
 
       server:run({
         capabilities = {

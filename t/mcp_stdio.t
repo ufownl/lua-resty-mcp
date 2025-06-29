@@ -133,6 +133,7 @@ location = /t {
     local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
@@ -157,6 +158,7 @@ location = /t {
     local tools = assert(client:list_tools())
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     ngx.say(tostring(client.server.discovered_tools == tools))
@@ -181,6 +183,7 @@ location = /t {
     ngx.say(tostring(client.server.discovered_tools == tools))
     for i, v in ipairs(tools) do
       ngx.say(v.name)
+      ngx.say(v.title)
       ngx.say(v.description)
     end
     client:shutdown()
@@ -191,12 +194,16 @@ GET /t
 --- error_code: 200
 --- response_body
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 client_info
+Client Info
 Query the client information.
 true
 nil
@@ -210,14 +217,19 @@ tools/list_changed
 nil
 false
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 client_info
+Client Info
 Query the client information.
 echo
+Echo Tool
 Echoes back the input.
 true
 nil
@@ -230,12 +242,16 @@ nil
 false
 true
 add
+Add Tool
 Adds two numbers.
 enable_echo
+Enable Echo
 Enables the echo tool.
 disable_echo
+Disable Echo
 Disables the echo tool.
 client_info
+Client Info
 Query the client information.
 --- no_error_log
 [error]
