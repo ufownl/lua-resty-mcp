@@ -32,15 +32,18 @@ local function game_state(self, mcp, server)
       end
       table.insert(self.history, {role = res.role, content = res.content})
       return "Patient: "..res.content.text
-    end, "Ask the patient about his/her specific conditions.", {
-      type = "object",
-      properties = {
-        content = {
-          type = "string",
-          description = "The content of inquiry. Please put the full inquiry content into this argument in English."
-        }
-      },
-      required = {"content"}
+    end, {
+      description = "Ask the patient about his/her specific conditions.",
+      input_schema = {
+        type = "object",
+        properties = {
+          content = {
+            type = "string",
+            description = "The content of inquiry. Please put the full inquiry content into this argument in English."
+          }
+        },
+        required = {"content"}
+      }
     }),
     mcp.tool("diagnose", function(args, ctx)
       local res, err = ctx.session:create_message({
@@ -64,15 +67,18 @@ local function game_state(self, mcp, server)
       end
       ctx.session:replace_tools({self.start_game})
       return "Host: "..res.content.text
-    end, "Make a diagnosis for the patient.", {
-      type = "object",
-      properties = {
-        disease = {
-          type = "string",
-          description = "The diagnosed disease. Please put the name of this disease in English."
-        }
-      },
-      required = {"disease"}
+    end, {
+      description = "Make a diagnosis for the patient.",
+      input_schema = {
+        type = "object",
+        properties = {
+          disease = {
+            type = "string",
+            description = "The diagnosed disease. Please put the name of this disease in English."
+          }
+        },
+        required = {"disease"}
+      }
     })
   })
 end
@@ -161,7 +167,7 @@ function _MT.__index.initialize(self, mcp, server)
     table.insert(self.history, {role = res.role, content = res.content})
     game_state(self, mcp, ctx.session)
     return "Patient: "..res.content.text
-  end, "Start a round of the disease guessing game.")
+  end, {description = "Start a round of the disease guessing game."})
   local ok, err = server:register(self.start_game)
   return ok and server_instruction, err
 end

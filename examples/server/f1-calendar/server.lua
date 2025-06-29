@@ -118,7 +118,7 @@ function _M.declare(mcp, server)
     end
     resp = resp..string.format("at %s (lon %f, lat %f).\n\n", race.location, race.longitude, race.latitude)
     return resp..race_schedule(race)
-  end, "Get detailed information and the race schedule about the upcoming or ongoing Formula One Grand Prix. The race schedule includes the start and end times of each session.")))
+  end, {description = "Get detailed information and the race schedule about the upcoming or ongoing Formula One Grand Prix. The race schedule includes the start and end times of each session."})))
 
   assert(server:register(mcp.tool("race_calendar", function(args, ctx)
     local year = args.year or data.config.calendarOutputYear
@@ -144,14 +144,17 @@ function _M.declare(mcp, server)
       resp = resp..string.format("%s\n", race_schedule(r))
     end
     return resp
-  end, "Get the race calendar of the Formula One World Championship for this year or a specific season. You can get information such as how many rounds there are in a year, the location, and the schedule of each Grand Prix in the race calendar. The schedule includes detailed information about each session, such as the session name, start and end times, etc.", {
-    type = "object",
-    properties = {
-      year = {
-        type = "integer",
-        description = string.format("Specify the year in four-digit format, available years are %s. Alternatively, you can omit this argument to get the race calendar for this year.", table.concat(data.config.availableYears, ", ")),
-        minimum = data.config.availableYears[1],
-        maximum = data.config.availableYears[-1],
+  end, {
+    description = "Get the race calendar of the Formula One World Championship for this year or a specific season. You can get information such as how many rounds there are in a year, the location, and the schedule of each Grand Prix in the race calendar. The schedule includes detailed information about each session, such as the session name, start and end times, etc.",
+    input_schema = {
+      type = "object",
+      properties = {
+        year = {
+          type = "integer",
+          description = string.format("Specify the year in four-digit format, available years are %s. Alternatively, you can omit this argument to get the race calendar for this year.", table.concat(data.config.availableYears, ", ")),
+          minimum = data.config.availableYears[1],
+          maximum = data.config.availableYears[-1],
+        }
       }
     }
   })))

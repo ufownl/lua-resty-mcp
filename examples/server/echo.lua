@@ -13,16 +13,19 @@ end, {
 
 assert(server:register(mcp.resource_template("echo://{message}", "echo", function(uri, vars)
   return true, "Resource echo: "..ngx.unescape_uri(vars.message)
-end, "Echo a message as a resource", "text/plain")))
+end, {description = "Echo a message as a resource.", mime = "text/plain"})))
 
 assert(server:register(mcp.tool("echo", function(args)
   return "Tool echo: "..args.message
-end, "Echo a message as a tool", {
-  type = "object",
-  properties = {
-    message = {type = "string"}
-  },
-  required = {"message"}
+end, {
+  description = "Echo a message as a tool",
+  input_schema = {
+    type = "object",
+    properties = {
+      message = {type = "string"}
+    },
+    required = {"message"}
+  }
 })))
 
 server:run()
