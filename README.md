@@ -62,6 +62,7 @@ Production ready.
   - [x] Tools
   - [x] Roots
   - [x] Sampling
+  - [x] Elicitation
   - [x] Utilities
     - [x] Pagination
     - [x] Progress
