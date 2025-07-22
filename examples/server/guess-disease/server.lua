@@ -3,10 +3,36 @@ local _M = {
   _VERSION = "1.0"
 }
 
-local server_instruction = "You are the control terminal of the disease guessing game. You MUST reply with the result of the tool call in the same language as the user query."
+local server_instruction = "You are the control terminal of the disease guessing game. You MUST reply with the result of the tool call in the same language as the user query. DO NOT help the user to make decisions."
 local assistant_prompt = "You are a helpful assistant who is proficient in medical knowledge."
 local function patient_prompt(self)
   return string.format("You are participating in a disease guessing game. You play the role of a patient in this game. The disease you suffer from may have the following symptoms:\n\n%s\n\nPlease note that the character you are playing is very lacking in medical knowledge and cannot accurately and fluently describe your condition to the doctor.", self.symptoms)
+end
+local imagine_prompt = "You are a helpful assistant and very imaginative. Your task is to imagine the scene based on what a patient says and describe it from a visual perspective in a short sentence."
+
+local function imagine_scene(mcp, server, text)
+  local res, err = server:create_message({
+    {
+      role = "user",
+      content = {
+        type = "text",
+        text = string.format("A patient walked into the doctor's office and then...\n\n%s", text)
+      }
+    }
+  }, 4096, {
+    systemPrompt = imagine_prompt,
+    includeContext = "none",
+    temperature = 0.2
+  }, 60)
+  if not res then
+    return nil, err
+  end
+  if not res.content.text then
+    return nil, "invalid response type: "..res.content.type
+  end
+  return server:register(mcp.resource("text://main-scene", "MainScene", function(uri, ctx)
+    return res.content.text
+  end, {mime = "text/plain"}))
 end
 
 local function game_state(self, mcp, server)
@@ -31,6 +57,7 @@ local function game_state(self, mcp, server)
         return nil, "invalid response type: "..res.content.type
       end
       table.insert(self.history, {role = res.role, content = res.content})
+      ctx.session:unregister_resource("text://main-scene")
       return "Patient: "..res.content.text
     end, {
       description = "Ask the patient about his/her specific conditions.",
@@ -65,7 +92,11 @@ local function game_state(self, mcp, server)
       if not res.content.text then
         return nil, "invalid response type: "..res.content.type
       end
-      ctx.session:replace_tools({self.start_game})
+      local ok, err = ctx.session:replace_tools({self.start_game})
+      if not ok then
+        return nil, err
+      end
+      ctx.session:unregister_resource("text://main-scene")
       return "Host: "..res.content.text
     end, {
       description = "Make a diagnosis for the patient.",
@@ -184,7 +215,14 @@ function _MT.__index.initialize(self, mcp, server)
       return nil, "invalid response type: "..res.content.type
     end
     table.insert(self.history, {role = res.role, content = res.content})
-    game_state(self, mcp, ctx.session)
+    local ok, err = imagine_scene(mcp, ctx.session, res.content.text)
+    if not ok then
+      return nil, err
+    end
+    local ok, err = game_state(self, mcp, ctx.session)
+    if not ok then
+      return nil, err
+    end
     return "Patient: "..res.content.text
   end, {description = "Start a round of the disease guessing game."})
   local ok, err = server:register(self.start_game)

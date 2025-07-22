@@ -6,8 +6,7 @@ server:run({
   capabilities = {
     completions = false,
     logging = false,
-    prompts = false,
-    resources = false
+    prompts = false
   },
   instructions = assert(game:initialize(mcp, server))
 })
